@@ -19,50 +19,46 @@ export function LoginPage() {
 
   return (
     <AuthLayout
-      title="Welcome back"
-      subtitle="Log in to manage your cycling rentals and tasks."
+      title="Login to App Name"
+      subtitle="Securely access your account with your email and password. Fast, simple, and protected login to get you started."
+      footer={
+        <Link href="/auth/signup" className="inline-flex py-2">
+          <Button variant="secondary">Signup</Button>
+        </Link>
+      }
     >
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="space-y-4">
           <InputField
-            label="Email"
             name="email"
             type="email"
-            placeholder="you@example.com"
+            placeholder="Email or Username"
             autoComplete="email"
             required
           />
           <InputField
-            label="Password"
             name="password"
             type="password"
-            placeholder="••••••••"
+            placeholder="Password"
             autoComplete="current-password"
+            endAdornment={<span className="text-lg leading-none">~</span>}
             required
           />
-        </div>
-
-        <div className="flex items-center justify-between text-sm">
-          <button
-            type="button"
-            className="font-medium text-indigo-600 hover:text-indigo-500"
-          >
-            Forgot password?
-          </button>
-          <span className="text-gray-500">
-            Don&apos;t have an account?{" "}
+          <div className="flex justify-end pt-2 pb-3">
             <Link
-              href="/auth/signup"
-              className="font-medium text-indigo-600 hover:text-indigo-500"
+              href="/auth/forgot-password"
+              className="rounded-md px-2 py-1.5 text-xs font-semibold text-[#222630] hover:text-[#111318]"
             >
-              Sign up
+              Forgot Password?
             </Link>
-          </span>
+          </div>
         </div>
 
-        <Button type="submit" fullWidth>
-          Log in
-        </Button>
+        <div className="mt-4 py-3">
+          <Button type="submit" fullWidth>
+            Login
+          </Button>
+        </div>
       </form>
     </AuthLayout>
   );
