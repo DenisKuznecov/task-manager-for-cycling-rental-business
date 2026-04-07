@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import React, { useEffect, useRef, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/src/utils/supabase/client";
 import { Button } from "@/ui/components/Button";
 import { LinkButton } from "@/ui/components/LinkButton";
 import { TextField } from "@/ui/components/TextField";
@@ -10,11 +11,37 @@ import { FeatherChevronRight } from "@subframe/core";
 
 function VerificationPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const email = searchParams.get("email")?.trim() ?? "";
   const [code, setCode] = useState(["", "", "", "", "", ""]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [countdown, setCountdown] = useState(0);
+  const [successMessage, setSuccessMessage] = useState("");
   const inputRefs = useRef<(HTMLInputElement | null)[]>([]);
 
+  useEffect(() => {
+    if (countdown <= 0) return;
+
+    const timer = window.setInterval(() => {
+      setCountdown((current) => {
+        if (current <= 1) {
+          window.clearInterval(timer);
+          return 0;
+        }
+
+        return current - 1;
+      });
+    }, 1000);
+
+    return () => {
+      window.clearInterval(timer);
+    };
+  }, [countdown]);
+
   const handleCodeChange = (index: number, value: string) => {
-    if (value.length > 1) return;
+    if (!/^\d?$/.test(value)) return;
+
     const newCode = [...code];
     newCode[index] = value;
     setCode(newCode);
@@ -26,6 +53,84 @@ function VerificationPage() {
   const handleKeyDown = (index: number, e: React.KeyboardEvent) => {
     if (e.key === "Backspace" && !code[index] && index > 0) {
       inputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleVerify = async () => {
+    if (isLoading) return;
+
+    if (!email) {
+      setError("Missing email. Please return to Sign Up and try again.");
+      return;
+    }
+
+    const enteredCode = code.join("");
+    if (enteredCode.length !== 6) {
+      setError("Please enter the 6-digit verification code.");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const supabase = createClient();
+      const { error: verifyError } = await supabase.auth.verifyOtp({
+        email,
+        token: enteredCode,
+        type: "signup",
+      });
+
+      if (verifyError) {
+        setError(verifyError.message);
+        return;
+      }
+
+      router.push("/dashboard");
+      router.refresh();
+    } catch (verifyError) {
+      setError(
+        verifyError instanceof Error
+          ? verifyError.message
+          : "Unable to verify code. Please try again."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleResend = async () => {
+    if (!email) {
+      setError("Missing email. Please return to Sign Up and try again.");
+      return;
+    }
+
+    if (countdown > 0) return;
+
+    setError("");
+    setSuccessMessage("");
+
+    try {
+      const supabase = createClient();
+      const { error: resendError } = await supabase.auth.resend({
+        type: "signup",
+        email,
+      });
+
+      if (resendError) {
+        setError(resendError.message);
+        return;
+      }
+
+      setSuccessMessage("A new code has been sent.");
+      setCountdown(60);
+    } catch (resendError) {
+      setError(
+        resendError instanceof Error
+          ? resendError.message
+          : "Unable to resend code. Please try again."
+      );
     }
   };
 
@@ -80,9 +185,10 @@ function VerificationPage() {
               <LinkButton
                 variant="brand"
                 iconRight={<FeatherChevronRight />}
-                onClick={() => {}}
+                disabled={countdown > 0}
+                onClick={handleResend}
               >
-                Resend code
+                {countdown > 0 ? `Resend Code (${countdown}s)` : "Resend Code"}
               </LinkButton>
             </div>
           </div>
@@ -113,10 +219,26 @@ function VerificationPage() {
             </div>
             <Button
               className="h-8 w-full flex-none"
-              onClick={() => {}}
+              disabled={isLoading || !email}
+              onClick={handleVerify}
             >
-              Verify code
+              {isLoading ? "Verifying..." : "Verify code"}
             </Button>
+            {!email ? (
+              <span className="text-caption font-caption text-error-700">
+                Missing email in the URL. Please return to Sign Up.
+              </span>
+            ) : null}
+            {error ? (
+              <span className="text-caption font-caption text-error-700">
+                {error}
+              </span>
+            ) : null}
+            {successMessage ? (
+              <span className="text-caption font-caption text-success-700">
+                {successMessage}
+              </span>
+            ) : null}
             <div className="flex w-full items-center justify-center gap-2 pt-4">
               <LinkButton
                 variant="neutral"

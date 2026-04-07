@@ -43,7 +43,7 @@ function SignUpPage() {
         return;
       }
 
-      router.push("/verification");
+      router.push(`/verification?email=${encodeURIComponent(email.trim())}`);
     } catch (error) {
       setErrorMessage(
         error instanceof Error ? error.message : "Unexpected error while signing up."
