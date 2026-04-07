@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/src/utils/supabase/client";
 import { Button } from "@/ui/components/Button";
 import { LinkButton } from "@/ui/components/LinkButton";
 import { TextField } from "@/ui/components/TextField";
@@ -11,8 +12,41 @@ import { FeatherMail } from "@subframe/core";
 
 function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleSignIn = async () => {
+    if (isLoading) return;
+
+    setErrorMessage("");
+    setIsLoading(true);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      const nextPath = searchParams.get("next") || "/dashboard";
+      router.push(nextPath);
+      router.refresh();
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unexpected error while signing in."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex h-full w-full flex-wrap items-start bg-default-background mobile:flex-col mobile:flex-wrap mobile:gap-0">
@@ -113,10 +147,16 @@ function SignInPage() {
             </div>
             <Button
               className="h-8 w-full flex-none"
-              onClick={() => {}}
+              disabled={isLoading}
+              onClick={handleSignIn}
             >
-              Sign in
+              {isLoading ? "Signing in..." : "Sign in"}
             </Button>
+            {errorMessage ? (
+              <span className="text-caption font-caption text-error-700">
+                {errorMessage}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>

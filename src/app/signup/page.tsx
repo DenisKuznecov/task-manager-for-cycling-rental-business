@@ -2,6 +2,7 @@
 
 import React, { useState } from "react";
 import { useRouter } from "next/navigation";
+import { createClient } from "@/src/utils/supabase/client";
 import { Button } from "@/ui/components/Button";
 import { LinkButton } from "@/ui/components/LinkButton";
 import { TextField } from "@/ui/components/TextField";
@@ -16,6 +17,41 @@ function SignUpPage() {
   const [company, setCompany] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleSignUp = async () => {
+    if (isLoading) return;
+
+    setErrorMessage("");
+    setIsLoading(true);
+
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.signUp({
+        email: email.trim(),
+        password,
+        options: {
+          data: {
+            company: company.trim(),
+          },
+        },
+      });
+
+      if (error) {
+        setErrorMessage(error.message);
+        return;
+      }
+
+      router.push("/verification");
+    } catch (error) {
+      setErrorMessage(
+        error instanceof Error ? error.message : "Unexpected error while signing up."
+      );
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   return (
     <div className="flex h-full w-full flex-wrap items-start bg-default-background mobile:flex-col mobile:flex-wrap mobile:gap-0">
@@ -149,7 +185,14 @@ function SignUpPage() {
                 </div>
               </div>
             </div>
-            <Button onClick={() => {}}>Sign up</Button>
+            <Button disabled={isLoading} onClick={handleSignUp}>
+              {isLoading ? "Signing up..." : "Sign up"}
+            </Button>
+            {errorMessage ? (
+              <span className="text-caption font-caption text-error-700">
+                {errorMessage}
+              </span>
+            ) : null}
           </div>
         </div>
       </div>
