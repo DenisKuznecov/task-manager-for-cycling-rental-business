@@ -7,46 +7,66 @@ import { Button } from "@/ui/components/Button";
 import { LinkButton } from "@/ui/components/LinkButton";
 import { TextField } from "@/ui/components/TextField";
 import { FeatherArrowLeft } from "@subframe/core";
+import { FeatherCheck } from "@subframe/core";
 import { FeatherChevronRight } from "@subframe/core";
-import { FeatherMail } from "@subframe/core";
+import { FeatherLock } from "@subframe/core";
 
-function ForgotPasswordPage() {
+function ResetPasswordPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
 
-  const handleSendResetLink = async () => {
+  const handleUpdatePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (isLoading) return;
 
-    const trimmedEmail = email.trim();
-    if (!trimmedEmail) {
-      setErrorMessage("Please enter your email address.");
-      return;
-    }
+    const trimmedPassword = password.trim();
 
     setErrorMessage("");
     setSuccessMessage("");
+
+    if (trimmedPassword.length < 8) {
+      setErrorMessage("Password must be at least 8 characters long.");
+      return;
+    }
+
+    if (trimmedPassword !== confirmPassword.trim()) {
+      setErrorMessage("Passwords do not match.");
+      return;
+    }
+
     setIsLoading(true);
 
     try {
       const supabase = createClient();
-      const { error } = await supabase.auth.resetPasswordForEmail(trimmedEmail, {
-        redirectTo: `${window.location.origin}/auth/callback?next=/reset-password`,
-      });
+      const { error } = await supabase.auth.updateUser({ password: trimmedPassword });
 
       if (error) {
-        setErrorMessage(error.message);
+        if (
+          error.message.toLowerCase().includes("auth session missing") ||
+          error.message.toLowerCase().includes("invalid jwt")
+        ) {
+          setErrorMessage(
+            "This recovery link is invalid or expired. Request a new password reset link."
+          );
+        } else {
+          setErrorMessage(error.message);
+        }
         return;
       }
 
-      setSuccessMessage("Password reset link sent. Check your inbox.");
+      setSuccessMessage("Password updated. Redirecting you to Sign In...");
+      setTimeout(() => {
+        router.push("/login");
+      }, 1200);
     } catch (error) {
       setErrorMessage(
         error instanceof Error
           ? error.message
-          : "Unexpected error while sending the reset link."
+          : "Unexpected error while updating your password."
       );
     } finally {
       setIsLoading(false);
@@ -67,8 +87,7 @@ function ForgotPasswordPage() {
                 Secure your account
               </span>
               <span className="text-heading-3 font-heading-3 text-subtext-color">
-                Reset your password and regain access to your account in
-                minutes.
+                Reset your password and regain access to your account in minutes.
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-8">
@@ -113,30 +132,80 @@ function ForgotPasswordPage() {
           </div>
           <div className="flex w-full flex-col items-start justify-center gap-4">
             <span className="text-body font-body text-subtext-color">
-              Enter your email address and we&#39;ll send you a link to reset
-              your password.
+              Set a new password for your account below.
             </span>
-            <TextField
-              className="h-auto w-full flex-none"
-              label=""
-              helpText=""
-              icon={<FeatherMail />}
+            <form
+              className="flex w-full flex-col items-start justify-center gap-4"
+              onSubmit={handleUpdatePassword}
             >
-              <TextField.Input
-                placeholder="Email address"
-                value={email}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                  setEmail(event.target.value)
-                }
-              />
-            </TextField>
-            <Button
-              className="h-8 w-full flex-none"
-              disabled={isLoading}
-              onClick={handleSendResetLink}
-            >
-              {isLoading ? "Sending..." : "Send reset link"}
-            </Button>
+              <TextField
+                className="h-auto w-full flex-none"
+                label=""
+                helpText=""
+                icon={<FeatherLock />}
+              >
+                <TextField.Input
+                  type="password"
+                  placeholder="New password"
+                  value={password}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                    setPassword(event.target.value)
+                  }
+                />
+              </TextField>
+              <TextField
+                className="h-auto w-full flex-none"
+                label=""
+                helpText=""
+                icon={<FeatherLock />}
+              >
+                <TextField.Input
+                  type="password"
+                  placeholder="Confirm your new password"
+                  value={confirmPassword}
+                  onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+                    setConfirmPassword(event.target.value)
+                  }
+                />
+              </TextField>
+              <div className="flex w-full flex-wrap items-start gap-2 px-2 py-2">
+                <div className="flex grow shrink-0 basis-0 flex-col items-start justify-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <FeatherCheck className="text-body font-body text-success-700" />
+                    <span className="text-caption font-caption text-default-font">
+                      Mixed case letters
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <FeatherCheck className="text-body font-body text-success-700" />
+                    <span className="text-caption font-caption text-default-font">
+                      Minimum 8 characters
+                    </span>
+                  </div>
+                </div>
+                <div className="flex grow shrink-0 basis-0 flex-col items-start justify-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <FeatherCheck className="text-body font-body text-success-700" />
+                    <span className="text-caption font-caption text-default-font">
+                      Includes special characters
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <FeatherCheck className="text-body font-body text-success-700" />
+                    <span className="text-caption font-caption text-default-font">
+                      Does not contain email
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <Button
+                className="h-8 w-full flex-none"
+                type="submit"
+                disabled={isLoading}
+              >
+                {isLoading ? "Updating..." : "Update Password"}
+              </Button>
+            </form>
             {errorMessage ? (
               <span className="text-caption font-caption text-error-700">
                 {errorMessage}
@@ -163,4 +232,4 @@ function ForgotPasswordPage() {
   );
 }
 
-export default ForgotPasswordPage;
+export default ResetPasswordPage;
