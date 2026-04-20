@@ -63,9 +63,9 @@ function ResetPasswordPage() {
         return;
       }
 
-      setSuccessMessage("Password updated. Redirecting you to your dashboard...");
+      setSuccessMessage("Password updated. Redirecting you...");
       setTimeout(() => {
-        router.push("/dashboard");
+        router.push("/");
       }, 1200);
     } catch (error) {
       setErrorMessage(

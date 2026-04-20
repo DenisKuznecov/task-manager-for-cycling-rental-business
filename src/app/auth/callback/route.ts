@@ -33,7 +33,7 @@ export async function GET(request: Request) {
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      next = user ? await getPostLoginPath(supabase, user.id) : "/dashboard";
+      next = user ? await getPostLoginPath(supabase, user.id) : "/login";
     }
     return NextResponse.redirect(`${origin}${next}`);
   }

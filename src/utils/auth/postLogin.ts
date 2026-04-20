@@ -5,9 +5,15 @@ import type { SupabaseClient } from "@supabase/supabase-js";
  * role in `public.profiles`. Works with either the browser or server Supabase
  * client, since both expose the same query surface.
  *
- * Falls back to `/dashboard` on any error or for roles without a dedicated
- * landing page — the destination route's own layout is still responsible for
- * authorization, so this is purely a UX redirect.
+ * Routing schema:
+ *   - admin   -> /hq
+ *   - manager -> /hq
+ *   - partner -> /partner
+ *   - mechanic -> /workshop
+ *   - DB error / missing profile / null role -> /pending
+ *
+ * There is intentionally no "default zone" fallback: users without a
+ * recognized role are sent to /pending so an admin can assign one.
  */
 export async function getPostLoginPath(
   supabase: SupabaseClient,
@@ -19,19 +25,20 @@ export async function getPostLoginPath(
     .eq("id", userId)
     .single();
 
-  if (error || !profile) {
+  if (error || !profile || !profile.role) {
     console.error("getPostLoginPath: failed to load profile", error);
-    return "/dashboard";
+    return "/pending";
   }
 
   switch (profile.role) {
+    case "admin":
+    case "manager":
+      return "/hq";
     case "partner":
       return "/partner";
-    // Add more role → path mappings here as new sections are built:
-    // case "mechanic": return "/mechanic";
-    // case "manager":
-    // case "admin":
+    case "mechanic":
+      return "/workshop";
     default:
-      return "/dashboard";
+      return "/pending";
   }
 }

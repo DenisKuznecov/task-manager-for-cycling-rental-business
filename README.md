@@ -63,7 +63,7 @@ Access is scoped by role. The following rules describe what each role can see an
 - Scoped to their own data only.
 - Can view their own orders, sales statistics, and commissions.
 - Can view and manage their own support tickets.
-- Cannot access fleet management, live bookings, or the partner dashboard.
+- Cannot access fleet management, live bookings, or the partner portal.
 - Can create bookings for guests using their own coupon code.
 
 ### Mechanic

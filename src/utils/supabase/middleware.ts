@@ -1,7 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-const protectedRoutePrefixes = ["/dashboard", "/kanban", "/partner"];
+const protectedRoutePrefixes = ["/workshop", "/hq", "/partner"];
 
 function isRouteMatch(pathname: string, prefixes: string[]) {
   return prefixes.some(

@@ -1,13 +1,11 @@
 import React from "react";
 import { redirect } from "next/navigation";
-import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
-import { PartnerShell } from "./_components/PartnerShell";
 import { createClient } from "@/src/utils/supabase/server";
 
-const ALLOWED_ROLES = ["admin", "manager", "partner"] as const;
+const ALLOWED_ROLES = ["admin", "manager"] as const;
 type AllowedRole = (typeof ALLOWED_ROLES)[number];
 
-export default async function PartnerLayout({
+export default async function HeadquartersLayout({
   children,
 }: {
   children: React.ReactNode;
@@ -32,8 +30,7 @@ export default async function PartnerLayout({
     .single();
 
   if (profileError || !profile || !profile.role) {
-    // No profile row, no role, or DB error -> send to pending.
-    console.error("Partner layout: failed to load profile", profileError);
+    console.error("HQ layout: failed to load profile", profileError);
     redirect("/pending");
   }
 
@@ -41,9 +38,5 @@ export default async function PartnerLayout({
     redirect("/unauthorized");
   }
 
-  return (
-    <DefaultPageLayout>
-      <PartnerShell>{children}</PartnerShell>
-    </DefaultPageLayout>
-  );
+  return <>{children}</>;
 }

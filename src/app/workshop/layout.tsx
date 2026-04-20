@@ -1,21 +1,17 @@
 import React from "react";
 import { redirect } from "next/navigation";
-import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
-import { PartnerShell } from "./_components/PartnerShell";
 import { createClient } from "@/src/utils/supabase/server";
 
-const ALLOWED_ROLES = ["admin", "manager", "partner"] as const;
+const ALLOWED_ROLES = ["admin", "manager", "mechanic"] as const;
 type AllowedRole = (typeof ALLOWED_ROLES)[number];
 
-export default async function PartnerLayout({
+export default async function WorkshopLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   const supabase = await createClient();
 
-  // Use getUser() (not getSession()) on the server: it re-validates the JWT
-  // against Supabase Auth so the user identity cannot be spoofed via cookies.
   const {
     data: { user },
     error: userError,
@@ -32,8 +28,7 @@ export default async function PartnerLayout({
     .single();
 
   if (profileError || !profile || !profile.role) {
-    // No profile row, no role, or DB error -> send to pending.
-    console.error("Partner layout: failed to load profile", profileError);
+    console.error("Workshop layout: failed to load profile", profileError);
     redirect("/pending");
   }
 
@@ -41,9 +36,5 @@ export default async function PartnerLayout({
     redirect("/unauthorized");
   }
 
-  return (
-    <DefaultPageLayout>
-      <PartnerShell>{children}</PartnerShell>
-    </DefaultPageLayout>
-  );
+  return <>{children}</>;
 }

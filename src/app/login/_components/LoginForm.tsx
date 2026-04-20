@@ -51,7 +51,7 @@ export function LoginForm() {
         explicitNext ||
         (data.user
           ? await getPostLoginPath(supabase, data.user.id)
-          : "/dashboard");
+          : "/login");
 
       router.push(nextPath);
       router.refresh();
