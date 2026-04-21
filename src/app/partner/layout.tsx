@@ -27,7 +27,7 @@ export default async function PartnerLayout({
 
   const { data: profile, error: profileError } = await supabase
     .from("profiles")
-    .select("role")
+    .select("role, partners(*)")
     .eq("id", user.id)
     .single();
 
@@ -41,9 +41,18 @@ export default async function PartnerLayout({
     redirect("/unauthorized");
   }
 
+  // Supabase returns related rows as an array even for to-one relations.
+  const partnersRel = profile.partners as
+    | { name: string; location: string; promo_code: string; slug: string }
+    | { name: string; location: string; promo_code: string; slug: string }[]
+    | null;
+  const partnerData = Array.isArray(partnersRel)
+    ? partnersRel[0] ?? null
+    : partnersRel;
+
   return (
     <DefaultPageLayout>
-      <PartnerShell>{children}</PartnerShell>
+      <PartnerShell partner={partnerData}>{children}</PartnerShell>
     </DefaultPageLayout>
   );
 }
