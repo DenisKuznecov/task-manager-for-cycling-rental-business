@@ -9,16 +9,32 @@
  */
 
 import React from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { FeatherLogOut } from "@subframe/core";
 import { FeatherSettings } from "@subframe/core";
 import { FeatherUser } from "@subframe/core";
 import * as SubframeCore from "@subframe/core";
 import { createClient } from "@/src/utils/supabase/client";
+import { useUser, type UserRole } from "@/src/context/UserContext";
 import { Avatar } from "../components/Avatar";
 import { DropdownMenu } from "../components/DropdownMenu";
 import { TopbarWithRightNav } from "../components/TopbarWithRightNav";
 import * as SubframeUtils from "../utils";
+
+const NAV_ITEMS: {
+  label: string;
+  roles: UserRole[];
+  href?: string;
+}[] = [
+  { label: "Partners", roles: ["admin", "manager"], href: "/all-partners" },
+  { label: "Orders", roles: ["admin", "manager"] },
+  { label: "Customers", roles: ["admin", "manager"] },
+  {
+    label: "Task Management",
+    roles: ["admin", "manager", "mechanic"],
+    href: "/workshop",
+  },
+];
 
 interface DefaultPageLayoutRootProps
   extends React.HTMLAttributes<HTMLDivElement> {
@@ -34,6 +50,12 @@ const DefaultPageLayoutRoot = React.forwardRef<
   ref
 ) {
   const router = useRouter();
+  const pathname = usePathname();
+  const { profile } = useUser();
+  const role = profile?.role;
+  const visibleNavItems = role
+    ? NAV_ITEMS.filter((item) => item.roles.includes(role))
+    : [];
 
   const handleLogout = async () => {
     const supabase = createClient();
@@ -59,10 +81,23 @@ const DefaultPageLayoutRoot = React.forwardRef<
     >
       <TopbarWithRightNav
         leftSlot={
-          <img
-            className="h-8 flex-none object-cover"
-            src="https://res.cloudinary.com/subframe/image/upload/v1771493398/uploads/36440/znvfvrhfhlzyaeoslprx.png"
-          />
+          <>
+            <img
+              className="h-8 flex-none object-cover"
+              src="https://res.cloudinary.com/subframe/image/upload/v1771493398/uploads/36440/znvfvrhfhlzyaeoslprx.png"
+            />
+            {visibleNavItems.map((item) => (
+              <TopbarWithRightNav.NavItem
+                key={item.label}
+                selected={!!item.href && pathname?.startsWith(item.href)}
+                onClick={
+                  item.href ? () => router.push(item.href as string) : undefined
+                }
+              >
+                {item.label}
+              </TopbarWithRightNav.NavItem>
+            ))}
+          </>
         }
         rightSlot={
           <SubframeCore.DropdownMenu.Root>
@@ -78,7 +113,7 @@ const DefaultPageLayoutRoot = React.forwardRef<
                 sideOffset={4}
                 asChild={true}
               >
-                <DropdownMenu>
+                <DropdownMenu className="z-20">
                   <DropdownMenu.DropdownItem icon={<FeatherUser />}>
                     Profile
                   </DropdownMenu.DropdownItem>

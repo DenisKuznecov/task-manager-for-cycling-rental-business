@@ -33,7 +33,7 @@ export async function getPostLoginPath(
   switch (profile.role) {
     case "admin":
     case "manager":
-      return "/hq";
+      return "/all-partners";
     case "partner":
       return "/partner";
     case "mechanic":

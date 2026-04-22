@@ -28,7 +28,8 @@ const NavItem = React.forwardRef<HTMLDivElement, NavItemProps>(function NavItem(
   return (
     <div
       className={SubframeUtils.twClassNames(
-        "group/79ff7d2b flex cursor-pointer items-center justify-center gap-2 rounded-md px-2 py-1",
+        "group/79ff7d2b flex cursor-pointer items-center justify-center gap-2 rounded-md px-2 py-1 hover:bg-brand-100",
+        { "bg-brand-100": selected },
         className
       )}
       ref={ref}
@@ -50,8 +51,11 @@ const NavItem = React.forwardRef<HTMLDivElement, NavItemProps>(function NavItem(
       {children ? (
         <span
           className={SubframeUtils.twClassNames(
-            "text-body font-body text-subtext-color group-hover/79ff7d2b:text-default-font",
-            { "text-body-bold font-body-bold text-default-font": selected }
+            "text-body font-body text-subtext-color group-hover/79ff7d2b:text-brand-primary",
+            {
+              "text-body-bold font-body-bold text-brand-primary group-hover/79ff7d2b:text-brand-primary":
+                selected,
+            }
           )}
         >
           {children}
