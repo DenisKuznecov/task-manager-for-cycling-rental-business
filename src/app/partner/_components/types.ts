@@ -1,5 +1,15 @@
+export type PartnerOrderStatus =
+  | "draft"
+  | "new"
+  | "canceled"
+  | "reserved"
+  | "started"
+  | "stopped"
+  | "archived";
+
 export type PartnerOrder = {
   id: string;
+  status: PartnerOrderStatus | null;
   starts_at: string;
   stops_at: string;
   amount_in_cents: number | null;

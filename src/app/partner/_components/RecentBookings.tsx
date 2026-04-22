@@ -17,6 +17,7 @@ import {
   formatRentalPeriod,
 } from "@/src/utils/formatters";
 import type { PartnerOrder } from "./types";
+import { OrderStatusBadge } from "./OrderStatusBadge";
 
 interface RecentBookingsProps {
   orders: PartnerOrder[];
@@ -62,6 +63,7 @@ export function RecentBookings({
                 <Table.HeaderCell>Bike</Table.HeaderCell>
                 <Table.HeaderCell>Period</Table.HeaderCell>
                 <Table.HeaderCell>Order Size</Table.HeaderCell>
+                <Table.HeaderCell>Status</Table.HeaderCell>
                 <Table.HeaderCell />
               </Table.HeaderRow>
             }
@@ -102,6 +104,9 @@ export function RecentBookings({
                     <span className="text-body font-body text-neutral-500">
                       {formatCentsToEuros(order.amount_in_cents)}
                     </span>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <OrderStatusBadge status={order.status} />
                   </Table.Cell>
                   <Table.Cell>
                     <div className="flex grow shrink-0 basis-0 items-center justify-end">

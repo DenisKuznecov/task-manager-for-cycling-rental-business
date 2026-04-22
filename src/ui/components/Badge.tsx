@@ -9,7 +9,14 @@ import * as SubframeCore from "@subframe/core";
 import * as SubframeUtils from "../utils";
 
 interface BadgeRootProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: "brand" | "neutral" | "error" | "warning" | "success";
+  variant?:
+    | "draft"
+    | "new"
+    | "canceled"
+    | "reserved"
+    | "started"
+    | "stopped"
+    | "archived";
   icon?: React.ReactNode;
   children?: React.ReactNode;
   iconRight?: React.ReactNode;
@@ -19,7 +26,7 @@ interface BadgeRootProps extends React.HTMLAttributes<HTMLDivElement> {
 const BadgeRoot = React.forwardRef<HTMLDivElement, BadgeRootProps>(
   function BadgeRoot(
     {
-      variant = "brand",
+      variant = "draft",
       icon = null,
       children,
       iconRight = null,
@@ -33,14 +40,18 @@ const BadgeRoot = React.forwardRef<HTMLDivElement, BadgeRootProps>(
         className={SubframeUtils.twClassNames(
           "group/97bdb082 flex h-6 items-center gap-1 rounded-md border border-solid border-brand-100 bg-brand-100 px-2",
           {
+            "border border-solid border-success-50 bg-success-50":
+              variant === "archived",
+            "border border-solid border-brand-800 bg-brand-800":
+              variant === "stopped",
+            "border border-solid border-success-700 bg-success-700":
+              variant === "started",
             "border border-solid border-success-100 bg-success-100":
-              variant === "success",
-            "border border-solid border-warning-100 bg-warning-100":
-              variant === "warning",
+              variant === "reserved",
             "border border-solid border-error-100 bg-error-100":
-              variant === "error",
-            "border border-solid border-neutral-100 bg-neutral-100":
-              variant === "neutral",
+              variant === "canceled",
+            "border border-solid border-neutral-100 bg-neutral-200":
+              variant === "new",
           },
           className
         )}
@@ -52,10 +63,12 @@ const BadgeRoot = React.forwardRef<HTMLDivElement, BadgeRootProps>(
             className={SubframeUtils.twClassNames(
               "text-caption font-caption text-brand-700",
               {
-                "text-success-800": variant === "success",
-                "text-warning-800": variant === "warning",
-                "text-error-700": variant === "error",
-                "text-neutral-700": variant === "neutral",
+                "text-success-700": variant === "archived",
+                "text-brand-200": variant === "stopped",
+                "text-success-100": variant === "started",
+                "text-success-800": variant === "reserved",
+                "text-error-700": variant === "canceled",
+                "text-neutral-700": variant === "new",
               }
             )}
           >
@@ -67,10 +80,12 @@ const BadgeRoot = React.forwardRef<HTMLDivElement, BadgeRootProps>(
             className={SubframeUtils.twClassNames(
               "whitespace-nowrap text-caption font-caption text-brand-800",
               {
-                "text-success-800": variant === "success",
-                "text-warning-800": variant === "warning",
-                "text-error-800": variant === "error",
-                "text-neutral-700": variant === "neutral",
+                "text-success-700": variant === "archived",
+                "text-brand-200": variant === "stopped",
+                "text-success-100": variant === "started",
+                "text-success-800": variant === "reserved",
+                "text-error-800": variant === "canceled",
+                "text-neutral-700": variant === "new",
               }
             )}
           >
@@ -82,10 +97,12 @@ const BadgeRoot = React.forwardRef<HTMLDivElement, BadgeRootProps>(
             className={SubframeUtils.twClassNames(
               "text-caption font-caption text-brand-700",
               {
-                "text-success-800": variant === "success",
-                "text-warning-800": variant === "warning",
-                "text-error-700": variant === "error",
-                "text-neutral-700": variant === "neutral",
+                "text-success-700": variant === "archived",
+                "text-brand-200": variant === "stopped",
+                "text-success-100": variant === "started",
+                "text-success-800": variant === "reserved",
+                "text-error-700": variant === "canceled",
+                "text-neutral-700": variant === "new",
               }
             )}
           >

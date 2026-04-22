@@ -12,7 +12,7 @@ export async function loadRecentOrders(
   const { data } = await supabase
     .from("orders")
     .select(
-      "id, starts_at, stops_at, amount_in_cents, customers(name, email, phone)",
+      "id, status, starts_at, stops_at, amount_in_cents, customers(name, email, phone)",
     )
     .eq("partner_id", partnerId)
     .order("created_at", { ascending: false })
