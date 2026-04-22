@@ -14,9 +14,14 @@ interface PartnerShellProps {
     promo_code: string;
     slug: string;
   } | null;
+  basePath?: string;
 }
 
-export function PartnerShell({ children, partner }: PartnerShellProps) {
+export function PartnerShell({
+  children,
+  partner,
+  basePath = "/partner",
+}: PartnerShellProps) {
   const partnerName = partner?.name || "Partner";
   const [copied, setCopied] = React.useState(false);
 
@@ -96,7 +101,7 @@ export function PartnerShell({ children, partner }: PartnerShellProps) {
             Download
           </Button>
         </div>
-        <PartnerTabs />
+        <PartnerTabs basePath={basePath} />
       </div>
       {children}
     </div>

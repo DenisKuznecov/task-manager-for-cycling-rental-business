@@ -12,100 +12,24 @@ import { FeatherEdit2 } from "@subframe/core";
 import { FeatherFlag } from "@subframe/core";
 import { FeatherMoreHorizontal } from "@subframe/core";
 import * as SubframeCore from "@subframe/core";
+import {
+  formatCentsToEuros,
+  formatRentalPeriod,
+} from "@/src/utils/formatters";
+import type { PartnerOrder } from "./types";
 
-interface Booking {
-  id: string;
-  name: string;
-  avatar: string;
-  phone: string;
-  bike: string;
-  period: string;
-  orderSize: string;
+interface AllBookingsTableProps {
+  orders: PartnerOrder[];
 }
 
-const ALL_BOOKINGS: Booking[] = [
-  {
-    id: "1",
-    name: "John Doe",
-    avatar:
-      "https://res.cloudinary.com/subframe/image/upload/v1711417513/shared/kwut7rhuyivweg8tmyzl.jpg",
-    phone: "+34 612 345 901",
-    bike: "Specialized S-Works SL8",
-    period: "14 Apr 2026 - 16 Apr 2026",
-    orderSize: "€1,250",
-  },
-  {
-    id: "2",
-    name: "Alice Smith",
-    avatar:
-      "https://res.cloudinary.com/subframe/image/upload/v1711417507/shared/fychrij7dzl8wgq2zjq9.avif",
-    phone: "+34 612 345 901",
-    bike: "Focus Izalco Max 8.9",
-    period: "8 Apr 2026 - 12 Apr 2026",
-    orderSize: "€600",
-  },
-  {
-    id: "3",
-    name: "Robert Johnson",
-    avatar:
-      "https://res.cloudinary.com/subframe/image/upload/v1711417514/shared/ubsk7cs5hnnaj798efej.jpg",
-    phone: "+34 612 345 901",
-    bike: "Focus Aventura Step-thru",
-    period: "2 Apr 2026 - 11 Apr 2026",
-    orderSize: "€450",
-  },
-  {
-    id: "4",
-    name: "Emma Wilson",
-    avatar:
-      "https://res.cloudinary.com/subframe/image/upload/v1711417512/shared/m0kfajqpwkfief00it4v.jpg",
-    phone: "+34 612 345 901",
-    bike: "MMR Adrenaline 00",
-    period: "15 Apr 2026 - 17 Apr 2026",
-    orderSize: "€1,000",
-  },
-  {
-    id: "5",
-    name: "Michael Brown",
-    avatar:
-      "https://res.cloudinary.com/subframe/image/upload/v1711417512/shared/btvntvzhdbhpulae3kzk.jpg",
-    phone: "+34 612 345 901",
-    bike: "Pinarello Dogma F",
-    period: "14 Apr 2026 - 16 Apr 2026",
-    orderSize: "€225",
-  },
-  {
-    id: "6",
-    name: "Michael Brown",
-    avatar:
-      "https://res.cloudinary.com/subframe/image/upload/v1711417512/shared/btvntvzhdbhpulae3kzk.jpg",
-    phone: "+34 612 345 901",
-    bike: "Pinarello Dogma F",
-    period: "14 Apr 2026 - 16 Apr 2026",
-    orderSize: "€225",
-  },
-  {
-    id: "7",
-    name: "Michael Brown",
-    avatar:
-      "https://res.cloudinary.com/subframe/image/upload/v1711417512/shared/btvntvzhdbhpulae3kzk.jpg",
-    phone: "+34 612 345 901",
-    bike: "Pinarello Dogma F",
-    period: "14 Apr 2026 - 16 Apr 2026",
-    orderSize: "€225",
-  },
-];
-
-export function AllBookingsTable() {
+export function AllBookingsTable({ orders }: AllBookingsTableProps) {
   const [search, setSearch] = useState("");
 
-  const filtered = ALL_BOOKINGS.filter((booking) => {
+  const filtered = orders.filter((order) => {
     if (!search) return true;
     const needle = search.toLowerCase();
-    return (
-      booking.name.toLowerCase().includes(needle) ||
-      booking.bike.toLowerCase().includes(needle)
-    );
+    const name = order.customers?.name ?? "";
+    return name.toLowerCase().includes(needle);
   });
 
   return (
@@ -116,7 +40,7 @@ export function AllBookingsTable() {
         </span>
         <TextField label="" helpText="">
           <TextField.Input
-            placeholder="Search by name, bike"
+            placeholder="Search by name"
             value={search}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
               setSearch(event.target.value)
@@ -156,85 +80,104 @@ export function AllBookingsTable() {
         </SubframeCore.DropdownMenu.Root>
       </div>
       <div className="flex w-full flex-col items-start gap-6 overflow-hidden overflow-x-auto mobile:overflow-auto mobile:max-w-full">
-        <Table
-          header={
-            <Table.HeaderRow>
-              <Table.HeaderCell>Customer</Table.HeaderCell>
-              <Table.HeaderCell>Phone</Table.HeaderCell>
-              <Table.HeaderCell>Bike</Table.HeaderCell>
-              <Table.HeaderCell>Period</Table.HeaderCell>
-              <Table.HeaderCell>Order Size</Table.HeaderCell>
-              <Table.HeaderCell />
-            </Table.HeaderRow>
-          }
-        >
-          {filtered.map((booking) => (
-            <Table.Row key={booking.id}>
-              <Table.Cell>
-                <div className="flex items-center gap-2">
-                  <Avatar size="small" image={booking.avatar} square={true}>
-                    {booking.name.charAt(0)}
-                  </Avatar>
-                  <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
-                    {booking.name}
-                  </span>
-                </div>
-              </Table.Cell>
-              <Table.Cell>
-                <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
-                  {booking.phone}
-                </span>
-              </Table.Cell>
-              <Table.Cell>
-                <span className="text-body font-body text-neutral-500">
-                  {booking.bike}
-                </span>
-              </Table.Cell>
-              <Table.Cell>
-                <span className="whitespace-nowrap text-body font-body text-neutral-500">
-                  {booking.period}
-                </span>
-              </Table.Cell>
-              <Table.Cell>
-                <span className="text-body font-body text-neutral-500">
-                  {booking.orderSize}
-                </span>
-              </Table.Cell>
-              <Table.Cell>
-                <div className="flex grow shrink-0 basis-0 items-center justify-end">
-                  <SubframeCore.DropdownMenu.Root>
-                    <SubframeCore.DropdownMenu.Trigger asChild={true}>
-                      <IconButton
-                        icon={<FeatherMoreHorizontal />}
-                        onClick={() => {}}
-                      />
-                    </SubframeCore.DropdownMenu.Trigger>
-                    <SubframeCore.DropdownMenu.Portal>
-                      <SubframeCore.DropdownMenu.Content
-                        side="bottom"
-                        align="end"
-                        sideOffset={4}
-                        asChild={true}
-                      >
-                        <DropdownMenu>
-                          <DropdownMenu.DropdownItem>
-                            Favorite
-                          </DropdownMenu.DropdownItem>
-                          <DropdownMenu.DropdownItem icon={<FeatherEdit2 />}>
-                            Edit
-                          </DropdownMenu.DropdownItem>
-                          <DropdownMenu.DropdownItem icon={<FeatherFlag />}>
-                            Report
-                          </DropdownMenu.DropdownItem>
-                        </DropdownMenu>
-                      </SubframeCore.DropdownMenu.Content>
-                    </SubframeCore.DropdownMenu.Portal>
-                  </SubframeCore.DropdownMenu.Root>
-                </div>
-              </Table.Cell>
-            </Table.Row>
-          ))}
-        </Table>
+        {filtered.length === 0 ? (
+          <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-solid border-neutral-border bg-default-background py-12">
+            <span className="text-body-bold font-body-bold text-default-font text-center">
+              No bookings found
+            </span>
+            <span className="text-body font-body text-subtext-color text-center">
+              {orders.length === 0
+                ? "New bookings will appear here as they come in."
+                : "Try adjusting your search."}
+            </span>
+          </div>
+        ) : (
+          <Table
+            header={
+              <Table.HeaderRow>
+                <Table.HeaderCell>Customer</Table.HeaderCell>
+                <Table.HeaderCell>Phone</Table.HeaderCell>
+                <Table.HeaderCell>Bike</Table.HeaderCell>
+                <Table.HeaderCell>Period</Table.HeaderCell>
+                <Table.HeaderCell>Order Size</Table.HeaderCell>
+                <Table.HeaderCell />
+              </Table.HeaderRow>
+            }
+          >
+            {filtered.map((order) => {
+              const name = order.customers?.name || "Unknown";
+              const phone = order.customers?.phone || "N/A";
+              // TODO: replace with real bike relation once modelled.
+              const bike = "Standard E-Bike";
+              return (
+                <Table.Row key={order.id}>
+                  <Table.Cell>
+                    <div className="flex items-center gap-2">
+                      <Avatar size="small" square={true}>
+                        {name.charAt(0).toUpperCase()}
+                      </Avatar>
+                      <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
+                        {name}
+                      </span>
+                    </div>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
+                      {phone}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <span className="text-body font-body text-neutral-500">
+                      {bike}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <span className="whitespace-nowrap text-body font-body text-neutral-500">
+                      {formatRentalPeriod(order.starts_at, order.stops_at)}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <span className="text-body font-body text-neutral-500">
+                      {formatCentsToEuros(order.amount_in_cents)}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell>
+                    <div className="flex grow shrink-0 basis-0 items-center justify-end">
+                      <SubframeCore.DropdownMenu.Root>
+                        <SubframeCore.DropdownMenu.Trigger asChild={true}>
+                          <IconButton
+                            icon={<FeatherMoreHorizontal />}
+                            onClick={() => {}}
+                          />
+                        </SubframeCore.DropdownMenu.Trigger>
+                        <SubframeCore.DropdownMenu.Portal>
+                          <SubframeCore.DropdownMenu.Content
+                            side="bottom"
+                            align="end"
+                            sideOffset={4}
+                            asChild={true}
+                          >
+                            <DropdownMenu>
+                              <DropdownMenu.DropdownItem>
+                                Favorite
+                              </DropdownMenu.DropdownItem>
+                              <DropdownMenu.DropdownItem icon={<FeatherEdit2 />}>
+                                Edit
+                              </DropdownMenu.DropdownItem>
+                              <DropdownMenu.DropdownItem icon={<FeatherFlag />}>
+                                Report
+                              </DropdownMenu.DropdownItem>
+                            </DropdownMenu>
+                          </SubframeCore.DropdownMenu.Content>
+                        </SubframeCore.DropdownMenu.Portal>
+                      </SubframeCore.DropdownMenu.Root>
+                    </div>
+                  </Table.Cell>
+                </Table.Row>
+              );
+            })}
+          </Table>
+        )}
       </div>
     </div>
   );

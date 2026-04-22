@@ -5,25 +5,30 @@ import { usePathname, useRouter } from "next/navigation";
 import { Tabs } from "@/ui/components/Tabs";
 
 const TABS = [
-  { label: "Overview", href: "/partner/overview" },
-  { label: "Bookings", href: "/partner/bookings" },
-  { label: "Customers", href: "/partner/customers" },
+  { label: "Overview", segment: "overview" },
+  { label: "Bookings", segment: "bookings" },
+  { label: "Customers", segment: "customers" },
 ] as const;
 
-export function PartnerTabs() {
+interface PartnerTabsProps {
+  basePath?: string;
+}
+
+export function PartnerTabs({ basePath = "/partner" }: PartnerTabsProps) {
   const pathname = usePathname();
   const router = useRouter();
 
   return (
     <Tabs>
       {TABS.map((tab) => {
+        const href = `${basePath}/${tab.segment}`;
         const active =
-          pathname === tab.href || pathname?.startsWith(`${tab.href}/`);
+          pathname === href || pathname?.startsWith(`${href}/`);
         return (
           <Tabs.Item
-            key={tab.href}
+            key={href}
             active={active}
-            onClick={() => router.push(tab.href)}
+            onClick={() => router.push(href)}
           >
             {tab.label}
           </Tabs.Item>

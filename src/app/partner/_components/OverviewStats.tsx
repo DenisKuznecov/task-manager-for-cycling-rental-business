@@ -1,8 +1,7 @@
 import React from "react";
-import { RecentBookings } from "../_components/RecentBookings";
-import { SalesTrends } from "../_components/SalesTrends";
+import { SalesTrends } from "./SalesTrends";
 
-export default function PartnerOverviewPage() {
+export function OverviewStats() {
   return (
     <>
       <div className="flex w-full flex-wrap items-start rounded-md border border-solid border-neutral-border bg-default-background mobile:flex-col mobile:flex-nowrap mobile:gap-0">
@@ -36,7 +35,6 @@ export default function PartnerOverviewPage() {
       </div>
       <SalesTrends />
       <div className="flex h-px w-full flex-none flex-col items-center gap-2 bg-neutral-border" />
-      <RecentBookings />
     </>
   );
 }
