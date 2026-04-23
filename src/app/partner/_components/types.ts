@@ -20,6 +20,18 @@ export type PartnerOrder = {
   } | null;
 };
 
+export type PartnerBookingRow = {
+  id: string;
+  order_number: number | string | null;
+  status: PartnerOrderStatus | null;
+  starts_at: string;
+  stops_at: string;
+  amount_in_cents: number | null;
+  customer_name: string | null;
+  customer_email: string | null;
+  customer_phone: string | null;
+};
+
 export type PartnerRow = {
   id: string;
   name: string;

@@ -9,13 +9,18 @@ import {
 export default async function PartnerBookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; query?: string }>;
 }) {
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, query: queryParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
+  const query = queryParam ?? "";
 
   const { partner } = await resolveMyPartner();
-  const { orders, count } = await loadPartnerOrdersPage(partner?.id, page);
+  const { orders, count } = await loadPartnerOrdersPage(
+    partner?.id,
+    page,
+    query,
+  );
   const totalPages = Math.ceil(count / ORDERS_PAGE_SIZE);
 
   return (
@@ -23,6 +28,7 @@ export default async function PartnerBookingsPage({
       orders={orders}
       currentPage={page}
       totalPages={totalPages}
+      query={query}
     />
   );
 }

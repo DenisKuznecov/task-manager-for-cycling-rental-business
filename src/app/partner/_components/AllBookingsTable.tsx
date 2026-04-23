@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { Avatar } from "@/ui/components/Avatar";
 import { Button } from "@/ui/components/Button";
@@ -20,35 +20,55 @@ import {
   formatCentsToEuros,
   formatRentalPeriod,
 } from "@/src/utils/formatters";
-import type { PartnerOrder } from "./types";
+import type { PartnerBookingRow } from "./types";
 import { OrderStatusBadge } from "./OrderStatusBadge";
 
 interface AllBookingsTableProps {
-  orders: PartnerOrder[];
+  orders: PartnerBookingRow[];
   currentPage: number;
   totalPages: number;
+  query: string;
 }
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 export function AllBookingsTable({
   orders,
   currentPage,
   totalPages,
+  query,
 }: AllBookingsTableProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(query);
 
-  const filtered = orders.filter((order) => {
-    if (!search) return true;
-    const needle = search.toLowerCase();
-    const name = order.customers?.name ?? "";
-    return name.toLowerCase().includes(needle);
-  });
+  useEffect(() => {
+    setSearch(query);
+  }, [query]);
+
+  const buildHref = (nextQuery: string, nextPage: number) => {
+    const params = new URLSearchParams();
+    const trimmed = nextQuery.trim();
+    if (trimmed) params.set("query", trimmed);
+    if (nextPage !== 1) params.set("page", String(nextPage));
+    const queryString = params.toString();
+    return queryString ? `${pathname}?${queryString}` : pathname;
+  };
+
+  useEffect(() => {
+    if (search === query) return;
+
+    const handle = setTimeout(() => {
+      router.push(buildHref(search, 1));
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, query, pathname, router]);
 
   const handlePageChange = (newPage: number) => {
     if (newPage < 1 || newPage > totalPages || newPage === currentPage) return;
-    const href = newPage === 1 ? pathname : `${pathname}?page=${newPage}`;
-    router.push(href);
+    router.push(buildHref(query, newPage));
   };
 
   const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1);
@@ -61,7 +81,7 @@ export function AllBookingsTable({
         </span>
         <TextField label="" helpText="">
           <TextField.Input
-            placeholder="Search by name"
+            placeholder="Search by order #, name, or email"
             value={search}
             onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
               setSearch(event.target.value)
@@ -101,21 +121,22 @@ export function AllBookingsTable({
         </SubframeCore.DropdownMenu.Root>
       </div>
       <div className="flex w-full flex-col items-start gap-6 overflow-hidden overflow-x-auto mobile:overflow-auto mobile:max-w-full">
-        {filtered.length === 0 ? (
+        {orders.length === 0 ? (
           <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-solid border-neutral-border bg-default-background py-12">
             <span className="text-body-bold font-body-bold text-default-font text-center">
               No bookings found
             </span>
             <span className="text-body font-body text-subtext-color text-center">
-              {orders.length === 0
-                ? "New bookings will appear here as they come in."
-                : "Try adjusting your search."}
+              {query
+                ? "Try adjusting your search."
+                : "New bookings will appear here as they come in."}
             </span>
           </div>
         ) : (
           <Table
             header={
               <Table.HeaderRow>
+                <Table.HeaderCell>Order #</Table.HeaderCell>
                 <Table.HeaderCell>Customer</Table.HeaderCell>
                 <Table.HeaderCell>Phone</Table.HeaderCell>
                 <Table.HeaderCell>Bike</Table.HeaderCell>
@@ -126,13 +147,20 @@ export function AllBookingsTable({
               </Table.HeaderRow>
             }
           >
-            {filtered.map((order) => {
-              const name = order.customers?.name || "Unknown";
-              const phone = order.customers?.phone || "N/A";
+            {orders.map((order) => {
+              const name = order.customer_name || "Unknown";
+              const phone = order.customer_phone || "N/A";
+              const orderNumber =
+                order.order_number != null ? `#${order.order_number}` : "—";
               // TODO: replace with real bike relation once modelled.
               const bike = "Standard E-Bike";
               return (
                 <Table.Row key={order.id}>
+                  <Table.Cell>
+                    <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
+                      {orderNumber}
+                    </span>
+                  </Table.Cell>
                   <Table.Cell>
                     <div className="flex items-center gap-2">
                       <Avatar size="small" square={true}>

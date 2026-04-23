@@ -12,20 +12,25 @@ export default async function PartnerSlugBookingsPage({
   searchParams,
 }: {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; query?: string }>;
 }) {
-  const [{ slug }, { page: pageParam }] = await Promise.all([
+  const [{ slug }, { page: pageParam, query: queryParam }] = await Promise.all([
     params,
     searchParams,
   ]);
   const page = Math.max(1, Number(pageParam) || 1);
+  const query = queryParam ?? "";
 
   const partner = await resolvePartnerBySlug(slug);
   if (!partner) {
     notFound();
   }
 
-  const { orders, count } = await loadPartnerOrdersPage(partner.id, page);
+  const { orders, count } = await loadPartnerOrdersPage(
+    partner.id,
+    page,
+    query,
+  );
   const totalPages = Math.ceil(count / ORDERS_PAGE_SIZE);
 
   return (
@@ -33,6 +38,7 @@ export default async function PartnerSlugBookingsPage({
       orders={orders}
       currentPage={page}
       totalPages={totalPages}
+      query={query}
     />
   );
 }
