@@ -38,7 +38,7 @@ export function PartnerShell({
   }, [partner?.slug]);
 
   return (
-    <div className="container max-w-none flex h-full w-full flex-col items-start gap-8 bg-default-background py-12">
+    <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background pb-12">
       <div className="flex w-full flex-col items-start justify-end relative">
         <SubframeCore.Popover.Root open={copied}>
           <SubframeCore.Popover.Trigger asChild={true}>
