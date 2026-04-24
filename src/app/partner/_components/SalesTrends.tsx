@@ -2,7 +2,6 @@
 
 import React from "react";
 import { AreaChart } from "@/ui/components/AreaChart";
-import { Select } from "@/ui/components/Select";
 
 const SALES_DATA = [
   { Year: "2015", "Your Commission": 120, Orders: 110, "Total Order Value": 100 },
@@ -16,23 +15,12 @@ const SALES_DATA = [
 ];
 
 export function SalesTrends() {
-  const [timeframe, setTimeframe] = React.useState("month");
-
   return (
     <div className="flex w-full flex-col items-start gap-6">
       <div className="flex w-full items-center gap-2">
         <span className="grow shrink-0 basis-0 text-heading-3 font-heading-3 text-default-font">
           Sales Trends
         </span>
-        <Select
-          className="w-40 flex-none"
-          value={timeframe}
-          onValueChange={setTimeframe}
-        >
-          <Select.Item value="all-time">All Time</Select.Item>
-          <Select.Item value="month">Past month</Select.Item>
-          <Select.Item value="week">Past week</Select.Item>
-        </Select>
       </div>
       <AreaChart
         categories={["Total Order Value", "Orders", "Your Commission"]}
