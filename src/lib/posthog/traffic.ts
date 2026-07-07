@@ -42,6 +42,27 @@ WHERE event = '$pageview'
   ${timeframeClause(timeframe)}`;
 }
 
+type PostHogQueryResponse = {
+  results?: unknown;
+  error?: string | null;
+  detail?: string;
+  query_status?: { error?: boolean; error_message?: string | null };
+};
+
+const isDev = process.env.NODE_ENV === "development";
+
+/**
+ * Builds the Error thrown on a failed PostHog query. The message stays generic
+ * in production but includes the response detail in development so auth, scope,
+ * and HogQL syntax problems are debuggable from the thrown error alone.
+ */
+function hogQLError(status: number, detail: string | null): Error {
+  if (isDev && detail) {
+    return new Error(`PostHog query failed (${status}): ${detail}`);
+  }
+  return new Error(`PostHog query failed (${status})`);
+}
+
 async function runHogQLQuery(
   host: string,
   projectId: string,
@@ -60,15 +81,38 @@ async function runHogQLQuery(
       query: { kind: "HogQLQuery", query },
       refresh: "force_blocking",
     }),
-    next: { revalidate: REVALIDATE_SECONDS },
   });
 
-  if (!response.ok) {
-    throw new Error(`PostHog query failed (${response.status})`);
+  // Read the body as text first so we can log/inspect it even when it isn't
+  // valid JSON (e.g. an HTML error page from a proxy).
+  const rawBody = await response.text();
+  let json: PostHogQueryResponse | null = null;
+  try {
+    json = JSON.parse(rawBody) as PostHogQueryResponse;
+  } catch {
+    json = null;
   }
 
-  const json = (await response.json()) as { results?: unknown };
-  return Array.isArray(json.results) ? json.results : [];
+  if (!response.ok) {
+    console.error("runHogQLQuery:", {
+      status: response.status,
+      body: json ?? rawBody.slice(0, 500),
+    });
+    const detail =
+      json?.detail ?? json?.error ?? json?.query_status?.error_message ?? null;
+    throw hogQLError(response.status, detail);
+  }
+
+  // PostHog can return a 200 with the failure described inside the body.
+  const embeddedError =
+    json?.error ?? json?.detail ?? json?.query_status?.error_message ?? null;
+  if (embeddedError) {
+    console.error("runHogQLQuery:", { status: response.status, body: json });
+    throw hogQLError(response.status, embeddedError);
+  }
+
+  const results = json?.results;
+  return Array.isArray(results) ? results : [];
 }
 
 function toNumber(value: unknown): number {
