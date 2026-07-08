@@ -3,6 +3,9 @@ import type { BookingsTimeframe } from "@/src/lib/orders";
 import type { PartnerDailyTraffic } from "@/src/app/partner/_components/types";
 
 const DEFAULT_POSTHOG_HOST = "https://eu.i.posthog.com";
+const PRODUCTION_HOST = "www.echeloncyclinghub.com";
+const BOOK_BIKE_EVENT = "user_clicked_on_partner_book_bike";
+const BOOK_TOURS_EVENT = "user_clicked_on_partner_book_tours";
 
 // Traffic counts are near-real-time: our unstable_cache TTL is the single
 // source of staleness (max ~45s old), and each upstream call uses
@@ -10,36 +13,85 @@ const DEFAULT_POSTHOG_HOST = "https://eu.i.posthog.com";
 // (potentially older) cached query result.
 const REVALIDATE_SECONDS = 45;
 
-/**
- * Maps the dashboard time filter to a HogQL timestamp constraint. "all-time"
- * intentionally returns an empty string so the whole history is counted.
- */
-function timeframeClause(timeframe: BookingsTimeframe): string {
-  if (timeframe === "week") return "AND timestamp >= now() - INTERVAL 7 DAY";
-  if (timeframe === "month") return "AND timestamp >= now() - INTERVAL 30 DAY";
-  return "";
-}
-
 function dailySeriesQuery(pathname: string, timeframe: BookingsTimeframe): string {
   const escapedPath = pathname.replace(/'/g, "''");
+  const timeClause =
+    timeframe === "week"
+      ? "AND timestamp >= now() - INTERVAL 7 DAY"
+      : timeframe === "month"
+        ? "AND timestamp >= now() - INTERVAL 30 DAY"
+        : "";
   return `SELECT toDate(timestamp) AS day, count() AS views, count(DISTINCT distinct_id) AS visitors
 FROM events
 WHERE event = '$pageview'
   AND properties.$pathname = '${escapedPath}'
-  ${timeframeClause(timeframe)}
+  AND properties.$host = '${PRODUCTION_HOST}'
+  ${timeClause}
 GROUP BY day
 ORDER BY day`;
 }
 
-function windowTotalsQuery(pathname: string, timeframe: BookingsTimeframe): string {
+/**
+ * Returns six columns per row:
+ *   [0] views            – page-view count, current window
+ *   [1] visitors         – unique visitors, current window (exact COUNT DISTINCT)
+ *   [2] views_change_pct – integer % vs previous equal-length window, or NULL for all-time
+ *   [3] visitors_change_pct – same for unique visitors
+ *   [4] book_bike_people – distinct users who clicked Book Bike, current window
+ *   [5] book_tours_people – distinct users who clicked Book Tours, current window
+ *
+ * For week/month the outer WHERE restricts the full table scan to 2× the window
+ * so PostHog doesn't scan the whole event history.
+ *
+ * For all-time there is no comparable previous period; pct columns are literal
+ * NULL so the trend badge is hidden on the UI.
+ */
+function combinedTotalsQuery(pathname: string, timeframe: BookingsTimeframe): string {
   const escapedPath = pathname.replace(/'/g, "''");
-  // Window-wide unique visitors is NOT the sum of daily uniques, so it needs
-  // its own count(DISTINCT ...) over the whole timeframe.
-  return `SELECT count() AS views, count(DISTINCT distinct_id) AS visitors
+
+  if (timeframe === "all-time") {
+    // HogQL requires explicit ELSE NULL in CASE WHEN expressions.
+    return `SELECT
+  countIf(event = '$pageview') AS views,
+  count(DISTINCT CASE WHEN event = '$pageview' THEN distinct_id ELSE NULL END) AS visitors,
+  NULL AS views_change_pct,
+  NULL AS visitors_change_pct,
+  count(DISTINCT CASE WHEN event = '${BOOK_BIKE_EVENT}' THEN distinct_id ELSE NULL END) AS book_bike_people,
+  count(DISTINCT CASE WHEN event = '${BOOK_TOURS_EVENT}' THEN distinct_id ELSE NULL END) AS book_tours_people
 FROM events
-WHERE event = '$pageview'
-  AND properties.$pathname = '${escapedPath}'
-  ${timeframeClause(timeframe)}`;
+WHERE properties.$pathname = '${escapedPath}'
+  AND properties.$host = '${PRODUCTION_HOST}'`;
+  }
+
+  const days = timeframe === "week" ? 7 : 30;
+  const doubleDays = days * 2;
+  const curr = `timestamp >= now() - INTERVAL ${days} DAY`;
+  // Previous window = equally-sized window immediately before the current one.
+  const prev = `timestamp >= now() - INTERVAL ${doubleDays} DAY AND timestamp < now() - INTERVAL ${days} DAY`;
+
+  // toFloat on both operands before subtraction ensures float arithmetic
+  // (avoids UInt64 wraparound on negative deltas) and float division.
+  // nullIf(..., 0) propagates NULL instead of divide-by-zero when there are no
+  // events in the previous window; round() of NULL stays NULL.
+  // HogQL requires explicit ELSE NULL in CASE WHEN expressions.
+  return `SELECT
+  countIf(event = '$pageview' AND ${curr}) AS views,
+  count(DISTINCT CASE WHEN event = '$pageview' AND ${curr} THEN distinct_id ELSE NULL END) AS visitors,
+  round(
+    (toFloat(countIf(event = '$pageview' AND ${curr})) - toFloat(countIf(event = '$pageview' AND ${prev})))
+    / nullIf(toFloat(countIf(event = '$pageview' AND ${prev})), 0) * 100
+  ) AS views_change_pct,
+  round(
+    (toFloat(count(DISTINCT CASE WHEN event = '$pageview' AND ${curr} THEN distinct_id ELSE NULL END))
+     - toFloat(count(DISTINCT CASE WHEN event = '$pageview' AND ${prev} THEN distinct_id ELSE NULL END)))
+    / nullIf(toFloat(count(DISTINCT CASE WHEN event = '$pageview' AND ${prev} THEN distinct_id ELSE NULL END)), 0) * 100
+  ) AS visitors_change_pct,
+  count(DISTINCT CASE WHEN event = '${BOOK_BIKE_EVENT}' AND ${curr} THEN distinct_id ELSE NULL END) AS book_bike_people,
+  count(DISTINCT CASE WHEN event = '${BOOK_TOURS_EVENT}' AND ${curr} THEN distinct_id ELSE NULL END) AS book_tours_people
+FROM events
+WHERE properties.$pathname = '${escapedPath}'
+  AND properties.$host = '${PRODUCTION_HOST}'
+  AND timestamp >= now() - INTERVAL ${doubleDays} DAY`;
 }
 
 type PostHogQueryResponse = {
@@ -120,10 +172,20 @@ function toNumber(value: unknown): number {
   return Number.isFinite(parsed) ? parsed : 0;
 }
 
+function toNullableNumber(value: unknown): number | null {
+  if (value === null || value === undefined) return null;
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
 type TrafficResult = {
   dailyTraffic: PartnerDailyTraffic[];
   totalViews: number;
   totalVisitors: number;
+  viewsChangePct: number | null;
+  visitorsChangePct: number | null;
+  bookBikePeople: number;
+  bookToursPeople: number;
 };
 
 async function fetchTraffic(
@@ -135,7 +197,7 @@ async function fetchTraffic(
 ): Promise<TrafficResult> {
   const [dailyRows, totalRows] = await Promise.all([
     runHogQLQuery(host, projectId, apiKey, dailySeriesQuery(pathname, timeframe)),
-    runHogQLQuery(host, projectId, apiKey, windowTotalsQuery(pathname, timeframe)),
+    runHogQLQuery(host, projectId, apiKey, combinedTotalsQuery(pathname, timeframe)),
   ]);
 
   const dailyTraffic: PartnerDailyTraffic[] = dailyRows
@@ -151,18 +213,27 @@ async function fetchTraffic(
     })
     .filter((row) => row.date.length > 0);
 
-  const totalsRow = Array.isArray(totalRows[0]) ? (totalRows[0] as unknown[]) : [];
+  // Combined totals row columns:
+  //   [0] views  [1] visitors  [2] views_change_pct  [3] visitors_change_pct
+  //   [4] book_bike_people  [5] book_tours_people
+  const totals = Array.isArray(totalRows[0]) ? (totalRows[0] as unknown[]) : [];
 
   return {
     dailyTraffic,
-    totalViews: toNumber(totalsRow[0]),
-    totalVisitors: toNumber(totalsRow[1]),
+    totalViews: toNumber(totals[0]),
+    totalVisitors: toNumber(totals[1]),
+    viewsChangePct: toNullableNumber(totals[2]),
+    visitorsChangePct: toNullableNumber(totals[3]),
+    bookBikePeople: toNumber(totals[4]),
+    bookToursPeople: toNumber(totals[5]),
   };
 }
 
 /**
  * Loads a partner's promo-page traffic (daily series + window totals) from
  * PostHog, aligned to the dashboard's time filter.
+ *
+ * Only events from the production host (www.echeloncyclinghub.com) are counted.
  *
  * Never throws: missing config, network failures, and empty states all resolve
  * to an empty result so the rest of the dashboard still renders.
@@ -174,9 +245,21 @@ export async function loadPartnerTraffic(
   dailyTraffic: PartnerDailyTraffic[];
   totalViews: number;
   totalVisitors: number;
+  viewsChangePct: number | null;
+  visitorsChangePct: number | null;
+  bookBikePeople: number;
+  bookToursPeople: number;
   error: string | null;
 }> {
-  const empty = { dailyTraffic: [], totalViews: 0, totalVisitors: 0 };
+  const empty = {
+    dailyTraffic: [],
+    totalViews: 0,
+    totalVisitors: 0,
+    viewsChangePct: null,
+    visitorsChangePct: null,
+    bookBikePeople: 0,
+    bookToursPeople: 0,
+  };
 
   if (!slug) return { ...empty, error: null };
 
@@ -201,9 +284,11 @@ export async function loadPartnerTraffic(
     // (GET-only) won't cache. unstable_cache gives us caching whose key + tag
     // both include the timeframe, so switching filters resolves the right entry
     // (one cache entry per (pathname, timeframe); two upstream POSTs on a miss).
+    // "v2" in the key busts any stale cache entries from before the combined
+    // totals query was introduced (old entries only had totalViews/totalVisitors).
     const getCachedTraffic = unstable_cache(
       () => fetchTraffic(host, projectId, apiKey, pathname, timeframe),
-      ["partner-traffic", pathname, timeframe],
+      ["partner-traffic", "v2", pathname, timeframe],
       {
         revalidate: REVALIDATE_SECONDS,
         tags: [`posthog:traffic:${pathname}:${timeframe}`],
@@ -211,7 +296,9 @@ export async function loadPartnerTraffic(
     );
 
     const result = await getCachedTraffic();
-    return { ...result, error: null };
+    // Spread empty first so any field missing from a partially-stale cached
+    // entry falls back to its safe default instead of becoming undefined.
+    return { ...empty, ...result, error: null };
   } catch (err) {
     console.error("loadPartnerTraffic:", err);
     return { ...empty, error: "Couldn't load traffic." };

@@ -26,6 +26,10 @@ export async function TrafficStatsSection({
       dailyTraffic={traffic.dailyTraffic}
       totalViews={traffic.totalViews}
       totalVisitors={traffic.totalVisitors}
+      viewsChangePct={traffic.viewsChangePct}
+      visitorsChangePct={traffic.visitorsChangePct}
+      bookBikePeople={traffic.bookBikePeople}
+      bookToursPeople={traffic.bookToursPeople}
       error={traffic.error}
     />
   );
