@@ -1,6 +1,8 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { RecentBookings } from "../../_components/RecentBookings";
 import { OverviewStats } from "../../_components/OverviewStats";
+import { TrafficStatsSection } from "../../_components/TrafficStatsSection";
+import { TrafficStatsSkeleton } from "../../_components/TrafficStatsSkeleton";
 import { DataLoadError } from "@/src/components/DataLoadError";
 import { resolveMyPartner } from "../../_lib/resolvePartner";
 import {
@@ -21,11 +23,17 @@ export default async function PartnerOverviewPage({
   const startDate = computeDateThreshold(timeframe);
 
   const { partner } = await resolveMyPartner();
-  const { orders: recentOrders, error: recentOrdersError } =
-    await loadRecentOrders(partner?.id);
-  const { stats: dailyStats, error: dailyStatsError } =
-    await loadPartnerDailyStats(partner?.id, startDate);
+  const [
+    { orders: recentOrders, error: recentOrdersError },
+    { stats: dailyStats, error: dailyStatsError },
+  ] = await Promise.all([
+    loadRecentOrders(partner?.id),
+    loadPartnerDailyStats(partner?.id, startDate),
+  ]);
 
+  // Traffic comes from an external best-effort source (PostHog); its failures
+  // are surfaced inside TrafficStats only, never in the main sales banner. It
+  // also streams independently so a slow PostHog query never gates the rest.
   const loadError = dailyStatsError ?? recentOrdersError;
 
   let commissionRate = 0;
@@ -48,6 +56,12 @@ export default async function PartnerOverviewPage({
         timeframe={timeframe}
         partnerId={partner?.id ?? ""}
       />
+      <Suspense
+        key={`traffic-${partner?.slug ?? ""}-${timeframe}`}
+        fallback={<TrafficStatsSkeleton />}
+      >
+        <TrafficStatsSection slug={partner?.slug} timeframe={timeframe} />
+      </Suspense>
       <RecentBookings orders={recentOrders} viewAllHref="/partner/bookings" />
     </>
   );
