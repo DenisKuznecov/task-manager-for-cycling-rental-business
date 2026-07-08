@@ -34,7 +34,6 @@ export const resolveMyPartner = cache(async (): Promise<ResolvedMyPartner> => {
     userId: user.id,
     role: profile?.role ?? null,
     partner,
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     onboardingCompletedAt: (profile as any)?.onboarding_completed_at ?? null,
   };
 });
