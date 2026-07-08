@@ -54,10 +54,11 @@ export function RecentBookings({
         {orders.length === 0 ? (
           <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-solid border-neutral-border bg-default-background py-12">
             <span className="text-body-bold font-body-bold text-default-font text-center">
-              No bookings found
+              No bookings yet
             </span>
             <span className="text-body font-body text-subtext-color text-center">
-              New bookings will appear here as they come in.
+              Share your partner link to get your first bookings — they&apos;ll
+              appear here as they come in.
             </span>
           </div>
         ) : (
