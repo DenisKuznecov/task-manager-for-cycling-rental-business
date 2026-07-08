@@ -15,6 +15,8 @@ export {
   computeDateThreshold,
 } from "@/src/lib/orders";
 export type { BookingsTimeframe } from "@/src/lib/orders";
+export { loadPartnerTraffic } from "@/src/lib/posthog/traffic";
+export type { PartnerDailyTraffic } from "../_components/types";
 
 const RECENT_ORDERS_LIMIT = 5;
 

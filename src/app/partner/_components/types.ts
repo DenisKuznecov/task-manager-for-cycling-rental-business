@@ -50,3 +50,15 @@ export type PartnerDailyChartPoint = {
   "Total Order Value": number;
   "Your Commission": number;
 };
+
+export type PartnerDailyTraffic = {
+  date: string;
+  views: number;
+  visitors: number;
+};
+
+export type PartnerTrafficChartPoint = {
+  Date: string;
+  "Page Views": number;
+  "Unique Visitors": number;
+};

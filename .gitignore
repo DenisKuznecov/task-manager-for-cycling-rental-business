@@ -42,3 +42,9 @@ next-env.d.ts
 
 # supabase
 supabase/seed.sql
+
+# docs
+docs/
+
+# claude
+.claude/
