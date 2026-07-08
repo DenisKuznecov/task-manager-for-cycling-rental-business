@@ -6,6 +6,7 @@ export type ResolvedMyPartner = {
   userId: string;
   role: string | null;
   partner: PartnerRow | null;
+  onboardingCompletedAt: string | null;
 };
 
 export const resolveMyPartner = cache(async (): Promise<ResolvedMyPartner> => {
@@ -15,13 +16,13 @@ export const resolveMyPartner = cache(async (): Promise<ResolvedMyPartner> => {
   } = await supabase.auth.getUser();
 
   if (!user) {
-    return { userId: "", role: null, partner: null };
+    return { userId: "", role: null, partner: null, onboardingCompletedAt: null };
   }
 
   const { data: profile } = await supabase
     .from("profiles")
     .select(
-      "role, partners(id, name, location, promo_code, slug, commission_rate, hero_image_url)",
+      "role, onboarding_completed_at, partners(id, name, location, promo_code, slug, commission_rate, hero_image_url)",
     )
     .eq("id", user.id)
     .single();
@@ -33,6 +34,8 @@ export const resolveMyPartner = cache(async (): Promise<ResolvedMyPartner> => {
     userId: user.id,
     role: profile?.role ?? null,
     partner,
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    onboardingCompletedAt: (profile as any)?.onboarding_completed_at ?? null,
   };
 });
 
