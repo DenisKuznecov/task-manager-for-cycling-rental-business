@@ -39,7 +39,7 @@ export default async function HeadquartersLayout({
   }
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-y-auto bg-default-background">
+    <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto bg-default-background">
       <div className="flex min-h-full w-full flex-1 flex-col">{children}</div>
     </div>
   );
