@@ -20,6 +20,11 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "manager", "mechanic"],
     href: "/workshop",
   },
+  {
+    label: "Contact",
+    roles: ["admin", "manager", "mechanic", "partner"],
+    href: "/contact",
+  },
 ];
 
 export function isPartnersRoute(pathname: string | null): boolean {

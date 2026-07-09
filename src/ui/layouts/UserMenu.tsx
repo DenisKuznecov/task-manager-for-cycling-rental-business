@@ -2,7 +2,7 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { FeatherBookOpen, FeatherLogOut } from "@subframe/core";
+import { FeatherBookOpen, FeatherLogOut, FeatherMail } from "@subframe/core";
 import * as SubframeCore from "@subframe/core";
 import { useHasRole, useUser } from "@/src/context/UserContext";
 import { Avatar } from "../components/Avatar";
@@ -46,16 +46,20 @@ export function UserMenu({ userEmail, avatarInitial }: UserMenuProps) {
           >
             <DropdownMenu className="z-20">
               {canViewWiki ? (
-                <>
-                  <DropdownMenu.DropdownItem
-                    icon={<FeatherBookOpen />}
-                    onClick={() => router.push("/wiki")}
-                  >
-                    Wiki
-                  </DropdownMenu.DropdownItem>
-                  <DropdownMenu.DropdownDivider />
-                </>
+                <DropdownMenu.DropdownItem
+                  icon={<FeatherBookOpen />}
+                  onClick={() => router.push("/wiki")}
+                >
+                  Wiki
+                </DropdownMenu.DropdownItem>
               ) : null}
+              <DropdownMenu.DropdownItem
+                icon={<FeatherMail />}
+                onClick={() => router.push("/contact")}
+              >
+                Contact Us
+              </DropdownMenu.DropdownItem>
+              <DropdownMenu.DropdownDivider />
               <DropdownMenu.DropdownItem
                 icon={<FeatherLogOut />}
                 onClick={handleLogout}
