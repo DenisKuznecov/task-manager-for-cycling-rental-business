@@ -3,7 +3,7 @@
 import React, { useMemo } from "react";
 import { FeatherArrowUpRight, FeatherArrowDownRight } from "@subframe/core";
 import { Badge } from "@/ui/components/Badge";
-import { AreaChart } from "@/ui/components/AreaChart";
+import { BarChart } from "@/ui/components/BarChart";
 import { DataLoadError } from "@/src/components/DataLoadError";
 import type {
   PartnerDailyTraffic,
@@ -116,7 +116,7 @@ export function TrafficStats({
       {error ? (
         <DataLoadError title="Couldn't load traffic" message={error} />
       ) : hasData ? (
-        <AreaChart
+        <BarChart
           categories={["Page Views", "Unique Visitors"]}
           data={chartData}
           index="Date"
