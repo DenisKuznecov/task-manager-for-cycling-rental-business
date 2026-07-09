@@ -32,7 +32,7 @@ export function PageScrollArea({ isPending, children }: PageScrollAreaProps) {
   return (
     <div
       data-app-scroll-container
-      className="relative flex min-h-0 w-full grow shrink-0 basis-0 flex-col overflow-y-auto bg-default-background"
+      className="relative flex min-h-0 w-full flex-1 flex-col overflow-y-auto bg-default-background"
     >
       <div
         className={SubframeUtils.twClassNames(
