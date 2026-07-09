@@ -24,8 +24,6 @@ export function UserMenu({ userEmail, avatarInitial }: UserMenuProps) {
 
   const handleLogout = async () => {
     await signOut();
-    router.push("/login");
-    router.refresh();
   };
 
   return (
