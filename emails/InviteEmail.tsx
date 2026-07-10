@@ -36,7 +36,7 @@ import {
   
             {/* Body Text */}
             <Text className="mb-6 text-center text-base text-gray-700">
-              You have been invited to create a user on {"{{ .SiteURL }}"}. Follow this link to accept the invite:
+              You have been invited to create a user on Echelon Cycling Hub Partner Portal. Follow this link to accept the invite:
             </Text>
   
             {/* Action Button */}
