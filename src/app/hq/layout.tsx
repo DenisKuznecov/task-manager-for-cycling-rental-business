@@ -1,5 +1,6 @@
 import React from "react";
 import { redirect } from "next/navigation";
+import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 import { createClient } from "@/src/utils/supabase/server";
 
 const ALLOWED_ROLES = ["admin", "manager"] as const;
@@ -38,9 +39,5 @@ export default async function HeadquartersLayout({
     redirect("/unauthorized");
   }
 
-  return (
-    <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto bg-default-background">
-      <div className="flex min-h-full w-full flex-1 flex-col">{children}</div>
-    </div>
-  );
+  return <DefaultPageLayout>{children}</DefaultPageLayout>;
 }
