@@ -22,7 +22,7 @@ export default function HeadquartersPage() {
       </div>
 
       <div className="grid w-full grid-cols-1 gap-6 md:grid-cols-3">
-        {/* UTM Builder */}
+        {/* Marketing Links */}
         <div className="flex flex-col items-start gap-4 rounded-md border border-solid border-neutral-border bg-default-background p-6">
           <IconWithBackground
             size="large"
@@ -31,18 +31,18 @@ export default function HeadquartersPage() {
           />
           <div className="flex w-full flex-col items-start gap-1">
             <span className="text-heading-3 font-heading-3 text-default-font">
-              UTM Builder
+              Marketing Links
             </span>
             <span className="text-body font-body text-subtext-color">
-              Generate trackable UTM links for partners to promote services and
-              track commissions.
+              Generate and manage trackable UTM short links for partners to
+              promote services and track commissions.
             </span>
           </div>
           <LinkButton
             variant="brand"
-            onClick={() => router.push("/hq/utm-builder")}
+            onClick={() => router.push("/hq/links")}
           >
-            Open UTM Builder
+            Open Link Manager
           </LinkButton>
         </div>
 

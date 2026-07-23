@@ -1,13 +1,22 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useMemo, useState } from "react";
 import { useForm, Controller } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useRouter } from "next/navigation";
+import {
+  FeatherAlertTriangle,
+  FeatherCheckCircle,
+  FeatherLink,
+} from "@subframe/core";
+import { Badge } from "@/ui/components/Badge";
 import { Button } from "@/ui/components/Button";
 import { CopyToClipboardButton } from "@/ui/components/CopyToClipboardButton";
+import { LinkButton } from "@/ui/components/LinkButton";
 import { Select } from "@/ui/components/Select";
 import { TextField } from "@/ui/components/TextField";
+import { Toast } from "@/ui/components/Toast";
 import { ToggleGroup } from "@/ui/components/ToggleGroup";
 
 // ---------------------------------------------------------------------------
@@ -42,7 +51,7 @@ const utmFormSchema = z
 type UtmFormValues = z.infer<typeof utmFormSchema>;
 
 // ---------------------------------------------------------------------------
-// Component
+// Types
 // ---------------------------------------------------------------------------
 
 export interface Partner {
@@ -54,14 +63,27 @@ interface UtmBuilderFormProps {
   partners: Partner[];
 }
 
+interface SuccessState {
+  shortUrl: string;
+  isExisting: boolean;
+  message: string;
+}
+
+// ---------------------------------------------------------------------------
+// Component
+// ---------------------------------------------------------------------------
+
 export function UtmBuilderForm({ partners }: UtmBuilderFormProps) {
+  const router = useRouter();
+
   const {
     register,
     handleSubmit,
     control,
     watch,
     setValue,
-    formState: { errors },
+    reset,
+    formState: { errors, isSubmitting },
   } = useForm<UtmFormValues>({
     resolver: zodResolver(utmFormSchema),
     mode: "onBlur",
@@ -78,6 +100,9 @@ export function UtmBuilderForm({ partners }: UtmBuilderFormProps) {
       campaignContent: "",
     },
   });
+
+  const [successState, setSuccessState] = useState<SuccessState | null>(null);
+  const [submitError, setSubmitError] = useState<string | null>(null);
 
   const [
     assignment,
@@ -123,14 +148,52 @@ export function UtmBuilderForm({ partners }: UtmBuilderFormProps) {
     campaignContent,
   ]);
 
-  const onSubmit = handleSubmit((values) => {
-    console.log({
-      title: values.title,
-      assignment: values.assignment,
-      partnerId: values.assignment === "partner" ? (values.partnerId ?? null) : null,
-      longUrl,
+  const onSubmit = handleSubmit(async (values) => {
+    // Clear previous feedback on each attempt.
+    setSubmitError(null);
+    setSuccessState(null);
+
+    const resolvedPartnerId =
+      values.assignment === "partner" ? (values.partnerId ?? null) : null;
+
+    let response: Response;
+    try {
+      response = await fetch("/api/links/create", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          longUrl,
+          title: values.title,
+          partnerId: resolvedPartnerId,
+          assignment: values.assignment,
+        }),
+      });
+    } catch {
+      setSubmitError(
+        "Network error — please check your connection and try again."
+      );
+      return;
+    }
+
+    const data = await response.json();
+
+    if (!response.ok) {
+      setSubmitError(data.error ?? "An unexpected error occurred.");
+      return;
+    }
+
+    setSuccessState({
+      shortUrl: data.shortUrl,
+      isExisting: data.isExisting,
+      message: data.message,
     });
   });
+
+  const handleCreateAnother = () => {
+    reset();
+    setSuccessState(null);
+    setSubmitError(null);
+  };
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-6">
@@ -357,15 +420,76 @@ export function UtmBuilderForm({ partners }: UtmBuilderFormProps) {
           />
         </div>
 
-        {/* Generate Short Link */}
-        <Button
-          type="submit"
-          variant="brand-primary"
-          size="large"
-          className="self-start"
-        >
-          Generate Short Link
-        </Button>
+        {/* ----- Success card ----- */}
+        {successState ? (
+          <div className="flex flex-col gap-4 rounded-md border border-solid border-neutral-border bg-neutral-50 p-5">
+            <div className="flex items-center gap-2">
+              <Badge
+                variant={successState.isExisting ? "warning" : "success"}
+              >
+                {successState.isExisting ? "Existing Link Found" : "Link Created"}
+              </Badge>
+              <span className="text-body font-body text-subtext-color">
+                {successState.message}
+              </span>
+            </div>
+
+            <div className="flex items-end gap-2">
+              <TextField className="w-full" label="Short URL">
+                <TextField.Input
+                  readOnly
+                  value={successState.shortUrl}
+                  className="cursor-default select-all font-mono"
+                />
+              </TextField>
+              <CopyToClipboardButton
+                clipboardText={successState.shortUrl}
+                tooltipText="Copy short URL"
+              />
+            </div>
+
+            <div className="flex flex-wrap items-center gap-3">
+              <Button
+                variant="brand-primary"
+                size="medium"
+                icon={<FeatherLink />}
+                onClick={handleCreateAnother}
+              >
+                Create Another Link
+              </Button>
+              <LinkButton
+                variant="brand"
+                onClick={() => router.push("/hq/links")}
+              >
+                View All Links
+              </LinkButton>
+            </div>
+          </div>
+        ) : (
+          /* ----- Submit button + inline error ----- */
+          <div className="flex flex-col gap-3">
+            <Button
+              type="submit"
+              variant="brand-primary"
+              size="large"
+              className="self-start"
+              loading={isSubmitting}
+              disabled={isSubmitting}
+              icon={<FeatherCheckCircle />}
+            >
+              Generate Short Link
+            </Button>
+
+            {submitError ? (
+              <Toast
+                variant="error"
+                icon={<FeatherAlertTriangle />}
+                title="Could not generate link"
+                description={submitError}
+              />
+            ) : null}
+          </div>
+        )}
       </div>
     </form>
   );
