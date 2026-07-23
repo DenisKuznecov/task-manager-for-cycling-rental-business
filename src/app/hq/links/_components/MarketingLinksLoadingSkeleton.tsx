@@ -1,11 +1,13 @@
 import React from "react";
 import { SkeletonText } from "@/ui/components/SkeletonText";
+import { MarketingLinksBreadcrumbs } from "./MarketingLinksBreadcrumbs";
 
 const TABLE_ROW_COUNT = 8;
 
 export function MarketingLinksLoadingSkeleton() {
   return (
     <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12">
+      <MarketingLinksBreadcrumbs />
       <div className="flex w-full items-center justify-between">
         <div className="flex flex-col items-start gap-2">
           <span className="text-heading-1 font-heading-1 text-default-font">
