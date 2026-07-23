@@ -21,26 +21,7 @@ import type { MarketingLinkRow } from "@/src/lib/marketing-links";
 import type { PartnerOption } from "../page";
 import { LinkDeleteDialog } from "./LinkDeleteDialog";
 import { QrCodeDialog } from "./QrCodeDialog";
-
-const UTM_KEYS = [
-  "utm_source",
-  "utm_medium",
-  "utm_campaign",
-  "utm_term",
-  "utm_content",
-] as const;
-
-function parseUtmParams(url: string): Array<{ key: string; value: string }> {
-  try {
-    const parsed = new URL(url);
-    return UTM_KEYS.filter((k) => parsed.searchParams.has(k)).map((k) => ({
-      key: k,
-      value: parsed.searchParams.get(k)!,
-    }));
-  } catch {
-    return [];
-  }
-}
+import { parseUtmParams } from "@/src/utils/utm";
 
 interface MarketingLinksTableProps {
   links: MarketingLinkRow[];

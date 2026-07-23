@@ -9,6 +9,13 @@ import type {
   PartnerOrder,
 } from "../_components/types";
 
+export interface PartnerMarketingLink {
+  id: string;
+  title: string;
+  short_url: string;
+  long_url: string;
+}
+
 export {
   ORDERS_PAGE_SIZE,
   resolveTimeframe,
@@ -71,6 +78,26 @@ export async function loadPartnerDailyStats(
   }
 
   return { stats: (data as PartnerDailyStat[] | null) ?? [], error: null };
+}
+
+export async function loadPartnerMarketingLinks(
+  partnerId: string | null | undefined,
+): Promise<{ links: PartnerMarketingLink[]; error: string | null }> {
+  if (!partnerId) return { links: [], error: null };
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("marketing_links")
+    .select("id, title, short_url, long_url")
+    .eq("partner_id", partnerId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("loadPartnerMarketingLinks:", error);
+    return { links: [], error: error.message };
+  }
+
+  return { links: (data as PartnerMarketingLink[] | null) ?? [], error: null };
 }
 
 export function normalizeCommissionRate(
