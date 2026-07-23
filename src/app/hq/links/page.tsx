@@ -1,12 +1,51 @@
-"use client";
-
 import React from "react";
-import { useRouter } from "next/navigation";
 import { FeatherPlus } from "@subframe/core";
 import { Button } from "@/ui/components/Button";
+import { createClient } from "@/src/utils/supabase/server";
+import { DataLoadError } from "@/src/components/DataLoadError";
+import {
+  MARKETING_LINKS_PAGE_SIZE,
+  loadMarketingLinksPage,
+} from "@/src/lib/marketing-links";
+import { MarketingLinksTable } from "./_components/MarketingLinksTable";
 
-export default function MarketingLinksPage() {
-  const router = useRouter();
+export type PartnerOption = { id: string; name: string };
+
+export default async function MarketingLinksPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    page?: string;
+    limit?: string;
+    query?: string;
+    assignment?: string;
+  }>;
+}) {
+  const {
+    page: pageParam,
+    limit: limitParam,
+    query: queryParam,
+    assignment: assignmentParam,
+  } = await searchParams;
+
+  const page = Math.max(1, Number(pageParam) || 1);
+  const limit = Math.max(1, Number(limitParam) || MARKETING_LINKS_PAGE_SIZE);
+  const query = queryParam ?? "";
+  const assignment = assignmentParam ?? "";
+
+  const supabase = await createClient();
+
+  const [linksResult, partnersResult] = await Promise.all([
+    loadMarketingLinksPage(page, limit, query, assignment),
+    supabase.from("partners").select("id, name").order("name", { ascending: true }),
+  ]);
+
+  if (partnersResult.error) {
+    console.error("MarketingLinksPage: failed to load partners", partnersResult.error);
+  }
+
+  const partners: PartnerOption[] = (partnersResult.data as PartnerOption[] | null) ?? [];
+  const totalPages = Math.ceil(linksResult.count / limit);
 
   return (
     <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12">
@@ -20,24 +59,28 @@ export default function MarketingLinksPage() {
             promotions.
           </span>
         </div>
-        <Button
-          variant="brand-primary"
-          icon={<FeatherPlus />}
-          onClick={() => router.push("/hq/utm-builder")}
-        >
-          Create Link
-        </Button>
+        <a href="/hq/utm-builder">
+          <Button variant="brand-primary" icon={<FeatherPlus />}>
+            Create Link
+          </Button>
+        </a>
       </div>
 
-      {/* Placeholder — link directory coming soon */}
-      <div className="flex w-full flex-col items-center gap-3 rounded-md border border-dashed border-neutral-border bg-neutral-50 py-16">
-        <span className="text-heading-3 font-heading-3 text-neutral-400">
-          Link directory coming soon
-        </span>
-        <span className="text-body font-body text-neutral-400">
-          Links you create will appear here.
-        </span>
-      </div>
+      {linksResult.error ? (
+        <DataLoadError
+          title="Couldn't load marketing links"
+          message={linksResult.error}
+        />
+      ) : null}
+
+      <MarketingLinksTable
+        links={linksResult.links}
+        partners={partners}
+        currentPage={page}
+        totalPages={totalPages}
+        query={query}
+        assignment={assignment}
+      />
     </div>
   );
 }
