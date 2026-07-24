@@ -1,13 +1,14 @@
 "use client";
 
 import React from "react";
-import { PartnerTabs } from "./PartnerTabs";
 import { FeatherLink } from "@subframe/core";
-import * as SubframeCore from "@subframe/core";
+import { PartnerTabs } from "./PartnerTabs";
+import { MarketingLinksDialog } from "./MarketingLinksDialog";
 
 interface PartnerShellProps {
   children: React.ReactNode;
   partner: {
+    id: string;
     name: string;
     location: string;
     promo_code: string;
@@ -24,49 +25,31 @@ export function PartnerShell({
 }: PartnerShellProps) {
   const partnerName = partner?.name || "Partner";
   const heroImageUrl = partner?.hero_image_url ?? null;
-  const [copied, setCopied] = React.useState(false);
-
-  const handleCopyPartnerLink = React.useCallback(async () => {
-    if (!partner?.slug) return;
-    const url = `https://www.echeloncyclinghub.com/partners${partner.slug}`;
-    try {
-      await navigator.clipboard.writeText(url);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 2000);
-    } catch (err) {
-      console.error("Failed to copy partner link", err);
-    }
-  }, [partner?.slug]);
+  const [dialogOpen, setDialogOpen] = React.useState(false);
 
   return (
     <div className="container max-w-none isolate flex w-full flex-col items-start gap-8 bg-default-background pb-12">
       <div className="flex w-full flex-col items-start justify-end relative">
-        <SubframeCore.Popover.Root open={copied}>
-          <SubframeCore.Popover.Trigger asChild={true}>
+        {partner?.id ? (
+          <>
             <button
               type="button"
-              onClick={handleCopyPartnerLink}
+              onClick={() => setDialogOpen(true)}
               className="flex items-center justify-center gap-2 rounded-lg bg-default-background px-4 py-2.5 shadow-lg absolute right-5 top-5 z-10 cursor-pointer border-none"
             >
               <FeatherLink className="text-body font-body text-default-font" />
               <span className="text-body font-body text-default-font m-0">
-                Copy Partner Link
+                Marketing Links
               </span>
             </button>
-          </SubframeCore.Popover.Trigger>
-          <SubframeCore.Popover.Portal>
-            <SubframeCore.Popover.Content
-              side="bottom"
-              align="center"
-              sideOffset={4}
-              asChild={true}
-            >
-              <div className="flex flex-col items-start gap-1 rounded-md border border-solid border-neutral-border bg-default-background px-2 py-2 shadow-lg">
-                <span className="text-body font-body text-default-font">Copied!</span>
-              </div>
-            </SubframeCore.Popover.Content>
-          </SubframeCore.Popover.Portal>
-        </SubframeCore.Popover.Root>
+            <MarketingLinksDialog
+              open={dialogOpen}
+              onOpenChange={setDialogOpen}
+              partnerId={partner.id}
+              partnerSlug={partner.slug}
+            />
+          </>
+        ) : null}
         <div className="flex flex-col items-start gap-4 rounded-lg bg-default-background pl-6 pr-4 py-4 shadow-lg absolute left-6 -bottom-6 z-10">
           <span className="text-heading-2 font-heading-2 text-default-font m-0">
             {partnerName}
