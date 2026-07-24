@@ -62,3 +62,14 @@ export type PartnerTrafficChartPoint = {
   "Page Views": number;
   "Unique Visitors": number;
 };
+
+export type PartnerUtmBreakdownRow = {
+  /** Normalized (lowercased, trimmed) UTM value; null for views without UTMs. */
+  label: string | null;
+  views: number;
+};
+
+export type PartnerUtmBreakdown = {
+  source: PartnerUtmBreakdownRow[];
+  medium: PartnerUtmBreakdownRow[];
+};

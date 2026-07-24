@@ -5,9 +5,11 @@ import { FeatherArrowUpRight, FeatherArrowDownRight } from "@subframe/core";
 import { Badge } from "@/ui/components/Badge";
 import { BarChart } from "@/ui/components/BarChart";
 import { DataLoadError } from "@/src/components/DataLoadError";
+import { TrafficSourceBreakdown } from "./TrafficSourceBreakdown";
 import type {
   PartnerDailyTraffic,
   PartnerTrafficChartPoint,
+  PartnerUtmBreakdown,
 } from "./types";
 
 interface TrafficStatsProps {
@@ -18,6 +20,7 @@ interface TrafficStatsProps {
   visitorsChangePct: number | null;
   bookBikePeople: number;
   bookToursPeople: number;
+  utmBreakdown: PartnerUtmBreakdown;
   error?: string | null;
 }
 
@@ -51,6 +54,7 @@ export function TrafficStats({
   visitorsChangePct,
   bookBikePeople,
   bookToursPeople,
+  utmBreakdown,
   error,
 }: TrafficStatsProps) {
   const chartData = useMemo<PartnerTrafficChartPoint[]>(
@@ -113,6 +117,9 @@ export function TrafficStats({
           </React.Fragment>
         ))}
       </div>
+      {!error && totalViews > 0 ? (
+        <TrafficSourceBreakdown breakdown={utmBreakdown} />
+      ) : null}
       {error ? (
         <DataLoadError title="Couldn't load traffic" message={error} />
       ) : hasData ? (
