@@ -5,12 +5,13 @@ import QRCode from "react-qr-code";
 import { FeatherDownload } from "@subframe/core";
 import { Button } from "@/ui/components/Button";
 import { DialogLayout } from "@/ui/layouts/DialogLayout";
-import type { MarketingLinkRow } from "@/src/lib/marketing-links";
 
 const QR_RENDER_SIZE = 400;
+const QR_FG_COLOR = "#002336";
 
 interface QrCodeDialogProps {
-  link: MarketingLinkRow | null;
+  title: string | null;
+  shortUrl: string | null;
   onOpenChange: (open: boolean) => void;
 }
 
@@ -27,8 +28,15 @@ function getSvgElement(): SVGSVGElement | null {
   return document.getElementById("qr-code-svg") as SVGSVGElement | null;
 }
 
-export function QrCodeDialog({ link, onOpenChange }: QrCodeDialogProps) {
-  const baseFilename = link ? `QR-${sanitizeFilename(link.title)}` : "QR-Code";
+export function QrCodeDialog({
+  title,
+  shortUrl,
+  onOpenChange,
+}: QrCodeDialogProps) {
+  const open = shortUrl !== null;
+  const baseFilename = title
+    ? `QR-${sanitizeFilename(title)}`
+    : "QR-Code";
 
   const downloadSVG = () => {
     const svg = getSvgElement();
@@ -83,31 +91,32 @@ export function QrCodeDialog({ link, onOpenChange }: QrCodeDialogProps) {
   };
 
   return (
-    <DialogLayout open={link !== null} onOpenChange={onOpenChange}>
+    <DialogLayout open={open} onOpenChange={onOpenChange}>
       <div className="flex w-[400px] max-w-full flex-col gap-6 p-6">
         <div className="flex flex-col gap-1">
           <span className="text-heading-3 font-heading-3 text-default-font">
             QR Code
           </span>
-          {link ? (
+          {title ? (
             <span className="text-body font-body text-subtext-color">
-              {link.title}
+              {title}
             </span>
           ) : null}
         </div>
 
-        {link ? (
+        {shortUrl ? (
           <div className="flex flex-col items-center gap-4">
             <div className="rounded-lg border border-solid border-neutral-border bg-white p-4">
               <QRCode
                 id="qr-code-svg"
-                value={link.short_url}
+                value={shortUrl}
                 size={200}
+                fgColor={QR_FG_COLOR}
                 style={{ height: "auto", maxWidth: "100%", width: "100%" }}
               />
             </div>
             <span className="text-caption font-caption text-subtext-color break-all text-center">
-              {link.short_url}
+              {shortUrl}
             </span>
           </div>
         ) : null}

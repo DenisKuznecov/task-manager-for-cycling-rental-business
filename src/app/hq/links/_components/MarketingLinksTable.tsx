@@ -20,7 +20,7 @@ import { deleteMarketingLink } from "@/src/lib/marketing-links-actions";
 import type { MarketingLinkRow } from "@/src/lib/marketing-links";
 import type { PartnerOption } from "../page";
 import { LinkDeleteDialog } from "./LinkDeleteDialog";
-import { QrCodeDialog } from "./QrCodeDialog";
+import { QrCodeDialog } from "@/src/components/QrCodeDialog";
 import { parseUtmParams } from "@/src/utils/utm";
 
 interface MarketingLinksTableProps {
@@ -272,7 +272,8 @@ export function MarketingLinksTable({
       </div>
 
       <QrCodeDialog
-        link={qrTarget}
+        title={qrTarget?.title ?? null}
+        shortUrl={qrTarget?.short_url ?? null}
         onOpenChange={(open) => {
           if (!open) setQrTarget(null);
         }}

@@ -1,7 +1,12 @@
-import React from "react";
+"use client";
+
+import React, { useState } from "react";
+import { FeatherQrCode } from "@subframe/core";
 import { Badge } from "@/ui/components/Badge";
 import { CopyToClipboardButton } from "@/ui/components/CopyToClipboardButton";
+import { IconButton } from "@/ui/components/IconButton";
 import { DataLoadError } from "@/src/components/DataLoadError";
+import { QrCodeDialog } from "@/src/components/QrCodeDialog";
 import { parseUtmParams } from "@/src/utils/utm";
 import type { PartnerMarketingLink } from "../_lib/loadPartnerOverview";
 
@@ -18,6 +23,11 @@ export function PartnerMarketingLinks({
   error,
   showHeader = true,
 }: PartnerMarketingLinksProps) {
+  const [qrTarget, setQrTarget] = useState<{
+    title: string;
+    shortUrl: string;
+  } | null>(null);
+
   const defaultUrl = partnerSlug
     ? `https://www.echeloncyclinghub.com/partners${partnerSlug}`
     : null;
@@ -26,56 +36,78 @@ export function PartnerMarketingLinks({
   const showEmptyState = links.length === 0 && defaultUrl === null;
 
   return (
-    <div className="flex w-full flex-col items-start gap-6">
-      {showHeader ? (
-        <div className="flex w-full items-center gap-2">
-          <span className="grow shrink-0 basis-0 text-heading-3 font-heading-3 text-default-font">
-            Your Marketing Links
-          </span>
-        </div>
-      ) : null}
+    <>
+      <div className="flex w-full flex-col items-start gap-6">
+        {showHeader ? (
+          <div className="flex w-full items-center gap-2">
+            <span className="grow shrink-0 basis-0 text-heading-3 font-heading-3 text-default-font">
+              Your Marketing Links
+            </span>
+          </div>
+        ) : null}
 
-      {error ? (
-        <DataLoadError
-          title="Couldn't load marketing links"
-          message={error}
-        />
-      ) : showEmptyState ? (
-        <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-solid border-neutral-border bg-default-background py-12">
-          <span className="text-body-bold font-body-bold text-default-font text-center">
-            No marketing links yet
-          </span>
-          <span className="text-body font-body text-subtext-color text-center">
-            Your marketing links will appear here once they are set up.
-          </span>
-        </div>
-      ) : showDefaultFallback ? (
-        <div className="flex w-full flex-col items-start gap-4">
-          <LinkCard
-            title="Your Partner Link"
-            shortUrl={defaultUrl!}
-            longUrl={null}
+        {error ? (
+          <DataLoadError
+            title="Couldn't load marketing links"
+            message={error}
           />
-          <p className="text-body font-body text-subtext-color">
-            This default link doesn&apos;t support detailed traffic tracking. If
-            you&apos;d like to track where your clients come from (Instagram,
-            Facebook, your website, etc.), reach out to us and we&apos;ll
-            prepare tailored marketing links for you.
-          </p>
-        </div>
-      ) : (
-        <div className="grid w-full grid-cols-2 gap-4 mobile:grid-cols-1">
-          {links.map((link) => (
+        ) : showEmptyState ? (
+          <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-solid border-neutral-border bg-default-background py-12">
+            <span className="text-body-bold font-body-bold text-default-font text-center">
+              No marketing links yet
+            </span>
+            <span className="text-body font-body text-subtext-color text-center">
+              Your marketing links will appear here once they are set up.
+            </span>
+          </div>
+        ) : showDefaultFallback ? (
+          <div className="flex w-full flex-col items-start gap-4">
             <LinkCard
-              key={link.id}
-              title={link.title}
-              shortUrl={link.short_url}
-              longUrl={link.long_url}
+              title="Your Partner Link"
+              shortUrl={defaultUrl!}
+              longUrl={null}
+              onShowQr={() =>
+                setQrTarget({
+                  title: "Your Partner Link",
+                  shortUrl: defaultUrl!,
+                })
+              }
             />
-          ))}
-        </div>
-      )}
-    </div>
+            <p className="text-body font-body text-subtext-color">
+              This default link doesn&apos;t support detailed traffic tracking. If
+              you&apos;d like to track where your clients come from (Instagram,
+              Facebook, your website, etc.), reach out to us and we&apos;ll
+              prepare tailored marketing links for you.
+            </p>
+          </div>
+        ) : (
+          <div className="grid w-full grid-cols-2 gap-4 mobile:grid-cols-1">
+            {links.map((link) => (
+              <LinkCard
+                key={link.id}
+                title={link.title}
+                shortUrl={link.short_url}
+                longUrl={link.long_url}
+                onShowQr={() =>
+                  setQrTarget({
+                    title: link.title,
+                    shortUrl: link.short_url,
+                  })
+                }
+              />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <QrCodeDialog
+        title={qrTarget?.title ?? null}
+        shortUrl={qrTarget?.shortUrl ?? null}
+        onOpenChange={(open) => {
+          if (!open) setQrTarget(null);
+        }}
+      />
+    </>
   );
 }
 
@@ -83,9 +115,10 @@ interface LinkCardProps {
   title: string;
   shortUrl: string;
   longUrl: string | null;
+  onShowQr: () => void;
 }
 
-function LinkCard({ title, shortUrl, longUrl }: LinkCardProps) {
+function LinkCard({ title, shortUrl, longUrl, onShowQr }: LinkCardProps) {
   const utmParams = longUrl ? parseUtmParams(longUrl) : [];
 
   return (
@@ -100,6 +133,11 @@ function LinkCard({ title, shortUrl, longUrl }: LinkCardProps) {
         <CopyToClipboardButton
           clipboardText={shortUrl}
           tooltipText="Copy link"
+        />
+        <IconButton
+          icon={<FeatherQrCode />}
+          onClick={onShowQr}
+          title="Show QR code"
         />
       </div>
       {utmParams.length > 0 && (
