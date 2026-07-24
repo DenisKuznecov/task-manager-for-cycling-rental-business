@@ -30,6 +30,7 @@ export async function TrafficStatsSection({
       visitorsChangePct={traffic.visitorsChangePct}
       bookBikePeople={traffic.bookBikePeople}
       bookToursPeople={traffic.bookToursPeople}
+      utmBreakdown={traffic.utmBreakdown}
       error={traffic.error}
     />
   );

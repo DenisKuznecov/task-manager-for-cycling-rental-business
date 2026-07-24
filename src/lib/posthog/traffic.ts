@@ -1,6 +1,10 @@
 import { unstable_cache } from "next/cache";
 import type { BookingsTimeframe } from "@/src/lib/orders";
-import type { PartnerDailyTraffic } from "@/src/app/partner/_components/types";
+import type {
+  PartnerDailyTraffic,
+  PartnerUtmBreakdown,
+  PartnerUtmBreakdownRow,
+} from "@/src/app/partner/_components/types";
 
 const DEFAULT_POSTHOG_HOST = "https://eu.i.posthog.com";
 const PRODUCTION_HOST = "www.echeloncyclinghub.com";
@@ -92,6 +96,36 @@ FROM events
 WHERE properties.$pathname = '${escapedPath}'
   AND properties.$host = '${PRODUCTION_HOST}'
   AND timestamp >= now() - INTERVAL ${doubleDays} DAY`;
+}
+
+/**
+ * Groups the promo page's views by a UTM parameter.
+ *
+ * lower(trim(...)) merges case/whitespace variants of the same value (this
+ * project's links have e.g. both "TikTok" and lowercase values), and
+ * nullIf(..., '') folds empty values into NULL, so all non-UTM traffic lands
+ * in a single NULL row that the UI renders as "Direct / other".
+ */
+function utmBreakdownQuery(
+  pathname: string,
+  timeframe: BookingsTimeframe,
+  param: "utm_source" | "utm_medium",
+): string {
+  const escapedPath = pathname.replace(/'/g, "''");
+  const timeClause =
+    timeframe === "week"
+      ? "AND timestamp >= now() - INTERVAL 7 DAY"
+      : timeframe === "month"
+        ? "AND timestamp >= now() - INTERVAL 30 DAY"
+        : "";
+  return `SELECT nullIf(lower(trim(properties.${param})), '') AS label, count() AS views
+FROM events
+WHERE event = '$pageview'
+  AND properties.$pathname = '${escapedPath}'
+  AND properties.$host = '${PRODUCTION_HOST}'
+  ${timeClause}
+GROUP BY label
+ORDER BY views DESC`;
 }
 
 type PostHogQueryResponse = {
@@ -186,7 +220,21 @@ type TrafficResult = {
   visitorsChangePct: number | null;
   bookBikePeople: number;
   bookToursPeople: number;
+  utmBreakdown: PartnerUtmBreakdown;
 };
+
+/** Rows arrive as [label, views] tuples, already sorted by views descending. */
+function parseBreakdownRows(rows: unknown[]): PartnerUtmBreakdownRow[] {
+  return rows.map((row) => {
+    const cells = Array.isArray(row) ? row : [];
+    const rawLabel = cells[0];
+    return {
+      label:
+        typeof rawLabel === "string" && rawLabel.length > 0 ? rawLabel : null,
+      views: toNumber(cells[1]),
+    };
+  });
+}
 
 async function fetchTraffic(
   host: string,
@@ -195,9 +243,21 @@ async function fetchTraffic(
   pathname: string,
   timeframe: BookingsTimeframe,
 ): Promise<TrafficResult> {
-  const [dailyRows, totalRows] = await Promise.all([
+  const [dailyRows, totalRows, sourceRows, mediumRows] = await Promise.all([
     runHogQLQuery(host, projectId, apiKey, dailySeriesQuery(pathname, timeframe)),
     runHogQLQuery(host, projectId, apiKey, combinedTotalsQuery(pathname, timeframe)),
+    runHogQLQuery(
+      host,
+      projectId,
+      apiKey,
+      utmBreakdownQuery(pathname, timeframe, "utm_source"),
+    ),
+    runHogQLQuery(
+      host,
+      projectId,
+      apiKey,
+      utmBreakdownQuery(pathname, timeframe, "utm_medium"),
+    ),
   ]);
 
   const dailyTraffic: PartnerDailyTraffic[] = dailyRows
@@ -226,6 +286,10 @@ async function fetchTraffic(
     visitorsChangePct: toNullableNumber(totals[3]),
     bookBikePeople: toNumber(totals[4]),
     bookToursPeople: toNumber(totals[5]),
+    utmBreakdown: {
+      source: parseBreakdownRows(sourceRows),
+      medium: parseBreakdownRows(mediumRows),
+    },
   };
 }
 
@@ -249,6 +313,7 @@ export async function loadPartnerTraffic(
   visitorsChangePct: number | null;
   bookBikePeople: number;
   bookToursPeople: number;
+  utmBreakdown: PartnerUtmBreakdown;
   error: string | null;
 }> {
   const empty = {
@@ -259,6 +324,7 @@ export async function loadPartnerTraffic(
     visitorsChangePct: null,
     bookBikePeople: 0,
     bookToursPeople: 0,
+    utmBreakdown: { source: [], medium: [] },
   };
 
   if (!slug) return { ...empty, error: null };
@@ -283,12 +349,12 @@ export async function loadPartnerTraffic(
     // The HogQL endpoint is a POST, which Next's automatic fetch Data Cache
     // (GET-only) won't cache. unstable_cache gives us caching whose key + tag
     // both include the timeframe, so switching filters resolves the right entry
-    // (one cache entry per (pathname, timeframe); two upstream POSTs on a miss).
-    // "v2" in the key busts any stale cache entries from before the combined
-    // totals query was introduced (old entries only had totalViews/totalVisitors).
+    // (one cache entry per (pathname, timeframe); four upstream POSTs on a miss).
+    // "v3" in the key busts any stale cache entries from before the UTM
+    // breakdown queries were introduced (old entries lack utmBreakdown).
     const getCachedTraffic = unstable_cache(
       () => fetchTraffic(host, projectId, apiKey, pathname, timeframe),
-      ["partner-traffic", "v2", pathname, timeframe],
+      ["partner-traffic", "v3", pathname, timeframe],
       {
         revalidate: REVALIDATE_SECONDS,
         tags: [`posthog:traffic:${pathname}:${timeframe}`],

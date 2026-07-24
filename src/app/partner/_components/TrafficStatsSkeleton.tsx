@@ -3,8 +3,8 @@ import { SkeletonText } from "@/ui/components/SkeletonText";
 
 /**
  * Suspense fallback for {@link TrafficStatsSection}. Mirrors the real section
- * layout (title, two KPI cards, chart area) so the page doesn't shift when the
- * PostHog data resolves.
+ * layout (title, KPI cards, collapsed source breakdown, chart area) so the
+ * page doesn't shift when the PostHog data resolves.
  */
 export function TrafficStatsSkeleton() {
   return (
@@ -22,6 +22,14 @@ export function TrafficStatsSkeleton() {
             ) : null}
           </React.Fragment>
         ))}
+      </div>
+      {/* Collapsed "Views by source" accordion header */}
+      <div className="flex w-full items-center gap-3 rounded-md border border-solid border-neutral-border bg-default-background px-5 py-4">
+        <div className="flex flex-1 flex-col items-start gap-1">
+          <SkeletonText size="label" className="w-32" />
+          <SkeletonText size="label" className="w-56" />
+        </div>
+        <SkeletonText size="label" className="w-20" />
       </div>
       <SkeletonText size="default" className="h-80 w-full" />
     </div>
