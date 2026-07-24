@@ -18,7 +18,9 @@ export function useAppNavigation() {
 
   const navigate = useCallback(
     (href: string) => {
-      if (routeMatchesHref(pathname, href)) return;
+      // Exact match only — prefix matching would block "home" links like /hq
+      // when the user is already on a nested page (e.g. /hq/links).
+      if (pathname === href) return;
       setPendingHref(href);
       startTransition(() => {
         router.push(href);

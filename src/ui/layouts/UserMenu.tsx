@@ -2,7 +2,12 @@
 
 import React from "react";
 import { useRouter } from "next/navigation";
-import { FeatherBookOpen, FeatherLogOut, FeatherMail } from "@subframe/core";
+import {
+  FeatherBookOpen,
+  FeatherBuilding2,
+  FeatherLogOut,
+  FeatherMail,
+} from "@subframe/core";
 import * as SubframeCore from "@subframe/core";
 import { useHasRole, useUser } from "@/src/context/UserContext";
 import { Avatar } from "../components/Avatar";
@@ -18,6 +23,7 @@ export function UserMenu({ userEmail, avatarInitial }: UserMenuProps) {
   const router = useRouter();
   // The Wiki is internal-only: visible to staff, never to partners.
   const canViewWiki = useHasRole("admin", "manager", "mechanic");
+  const canViewHq = useHasRole("admin", "manager");
   // Use the context signOut so the auth listener treats this as an explicit
   // logout (plain /login) rather than session expiry (/login?next=...).
   const { signOut } = useUser();
@@ -45,6 +51,17 @@ export function UserMenu({ userEmail, avatarInitial }: UserMenuProps) {
             asChild={true}
           >
             <DropdownMenu className="z-20">
+              {canViewHq ? (
+                <>
+                  <DropdownMenu.DropdownItem
+                    icon={<FeatherBuilding2 />}
+                    onClick={() => router.push("/hq")}
+                  >
+                    Headquarters
+                  </DropdownMenu.DropdownItem>
+                  <DropdownMenu.DropdownDivider />
+                </>
+              ) : null}
               {canViewWiki ? (
                 <DropdownMenu.DropdownItem
                   icon={<FeatherBookOpen />}
@@ -53,6 +70,13 @@ export function UserMenu({ userEmail, avatarInitial }: UserMenuProps) {
                   Wiki
                 </DropdownMenu.DropdownItem>
               ) : null}
+              <DropdownMenu.DropdownItem
+                icon={<FeatherMail />}
+                onClick={() => router.push("/contact")}
+              >
+                Contact Us
+              </DropdownMenu.DropdownItem>
+              <DropdownMenu.DropdownDivider />
               <DropdownMenu.DropdownItem
                 icon={<FeatherMail />}
                 onClick={() => router.push("/contact")}
