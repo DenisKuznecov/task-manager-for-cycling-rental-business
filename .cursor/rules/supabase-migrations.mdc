@@ -5,6 +5,24 @@ alwaysApply: true
 
 # Supabase Migration Conventions
 
+## Apply migrations to the LOCAL database ONLY (CRITICAL)
+
+- NEVER apply migrations or DDL to the staging or production databases — not via the
+  Supabase MCP (`apply_migration`, `execute_sql`), not via `supabase db push`
+  against a linked project, not via the dashboard SQL editor.
+- Staging and production are migrated **exclusively by the GitHub Actions pipeline**
+  when a branch is merged. The agent's job ends at authoring the SQL file in
+  `supabase/migrations/` and applying it to the **local** stack
+  (`supabase migration up` / `supabase db reset`).
+- Why this is destructive: applying a migration remotely by hand writes an extra
+  version row into the remote `supabase_migrations.schema_migrations` history.
+  When CI later runs `supabase db push`, the remote history contains a version
+  that has no matching file in the repo, and the deploy fails until someone
+  manually runs `supabase migration repair`.
+- This applies even if the user asks to "make it work on staging" — surface the
+  merge/CI path instead. Only touch a remote database if the user explicitly and
+  unambiguously instructs it in the current conversation.
+
 All migrations (whether authored as SQL files or applied via the Supabase MCP `apply_migration` tool) MUST be idempotent so they can be re-run safely against a partially-applied or fresh database.
 
 ## RLS policies: drop-then-create
