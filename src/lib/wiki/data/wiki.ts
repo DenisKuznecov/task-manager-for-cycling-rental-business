@@ -91,8 +91,10 @@ export async function getWikiDocuments(
   const trimmed = filters.query?.trim() ?? "";
   if (trimmed) {
     const escaped = trimmed.replace(/[,()]/g, "");
+    // `content_text` is the extracted plain text of the body — searching the
+    // raw `content` column would match BlockNote JSON keys/props.
     queryBuilder = queryBuilder.or(
-      `title.ilike.%${escaped}%,content.ilike.%${escaped}%`,
+      `title.ilike.%${escaped}%,content_text.ilike.%${escaped}%`,
     );
   }
 

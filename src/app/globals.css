@@ -27,32 +27,32 @@ body {
 }
 
 /*
- * Wiki TipTap editor. The contenteditable itself is styled with Tailwind
- * `prose` classes via editorProps; these rules cover what those classes can't
- * reach: a tall click target and the empty-state placeholder injected by the
- * Placeholder extension.
+ * Wiki BlockNote editor and read-only view. BlockNote ships fully-styled UI;
+ * these overrides pin it to the app font and adapt the two render contexts.
  */
-.ProseMirror {
+.bn-container {
+  --bn-font-family: Geist, ui-sans-serif, system-ui, -apple-system, "Segoe UI",
+    sans-serif;
+}
+
+/* Tall click target so an empty document is easy to click into. */
+.wiki-blocknote-editor .bn-editor {
   min-height: 24rem;
 }
 
-.ProseMirror:focus,
-.ProseMirror:focus-visible {
-  outline: none;
-}
-
-.ProseMirror p.is-editor-empty:first-child::before {
-  content: attr(data-placeholder);
-  float: left;
-  height: 0;
-  pointer-events: none;
-  color: #a3a3a3; /* neutral-400 */
+/*
+ * The read-only view doesn't show the side menu (drag handle / add block), so
+ * drop the gutter BlockNote reserves for it and blend into the page.
+ */
+.wiki-blocknote-view .bn-editor {
+  padding-inline: 0;
+  background: transparent;
 }
 
 /*
- * Wiki read-only view: leave a gap above headings when jumped to via the
- * table-of-contents so they don't sit flush against the scroll container edge.
+ * Leave a gap above blocks when jumped to via the table of contents so they
+ * don't sit flush against the scroll container edge.
  */
-.wiki-article :is(h1, h2, h3) {
+.wiki-blocknote-view [data-id] {
   scroll-margin-top: 1.5rem;
 }

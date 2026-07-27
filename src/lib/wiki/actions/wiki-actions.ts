@@ -9,6 +9,7 @@ import {
   UpdateWikiDocPayloadSchema,
   type UpdateWikiDocPayload,
 } from "@/src/lib/wiki/types/schema";
+import { extractWikiPlainText } from "@/src/lib/wiki/content";
 
 function firstZodErrorMessage(error: ZodError): string {
   return error.issues[0]?.message ?? "Invalid document data.";
@@ -87,9 +88,17 @@ async function updateWikiDocumentAction(
   const supabase = await createClient();
   const { title, content, category_id, status } = parsed.data;
 
+  // `content` is BlockNote block JSON; `content_text` mirrors its readable
+  // text so directory search doesn't match JSON keys/props.
   const { data, error } = await supabase
     .from("wiki_documents")
-    .update({ title, content, category_id, status })
+    .update({
+      title,
+      content,
+      content_text: extractWikiPlainText(content),
+      category_id,
+      status,
+    })
     .eq("id", id)
     .select("id, slug")
     .maybeSingle();
