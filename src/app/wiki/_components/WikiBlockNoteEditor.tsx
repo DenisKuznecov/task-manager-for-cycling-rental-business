@@ -2,7 +2,7 @@
 
 import "@blocknote/mantine/style.css";
 
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import type { PartialBlock } from "@blocknote/core";
 import { useCreateBlockNote } from "@blocknote/react";
 import { BlockNoteView } from "@blocknote/mantine";
@@ -12,10 +12,9 @@ import { parseWikiBlocks } from "@/src/lib/wiki/content";
 
 interface WikiBlockNoteEditorProps {
   /**
-   * Initial document body (BlockNote block JSON, or Markdown for documents
-   * predating the BlockNote editor). Read ONCE on mount — the parent owns the
-   * value afterwards via `onChange`, so we never push it back into the editor
-   * (that would reset the cursor on every autosave round-trip).
+   * Initial document body as BlockNote block JSON. Read ONCE on mount — the
+   * parent owns the value afterwards via `onChange`, so we never push it back
+   * into the editor (that would reset the cursor on every autosave round-trip).
    */
   initialContent: string;
   /** Receives the serialized block JSON on every document change. */
@@ -37,9 +36,8 @@ export default function WikiBlockNoteEditor({
 }: WikiBlockNoteEditorProps) {
   const [uploadError, setUploadError] = useState<string | null>(null);
 
-  // `null` means the stored body is legacy Markdown (converted in the effect
-  // below); an empty array means a brand-new document (BlockNote requires
-  // `undefined`, not `[]`, for "start blank").
+  // An empty array / unparseable body means a brand-new document (BlockNote
+  // requires `undefined`, not `[]`, for "start blank").
   const initialBlocks = useMemo(
     () => parseWikiBlocks(initialContent) as unknown as PartialBlock[] | null,
     [initialContent],
@@ -69,27 +67,6 @@ export default function WikiBlockNoteEditor({
       }
     },
   });
-
-  // Legacy Markdown documents are converted to blocks on first open. The
-  // conversion fires `onChange`, so the next autosave persists the document
-  // in block JSON — a deliberate, one-time format upgrade.
-  useEffect(() => {
-    if (initialBlocks !== null || initialContent.trim() === "") return;
-
-    let cancelled = false;
-    void (async () => {
-      const blocks = await Promise.resolve(
-        editor.tryParseMarkdownToBlocks(initialContent),
-      );
-      if (!cancelled && blocks.length > 0) {
-        editor.replaceBlocks(editor.document, blocks);
-      }
-    })();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [editor, initialBlocks, initialContent]);
 
   return (
     <div className="wiki-blocknote-editor flex w-full flex-col">

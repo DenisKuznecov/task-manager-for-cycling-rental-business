@@ -1,11 +1,9 @@
 -- BlockNote adoption for the wiki.
 --
--- 1. `wiki_documents.content` now stores BlockNote block JSON (the editor's
---    lossless native format) instead of Markdown. Searching that column would
---    match JSON keys/props, so a `content_text` companion column carries the
---    extracted plain text. It is written by the app on every save; legacy
---    Markdown rows are backfilled with their raw content (markdown syntax is
---    close enough to plain text for ILIKE search until the row is re-saved).
+-- 1. `wiki_documents.content` stores BlockNote block JSON (the editor's
+--    lossless native format). Searching that column would match JSON
+--    keys/props, so a `content_text` companion column carries the extracted
+--    plain text. It is written by the app on every save.
 --
 -- 2. The wiki media bucket accepts every media type BlockNote can embed
 --    (image, video, audio, file blocks), not just images. The bucket id stays
@@ -13,11 +11,6 @@
 
 alter table public.wiki_documents
   add column if not exists content_text text not null default '';
-
-update public.wiki_documents
-set content_text = coalesce(content, '')
-where content_text = ''
-  and coalesce(content, '') <> '';
 
 -- Adding a column at the end keeps CREATE OR REPLACE VIEW valid.
 create or replace view public.wiki_documents_view with (security_invoker = 'true') as

@@ -6,13 +6,13 @@ import {
 import { WIKI_STATUSES } from "@/src/lib/wiki/types/records";
 
 const MAX_TITLE_LENGTH = 200;
-// BlockNote block JSON is several times more verbose than the Markdown it
-// replaced (ids + props per block), so the ceiling is raised accordingly.
+// BlockNote block JSON includes ids + props per block, so the ceiling is
+// higher than a plain-text body of similar length would need.
 const MAX_CONTENT_LENGTH = 400_000;
 
 /**
  * Payload validated server-side by `updateWikiDocument`. Title/category/status
- * are edited from the metadata sidebar; `content` is the Markdown body.
+ * are edited from the metadata sidebar; `content` is BlockNote block JSON.
  */
 export const UpdateWikiDocPayloadSchema = z.object({
   title: z
@@ -23,11 +23,11 @@ export const UpdateWikiDocPayloadSchema = z.object({
     .refine((value) => validateSafeText(value) === true, {
       message: SAFE_TEXT_VALIDATION_MESSAGE,
     }),
-  // Document body: BlockNote block JSON (legacy rows still hold Markdown).
-  // We intentionally do NOT run the strict safe-text regex on this field:
-  // body text routinely contains `<`/`>` (code samples, comparisons), and XSS
-  // is prevented at render time because BlockNote renders block/inline nodes
-  // as React elements — raw HTML strings are never injected into the DOM.
+  // Document body: BlockNote block JSON. We intentionally do NOT run the
+  // strict safe-text regex on this field: body text routinely contains
+  // `<`/`>` (code samples, comparisons), and XSS is prevented at render time
+  // because BlockNote renders block/inline nodes as React elements — raw HTML
+  // strings are never injected into the DOM.
   content: z
     .string()
     .max(

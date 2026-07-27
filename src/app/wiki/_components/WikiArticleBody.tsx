@@ -12,7 +12,7 @@ import { APP_SCROLL_CONTAINER_SELECTOR } from "@/src/utils/scroll-main";
 import { extractNodeText, parseWikiBlocks } from "@/src/lib/wiki/content";
 
 interface WikiArticleBodyProps {
-  /** Document body: BlockNote block JSON, or Markdown for legacy documents. */
+  /** Document body as BlockNote block JSON. */
   content: string;
 }
 
@@ -78,33 +78,9 @@ export default function WikiArticleBody({ content }: WikiArticleBodyProps) {
     },
   });
 
-  // Legacy Markdown documents render via a one-off in-memory conversion; the
-  // stored row is only upgraded to block JSON when someone edits it.
   useEffect(() => {
-    let cancelled = false;
-
-    const finish = () => {
-      if (!cancelled) setToc(buildToc(editor.document as Block[]));
-    };
-
-    if (initialBlocks === null && content.trim() !== "") {
-      void (async () => {
-        const blocks = await Promise.resolve(
-          editor.tryParseMarkdownToBlocks(content),
-        );
-        if (!cancelled && blocks.length > 0) {
-          editor.replaceBlocks(editor.document, blocks);
-        }
-        finish();
-      })();
-    } else {
-      finish();
-    }
-
-    return () => {
-      cancelled = true;
-    };
-  }, [editor, initialBlocks, content]);
+    setToc(buildToc(editor.document as Block[]));
+  }, [editor]);
 
   const scrollToBlock = useCallback((id: string) => {
     document

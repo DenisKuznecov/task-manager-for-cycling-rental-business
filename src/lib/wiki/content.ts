@@ -4,9 +4,7 @@
  *
  * `wiki_documents.content` stores the document as **BlockNote block JSON**
  * (`JSON.stringify(editor.document)`), which is BlockNote's lossless native
- * format. Documents created before the BlockNote migration hold Markdown
- * instead; the editor and view components convert those to blocks on first
- * open, so every helper here must accept both formats.
+ * format.
  */
 
 type UnknownRecord = Record<string, unknown>;
@@ -17,9 +15,7 @@ function isRecord(value: unknown): value is UnknownRecord {
 
 /**
  * Parses `content` as a BlockNote block array. Returns `null` when the string
- * is not valid JSON or not an array of objects — callers treat that as legacy
- * Markdown. (A Markdown doc is never itself a valid JSON array of objects, so
- * the detection cannot misfire.)
+ * is empty, not valid JSON, or not an array of objects.
  */
 export function parseWikiBlocks(content: string): UnknownRecord[] | null {
   const trimmed = content.trim();
@@ -76,27 +72,14 @@ export function extractNodeText(node: unknown): string {
   return fragments.join(" ").replace(/\s+/g, " ").trim();
 }
 
-/** Strips the noisiest Markdown syntax so only readable words remain. */
-function stripMarkdownSyntax(markdown: string): string {
-  return markdown
-    .replace(/```[\s\S]*?```/g, " ") // fenced code blocks
-    .replace(/`[^`]*`/g, " ") // inline code
-    .replace(/!\[[^\]]*\]\([^)]*\)/g, " ") // images
-    .replace(/\[([^\]]*)\]\([^)]*\)/g, "$1") // links -> label text
-    .replace(/[#>*_~`|-]/g, " ") // residual markdown punctuation
-    .replace(/\s+/g, " ")
-    .trim();
-}
-
 /**
- * Plain text of a document body, whichever format it is stored in. Used for
- * the `content_text` search column and reading-time estimates.
+ * Plain text of a BlockNote document body. Used for the `content_text` search
+ * column and reading-time estimates. Returns `""` when `content` is not valid
+ * block JSON.
  */
 export function extractWikiPlainText(content: string): string {
   const blocks = parseWikiBlocks(content);
-  if (blocks === null) {
-    return stripMarkdownSyntax(content);
-  }
+  if (blocks === null) return "";
 
   const fragments: string[] = [];
   collectText(blocks, fragments);
@@ -107,11 +90,11 @@ export function extractWikiPlainText(content: string): string {
  * Whether the document renders as empty. A fresh BlockNote doc is one empty
  * paragraph block — textually non-empty JSON — so a plain `trim()` check on
  * the raw content is not enough. Blocks without text (images, dividers,
- * tables) still count as content.
+ * tables) still count as content. Unparseable content is treated as empty.
  */
 export function isWikiContentEmpty(content: string): boolean {
   const blocks = parseWikiBlocks(content);
-  if (blocks === null) return content.trim().length === 0;
+  if (blocks === null) return true;
 
   return blocks.every((block) => {
     if (block.type !== "paragraph" && block.type !== undefined) return false;
