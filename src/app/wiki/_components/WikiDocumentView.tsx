@@ -39,6 +39,7 @@ const PROSE_CLASS = cn(
   "prose-a:text-brand-700",
   "prose-blockquote:border-l-brand-600 prose-blockquote:text-subtext-color",
   "prose-pre:bg-neutral-900 prose-pre:text-white",
+  "prose-img:rounded-md",
 );
 
 function formatDate(iso: string): string {
@@ -158,6 +159,19 @@ export function WikiDocumentView({
       h1: makeHeading("h1"),
       h2: makeHeading("h2"),
       h3: makeHeading("h3"),
+      // Wide tables (e.g. migrated Notion databases) scroll horizontally
+      // instead of blowing out the article column.
+      table: function TableRenderer({
+        children,
+      }: {
+        children?: React.ReactNode;
+      }) {
+        return (
+          <div className="w-full overflow-x-auto">
+            <table>{children}</table>
+          </div>
+        );
+      },
       a: function AnchorRenderer({
         href,
         children,

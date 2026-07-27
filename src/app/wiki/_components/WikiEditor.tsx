@@ -184,6 +184,7 @@ export function WikiEditor({ document, categories }: WikiEditorProps) {
           <WikiMarkdownEditor
             initialMarkdown={document.content}
             onChange={setContent}
+            documentId={document.id}
           />
         </div>
 
