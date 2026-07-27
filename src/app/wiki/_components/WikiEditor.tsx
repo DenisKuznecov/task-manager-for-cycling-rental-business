@@ -7,6 +7,7 @@ import React, {
   useState,
   useTransition,
 } from "react";
+import dynamic from "next/dynamic";
 import { useRouter } from "next/navigation";
 import {
   FeatherAlertTriangle,
@@ -29,8 +30,17 @@ import {
   type WikiDocument,
   type WikiStatus,
 } from "@/src/lib/wiki/types/records";
-import { WikiMarkdownEditor } from "./WikiMarkdownEditor";
 import { WikiDeleteDialog } from "./WikiDeleteDialog";
+
+// BlockNote only renders client-side; skip SSR for the editor.
+const WikiBlockNoteEditor = dynamic(() => import("./WikiBlockNoteEditor"), {
+  ssr: false,
+  loading: () => (
+    <div className="px-4 py-4 text-caption font-caption text-subtext-color">
+      Loading editor…
+    </div>
+  ),
+});
 
 const AUTOSAVE_DEBOUNCE_MS = 1500;
 // Radix Select disallows an empty-string value, so "no category" needs a token.
@@ -181,8 +191,8 @@ export function WikiEditor({ document, categories }: WikiEditorProps) {
 
       <div className="flex w-full items-start gap-6 mobile:flex-col">
         <div className="grow shrink-0 basis-0 w-full rounded-md border border-solid border-neutral-border bg-default-background">
-          <WikiMarkdownEditor
-            initialMarkdown={document.content}
+          <WikiBlockNoteEditor
+            initialContent={document.content}
             onChange={setContent}
             documentId={document.id}
           />
