@@ -1,7 +1,8 @@
 import { createClient } from "@/src/utils/supabase/server";
 import {
   isWikiStatus,
-  toWikiCategoryColor,
+  toWikiCategoryIcon,
+  UNCATEGORIZED_CATEGORY_SLUG,
   type WikiCategory,
   type WikiDocument,
   type WikiStatusFilter,
@@ -13,6 +14,7 @@ export const WIKI_PAGE_SIZE = 10;
 
 export interface WikiDocumentsFilters {
   query?: string;
+  /** Real category slug, or `uncategorized` for null category_id. */
   categorySlug?: string | null;
   status?: WikiStatusFilter;
 }
@@ -22,21 +24,30 @@ type WikiDocumentViewRow = {
   title: string;
   slug: string;
   content: string | null;
+  content_text?: string | null;
   status: string;
   category_id: string | null;
   category_name: string | null;
   category_slug: string | null;
-  category_color: string | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+type WikiCategoryViewRow = {
+  id: string;
+  name: string;
+  slug: string;
+  icon: string | null;
+  created_at: string;
+  document_count: number | null;
 };
 
 type WikiCategoryRow = {
   id: string;
   name: string;
   slug: string;
-  color: string | null;
+  icon: string | null;
   created_at: string;
 };
 
@@ -50,22 +61,25 @@ function mapDocumentRow(row: WikiDocumentViewRow): WikiDocument {
     category_id: row.category_id,
     category_name: row.category_name,
     category_slug: row.category_slug,
-    category_color: row.category_color
-      ? toWikiCategoryColor(row.category_color)
-      : null,
     published_at: row.published_at,
     created_at: row.created_at,
     updated_at: row.updated_at,
   };
 }
 
-function mapCategoryRow(row: WikiCategoryRow): WikiCategory {
+function mapCategoryRow(
+  row: WikiCategoryRow | WikiCategoryViewRow,
+): WikiCategory {
   return {
     id: row.id,
     name: row.name,
     slug: row.slug,
-    color: row.color ? toWikiCategoryColor(row.color) : null,
+    icon: toWikiCategoryIcon(row.icon),
     created_at: row.created_at,
+    document_count:
+      "document_count" in row && typeof row.document_count === "number"
+        ? row.document_count
+        : undefined,
   };
 }
 
@@ -98,7 +112,9 @@ export async function getWikiDocuments(
     );
   }
 
-  if (filters.categorySlug) {
+  if (filters.categorySlug === UNCATEGORIZED_CATEGORY_SLUG) {
+    queryBuilder = queryBuilder.is("category_id", null);
+  } else if (filters.categorySlug) {
     queryBuilder = queryBuilder.eq("category_slug", filters.categorySlug);
   }
 
@@ -183,7 +199,7 @@ export async function getWikiCategories(): Promise<{
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("wiki_categories")
-    .select("id, name, slug, color, created_at")
+    .select("id, name, slug, icon, created_at")
     .order("name", { ascending: true });
 
   if (error) {
@@ -193,6 +209,81 @@ export async function getWikiCategories(): Promise<{
 
   return {
     categories: ((data as WikiCategoryRow[] | null) ?? []).map(mapCategoryRow),
+    error: null,
+  };
+}
+
+export async function getWikiCategoriesWithCounts(): Promise<{
+  categories: WikiCategory[];
+  uncategorizedCount: number;
+  error: string | null;
+}> {
+  const supabase = await createClient();
+
+  const [categoriesResult, uncategorizedResult] = await Promise.all([
+    supabase
+      .from("wiki_categories_view")
+      .select("id, name, slug, icon, created_at, document_count")
+      .order("name", { ascending: true }),
+    supabase
+      .from("wiki_documents")
+      .select("id", { count: "exact", head: true })
+      .is("category_id", null),
+  ]);
+
+  if (categoriesResult.error) {
+    console.error("getWikiCategoriesWithCounts:", categoriesResult.error);
+    return {
+      categories: [],
+      uncategorizedCount: 0,
+      error: categoriesResult.error.message,
+    };
+  }
+
+  if (uncategorizedResult.error) {
+    console.error(
+      "getWikiCategoriesWithCounts:uncategorized",
+      uncategorizedResult.error,
+    );
+    return {
+      categories: [],
+      uncategorizedCount: 0,
+      error: uncategorizedResult.error.message,
+    };
+  }
+
+  return {
+    categories: ((categoriesResult.data as WikiCategoryViewRow[] | null) ?? []).map(
+      mapCategoryRow,
+    ),
+    uncategorizedCount: uncategorizedResult.count ?? 0,
+    error: null,
+  };
+}
+
+export async function getWikiCategoryBySlug(
+  slug: string,
+): Promise<{ category: WikiCategory | null; error: string | null }> {
+  if (slug === UNCATEGORIZED_CATEGORY_SLUG) {
+    return { category: null, error: null };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("wiki_categories_view")
+    .select("id, name, slug, icon, created_at, document_count")
+    .eq("slug", slug)
+    .maybeSingle();
+
+  if (error) {
+    console.error("getWikiCategoryBySlug:", error);
+    return { category: null, error: error.message };
+  }
+
+  if (!data) return { category: null, error: null };
+
+  return {
+    category: mapCategoryRow(data as WikiCategoryViewRow),
     error: null,
   };
 }

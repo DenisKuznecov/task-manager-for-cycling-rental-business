@@ -18,38 +18,67 @@ export function isWikiStatus(value: string): value is WikiStatus {
 export type WikiStatusFilter = WikiStatus | "all";
 
 /**
- * `wiki_categories.color` stores a Subframe `Badge` variant token so the UI can
- * pass it straight to `<Badge variant={...}>`. We fall back to "neutral" for any
- * unexpected/legacy value.
+ * Allowlisted `@subframe/core` Feather export names stored in
+ * `wiki_categories.icon`. Keep in sync with `WIKI_CATEGORY_ICON_MAP`.
  */
-export const WIKI_CATEGORY_COLORS = [
-  "warning",
-  "neutral",
-  "error",
-  "info",
-  "success",
-  "dark",
-  "mint",
+export const WIKI_CATEGORY_ICONS = [
+  "FeatherBarChart",
+  "FeatherBike",
+  "FeatherBook",
+  "FeatherBookOpen",
+  "FeatherBox",
+  "FeatherCalendar",
+  "FeatherCheckCircle",
+  "FeatherClipboard",
+  "FeatherCog",
+  "FeatherCreditCard",
+  "FeatherDollarSign",
+  "FeatherFileText",
+  "FeatherFolder",
+  "FeatherFolderOpen",
+  "FeatherGlobe",
+  "FeatherHelpCircle",
+  "FeatherImage",
+  "FeatherLifeBuoy",
+  "FeatherLink",
+  "FeatherList",
+  "FeatherMail",
+  "FeatherPackage",
+  "FeatherPrinter",
+  "FeatherSettings",
+  "FeatherShield",
+  "FeatherSmartphone",
+  "FeatherTag",
+  "FeatherTool",
+  "FeatherUsers",
+  "FeatherWrench",
 ] as const;
 
-export type WikiCategoryColor = (typeof WIKI_CATEGORY_COLORS)[number];
+export type WikiCategoryIcon = (typeof WIKI_CATEGORY_ICONS)[number];
 
-export const DEFAULT_WIKI_CATEGORY_COLOR: WikiCategoryColor = "neutral";
+export const DEFAULT_WIKI_CATEGORY_ICON: WikiCategoryIcon = "FeatherFileText";
 
-export function toWikiCategoryColor(
+/** Fixed icon for the synthetic Uncategorized tile (not stored in DB). */
+export const UNCATEGORIZED_CATEGORY_ICON: WikiCategoryIcon = "FeatherFolderOpen";
+
+/** Reserved slug for the synthetic Uncategorized category route. */
+export const UNCATEGORIZED_CATEGORY_SLUG = "uncategorized";
+
+export function toWikiCategoryIcon(
   value: string | null | undefined,
-): WikiCategoryColor {
-  return value && (WIKI_CATEGORY_COLORS as readonly string[]).includes(value)
-    ? (value as WikiCategoryColor)
-    : DEFAULT_WIKI_CATEGORY_COLOR;
+): WikiCategoryIcon {
+  return value && (WIKI_CATEGORY_ICONS as readonly string[]).includes(value)
+    ? (value as WikiCategoryIcon)
+    : DEFAULT_WIKI_CATEGORY_ICON;
 }
 
 export interface WikiCategory {
   id: string;
   name: string;
   slug: string;
-  color: WikiCategoryColor | null;
+  icon: WikiCategoryIcon;
   created_at: string;
+  document_count?: number;
 }
 
 /** Shape of a row from `public.wiki_documents_view` after mapping. */
@@ -62,7 +91,6 @@ export interface WikiDocument {
   category_id: string | null;
   category_name: string | null;
   category_slug: string | null;
-  category_color: WikiCategoryColor | null;
   published_at: string | null;
   created_at: string;
   updated_at: string;
