@@ -3,9 +3,15 @@ import {
   SAFE_TEXT_VALIDATION_MESSAGE,
   validateSafeText,
 } from "@/src/utils/validation";
-import { WIKI_STATUSES } from "@/src/lib/wiki/types/records";
+import {
+  UNCATEGORIZED_CATEGORY_SLUG,
+  WIKI_CATEGORY_ICONS,
+  WIKI_STATUSES,
+} from "@/src/lib/wiki/types/records";
+import { wikiSlugify } from "@/src/lib/wiki/slug";
 
 const MAX_TITLE_LENGTH = 200;
+const MAX_CATEGORY_NAME_LENGTH = 80;
 // BlockNote block JSON includes ids + props per block, so the ceiling is
 // higher than a plain-text body of similar length would need.
 const MAX_CONTENT_LENGTH = 400_000;
@@ -39,3 +45,39 @@ export const UpdateWikiDocPayloadSchema = z.object({
 });
 
 export type UpdateWikiDocPayload = z.infer<typeof UpdateWikiDocPayloadSchema>;
+
+const CategoryNameSchema = z
+  .string()
+  .trim()
+  .min(1, "Category name is required.")
+  .max(
+    MAX_CATEGORY_NAME_LENGTH,
+    `Name must be ${MAX_CATEGORY_NAME_LENGTH} characters or fewer.`,
+  )
+  .refine((value) => validateSafeText(value) === true, {
+    message: SAFE_TEXT_VALIDATION_MESSAGE,
+  })
+  .refine(
+    (value) => wikiSlugify(value) !== UNCATEGORIZED_CATEGORY_SLUG,
+    {
+      message: `"Uncategorized" is reserved. Choose a different name.`,
+    },
+  );
+
+export const UpsertWikiCategoryPayloadSchema = z.object({
+  name: CategoryNameSchema,
+  icon: z.enum(WIKI_CATEGORY_ICONS),
+});
+
+export type UpsertWikiCategoryPayload = z.infer<
+  typeof UpsertWikiCategoryPayloadSchema
+>;
+
+export const DeleteWikiCategoryModeSchema = z.enum([
+  "delete_documents",
+  "unassign",
+]);
+
+export type DeleteWikiCategoryMode = z.infer<
+  typeof DeleteWikiCategoryModeSchema
+>;

@@ -164,6 +164,27 @@ export function WikiEditor({ document, categories }: WikiEditorProps) {
             Wiki
           </Breadcrumbs.Item>
           <Breadcrumbs.Divider />
+          {document.category_name && document.category_slug ? (
+            <>
+              <Breadcrumbs.Item
+                onClick={() =>
+                  router.push(`/wiki/category/${document.category_slug}`)
+                }
+              >
+                {document.category_name}
+              </Breadcrumbs.Item>
+              <Breadcrumbs.Divider />
+            </>
+          ) : (
+            <>
+              <Breadcrumbs.Item
+                onClick={() => router.push("/wiki/category/uncategorized")}
+              >
+                Uncategorized
+              </Breadcrumbs.Item>
+              <Breadcrumbs.Divider />
+            </>
+          )}
           <Breadcrumbs.Item active={true}>
             {title.trim() || "Untitled Document"}
           </Breadcrumbs.Item>
@@ -205,13 +226,13 @@ export function WikiEditor({ document, categories }: WikiEditorProps) {
 
           <Select
             label="Category"
-            placeholder="No category"
+            placeholder="Uncategorized"
             value={categoryId ?? NO_CATEGORY}
             onValueChange={(value) =>
               setCategoryId(value === NO_CATEGORY ? null : value)
             }
           >
-            <Select.Item value={NO_CATEGORY}>No category</Select.Item>
+            <Select.Item value={NO_CATEGORY}>Uncategorized</Select.Item>
             {categories.map((category) => (
               <Select.Item key={category.id} value={category.id}>
                 {category.name}

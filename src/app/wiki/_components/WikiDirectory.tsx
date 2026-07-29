@@ -5,6 +5,7 @@ import { usePathname, useRouter } from "next/navigation";
 import {
   FeatherEdit2,
   FeatherFileText,
+  FeatherFolderCog,
   FeatherMoreHorizontal,
   FeatherPlus,
   FeatherTrash2,
@@ -28,14 +29,16 @@ import {
   type WikiStatusFilter,
 } from "@/src/lib/wiki/types/records";
 import { WikiDeleteDialog } from "./WikiDeleteDialog";
+import { WikiCategoryFormDialog } from "./WikiCategoryFormDialog";
 
 interface WikiDirectoryProps {
   documents: WikiDocument[];
-  categories: WikiCategory[];
+  categoryName: string;
+  /** When set, managers can edit this real category. Null for Uncategorized. */
+  editableCategory: WikiCategory | null;
   currentPage: number;
   totalPages: number;
   query: string;
-  activeCategorySlug: string | null;
   status: WikiStatusFilter;
   canManage: boolean;
 }
@@ -64,11 +67,11 @@ function coerceStatus(value: string): WikiStatusFilter {
 
 export function WikiDirectory({
   documents,
-  categories,
+  categoryName,
+  editableCategory,
   currentPage,
   totalPages,
   query,
-  activeCategorySlug,
   status,
   canManage,
 }: WikiDirectoryProps) {
@@ -81,6 +84,7 @@ export function WikiDirectory({
   const [deleteTarget, setDeleteTarget] = useState<WikiDocument | null>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const [isDeleting, startDeleting] = useTransition();
+  const [editCategoryOpen, setEditCategoryOpen] = useState(false);
 
   useEffect(() => {
     setSearch(query);
@@ -89,14 +93,11 @@ export function WikiDirectory({
   const buildHref = (
     nextQuery: string,
     nextPage: number,
-    nextCategory: string | null,
     nextStatus: WikiStatusFilter,
   ) => {
     const params = new URLSearchParams();
     const trimmed = nextQuery.trim();
     if (trimmed) params.set("query", trimmed);
-    if (nextCategory) params.set("category", nextCategory);
-    // Status is a manager-only control; never leak it into non-manager URLs.
     if (canManage && nextStatus !== "all") params.set("status", nextStatus);
     if (nextPage !== 1) params.set("page", String(nextPage));
     const queryString = params.toString();
@@ -107,12 +108,12 @@ export function WikiDirectory({
     if (search === query) return;
 
     const handle = setTimeout(() => {
-      router.push(buildHref(search, 1, activeCategorySlug, status));
+      router.push(buildHref(search, 1, status));
     }, SEARCH_DEBOUNCE_MS);
 
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, query, activeCategorySlug, status, pathname, router]);
+  }, [search, query, status, pathname, router]);
 
   const handleCreate = () => {
     if (isCreating) return;
@@ -127,15 +128,10 @@ export function WikiDirectory({
     });
   };
 
-  const handleCategoryChange = (nextCategory: string | null) => {
-    if (nextCategory === activeCategorySlug) return;
-    router.push(buildHref(query, 1, nextCategory, status));
-  };
-
   const handleStatusChange = (value: string) => {
     const nextStatus = coerceStatus(value);
     if (nextStatus === status) return;
-    router.push(buildHref(query, 1, activeCategorySlug, nextStatus));
+    router.push(buildHref(query, 1, nextStatus));
   };
 
   const handleDeleteConfirm = () => {
@@ -152,32 +148,43 @@ export function WikiDirectory({
     });
   };
 
-  const hasActiveFilters = Boolean(query || activeCategorySlug);
+  const hasActiveFilters = Boolean(query);
 
   return (
     <div className="flex w-full flex-col items-start gap-6">
       {canManage ? (
-        <div className="flex w-full flex-col items-end gap-1">
-          <Button
-            variant="brand-primary"
-            icon={<FeatherPlus />}
-            loading={isCreating}
-            disabled={isCreating}
-            onClick={handleCreate}
-          >
-            Create Document
-          </Button>
-          {createError ? (
-            <span className="text-caption font-caption text-error-700">
-              {createError}
-            </span>
+        <div className="flex w-full flex-wrap items-center justify-end gap-2">
+          {editableCategory ? (
+            <Button
+              variant="neutral-secondary"
+              icon={<FeatherFolderCog />}
+              onClick={() => setEditCategoryOpen(true)}
+            >
+              Edit category
+            </Button>
           ) : null}
+          <div className="flex flex-col items-end gap-1">
+            <Button
+              variant="brand-primary"
+              icon={<FeatherPlus />}
+              loading={isCreating}
+              disabled={isCreating}
+              onClick={handleCreate}
+            >
+              New document
+            </Button>
+            {createError ? (
+              <span className="text-caption font-caption text-error-700">
+                {createError}
+              </span>
+            ) : null}
+          </div>
         </div>
       ) : null}
 
       <div className="flex w-full items-center gap-2 mobile:flex-col mobile:items-stretch mobile:gap-3">
         <span className="grow shrink-0 basis-0 text-heading-3 font-heading-3 text-default-font mobile:grow-0 mobile:basis-auto">
-          All Documents
+          {categoryName}
         </span>
         <div className="flex items-center gap-2 mobile:w-full">
           <TextField
@@ -207,34 +214,6 @@ export function WikiDirectory({
         </div>
       </div>
 
-      {categories.length > 0 ? (
-        <div className="flex w-full flex-wrap items-center gap-2">
-          <Button
-            variant={
-              activeCategorySlug === null ? "brand-primary" : "neutral-secondary"
-            }
-            size="small"
-            onClick={() => handleCategoryChange(null)}
-          >
-            All
-          </Button>
-          {categories.map((category) => (
-            <Button
-              key={category.id}
-              variant={
-                activeCategorySlug === category.slug
-                  ? "brand-primary"
-                  : "neutral-secondary"
-              }
-              size="small"
-              onClick={() => handleCategoryChange(category.slug)}
-            >
-              {category.name}
-            </Button>
-          ))}
-        </div>
-      ) : null}
-
       <div className="flex w-full flex-col items-start gap-3">
         {documents.length === 0 ? (
           <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-solid border-neutral-border bg-default-background py-12">
@@ -246,7 +225,7 @@ export function WikiDirectory({
               {hasActiveFilters
                 ? "Try adjusting your search or filters."
                 : canManage
-                  ? "Create your first document to get started."
+                  ? "Create a document and assign it to this category."
                   : "Published documents will appear here."}
             </span>
           </div>
@@ -269,16 +248,9 @@ export function WikiDirectory({
                 <span className="line-clamp-1 text-body-bold font-body-bold text-default-font">
                   {doc.title}
                 </span>
-                <div className="flex flex-wrap items-center gap-2">
-                  {doc.category_name ? (
-                    <Badge variant={doc.category_color ?? "neutral"}>
-                      {doc.category_name}
-                    </Badge>
-                  ) : null}
-                  <span className="whitespace-nowrap text-caption font-caption text-subtext-color">
-                    Updated {formatUpdated(doc.updated_at)}
-                  </span>
-                </div>
+                <span className="whitespace-nowrap text-caption font-caption text-subtext-color">
+                  Updated {formatUpdated(doc.updated_at)}
+                </span>
               </div>
               <div className="flex flex-none items-center gap-2">
                 {canManage ? statusBadge(doc.status) : null}
@@ -330,9 +302,7 @@ export function WikiDirectory({
       <TablePagination
         currentPage={currentPage}
         totalPages={totalPages}
-        onPageChange={(page) =>
-          router.push(buildHref(query, page, activeCategorySlug, status))
-        }
+        onPageChange={(page) => router.push(buildHref(query, page, status))}
       />
 
       <WikiDeleteDialog
@@ -348,6 +318,14 @@ export function WikiDirectory({
         isDeleting={isDeleting}
         onConfirm={handleDeleteConfirm}
       />
+
+      {canManage && editableCategory ? (
+        <WikiCategoryFormDialog
+          open={editCategoryOpen}
+          onOpenChange={setEditCategoryOpen}
+          category={editableCategory}
+        />
+      ) : null}
     </div>
   );
 }
