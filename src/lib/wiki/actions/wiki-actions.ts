@@ -58,7 +58,8 @@ async function createWikiDocumentAction(
     };
   }
 
-  revalidatePath("/wiki");
+  revalidatePath("/wiki", "layout");
+  revalidatePath("/wiki/category/uncategorized");
   return { ok: true, id: data.id as string, slug: data.slug as string };
 }
 
@@ -118,7 +119,7 @@ async function updateWikiDocumentAction(
   }
 
   const slug = data.slug as string;
-  revalidatePath("/wiki");
+  revalidatePath("/wiki", "layout");
   revalidatePath(`/wiki/${slug}`);
   revalidatePath(`/wiki/edit/${id}`);
   return { ok: true, slug };
@@ -161,6 +162,6 @@ async function deleteWikiDocumentAction(
     };
   }
 
-  revalidatePath("/wiki");
+  revalidatePath("/wiki", "layout");
   return { ok: true };
 }

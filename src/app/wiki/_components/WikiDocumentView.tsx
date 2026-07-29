@@ -67,13 +67,22 @@ export function WikiDocumentView({
               <Breadcrumbs.Divider />
               <Breadcrumbs.Item
                 onClick={() =>
-                  router.push(`/wiki?category=${doc.category_slug}`)
+                  router.push(`/wiki/category/${doc.category_slug}`)
                 }
               >
                 {doc.category_name}
               </Breadcrumbs.Item>
             </>
-          ) : null}
+          ) : (
+            <>
+              <Breadcrumbs.Divider />
+              <Breadcrumbs.Item
+                onClick={() => router.push("/wiki/category/uncategorized")}
+              >
+                Uncategorized
+              </Breadcrumbs.Item>
+            </>
+          )}
           <Breadcrumbs.Divider />
           <Breadcrumbs.Item active={true}>{doc.title}</Breadcrumbs.Item>
         </Breadcrumbs>
@@ -90,17 +99,8 @@ export function WikiDocumentView({
       </div>
 
       <div className="flex w-full flex-col items-start gap-3">
-        {doc.category_name || (canManage && doc.status === "draft") ? (
-          <div className="flex flex-wrap items-center gap-2">
-            {doc.category_name ? (
-              <Badge variant={doc.category_color ?? "neutral"}>
-                {doc.category_name}
-              </Badge>
-            ) : null}
-            {canManage && doc.status === "draft" ? (
-              <Badge variant="neutral">Draft</Badge>
-            ) : null}
-          </div>
+        {canManage && doc.status === "draft" ? (
+          <Badge variant="neutral">Draft</Badge>
         ) : null}
 
         <span className="text-heading-1 font-heading-1 text-default-font">
