@@ -1,0 +1,100 @@
+---
+project_name: 'echelon-cycling-hub-admin'
+user_name: 'Den'
+date: '2026-08-05'
+sections_completed:
+  ['technology_stack', 'language_rules', 'framework_rules', 'testing_rules', 'quality_rules', 'workflow_rules', 'anti_patterns']
+status: 'complete'
+rule_count: 27
+optimized_for_llm: true
+---
+
+# Project Context for AI Agents
+
+_This file contains critical rules and patterns that AI agents must follow when implementing code in this project. Focus on unobvious details that agents might otherwise miss._
+
+---
+
+## Technology Stack & Versions
+
+- **Next.js 14.2.3** (App Router) + **React 18** + **TypeScript 5.9.3** (`strict: true`)
+- **Supabase** — `@supabase/supabase-js@2.102.1`, `@supabase/ssr@0.10.0` (Postgres, Auth, RLS)
+- **Subframe** — `@subframe/core@1.154.0`, generated components live in `src/ui` (import alias `@/ui/*`), synced via the Subframe CLI (`.subframe/sync.json`)
+- **Tailwind CSS 3** + `@tailwindcss/typography` for prose content (wiki)
+- **Zod 4.4.3** — request/payload validation. ⚠️ v4, not v3: e.g. `error.issues` (not `.errors`); don't assume v3-era APIs from training data.
+- **React Hook Form 7.76.1** + `@hookform/resolvers@5.4.0`
+- **BlockNote** (`@blocknote/core|mantine|react@0.52.1`) + **Mantine 8.3.18** — rich text editor, used for the Wiki feature only
+- **`@react-pdf/renderer@4.5.1`** — PDF generation (bike-fit reports)
+- **React Email 6.1.5** (`@react-email/components`, `@react-email/tailwind`) + **Resend 6.12.4** — transactional email (see `emails/`)
+- **`@hello-pangea/dnd@18.0.1`** — drag-and-drop (workshop mechanic kanban)
+- **Booqable** — external rental management platform; source of truth for orders/inventory, integrated via webhook (`src/app/api/webhooks/booqable`) and sync logic (`src/lib/booqable/sync.ts`)
+- **ESLint 8** with `eslint-config-next@13.5.4` — pinned older than `next@^14.2.3`; this mismatch is intentional/known, don't "fix" it as a side effect of an unrelated change
+- Hosted on **Vercel** (Hobby/free tier — see Critical Rules for the 10s function timeout constraint)
+- No test runner is configured (no Jest/Vitest/Playwright) — there is currently no automated test suite in this repo
+
+## Critical Implementation Rules
+
+### Language-Specific Rules (TypeScript)
+
+- `strict: true` is enforced — no bare `as any` / `@ts-ignore` to silence errors; if a type genuinely can't be narrowed, leave a comment explaining why.
+- Two import aliases, don't cross them: `@/src/*` for app code (`lib`, `utils`, `components`, `context`), `@/ui/*` for Subframe-generated components/layouts (physically in `src/ui`, but aliased without the `src` segment).
+- **Zod is v4, not v3** — `error.issues` (not `.errors`), and reuse the existing `firstZodErrorMessage(error)` helper pattern (see `src/lib/wiki/actions/wiki-actions.ts`) instead of re-deriving the first message inline.
+- Server action files start with `"use server"`; client components with `"use client"`.
+- `.cursor/rules/error-handling.mdc` already governs the full `withAuth` + `{ok, error}` discriminated-result convention in detail — condensed pointer here since this file may be read by tools that don't load `.cursor/rules/`.
+
+### Framework-Specific Rules (Next.js / React / Supabase)
+
+- Route-local components live in a `_components/` folder inside each route segment (underscore prefix keeps Next.js from treating them as routes). Every route also has a `loading.tsx` for its Suspense fallback.
+- Pages are async Server Components that call a loader directly (e.g. `src/app/orders/page.tsx` awaits `loadOrdersPage`); interactive pieces are separate `"use client"` components that receive data as props.
+- **Feature module organization** — business logic lives in `src/lib/<feature>/`, split into subfolders by concern: `data/` (loaders), `actions/` (server actions), `types/` (Zod schemas + TS types), plus feature-specific ones (`fields/`, `payload/`, `storage/`, `report/`). Each subfolder and the feature root re-export through an `index.ts` barrel. Reference implementations: `src/lib/bike-fit/`, `src/lib/wiki/`.
+- **Supabase client selection** — three different clients for three contexts: `src/utils/supabase/server.ts` (Server Components & Server Actions, cookie-based), `src/utils/supabase/client.ts` (Client Components), `src/utils/supabase/middleware.ts` (session refresh only, wired into `src/middleware.ts`).
+- **Existing Views** (concrete inventory — check before writing a new cross-table query): `bookings_view`, `wiki_documents_view`, `mechanic_performance_stats`.
+- **Role model:** `admin | manager | partner | mechanic` (`UserContext.tsx`, `useUser()` / `useHasRole()`). This is UI-layer gating only — RLS + `withAuth` are the real security boundary; never trust the client-side role check alone for anything sensitive.
+- **"One-click creation" pattern:** create actions insert a blank/default row and return its id; the caller redirects straight to `/edit/[id]` — no separate `/new` route or form (see `createWikiDocument`).
+- Mutations always call `revalidatePath(...)` explicitly for every affected route (layout + specific dynamic paths) rather than relying on `router.refresh()`.
+
+### Testing Rules
+
+- No test runner is configured (no Jest/Vitest/Playwright) and there are no `*.test.*`/`*.spec.*` files in the repo. Don't invent a testing setup unprompted; if a task needs test coverage, ask the user which framework they want introduced first.
+
+### Code Quality & Style Rules
+
+- `.eslintrc.json` only extends `next/core-web-vitals` — no custom rule overrides. There's no Prettier config in the repo, so there's no enforced auto-format contract beyond ESLint's own rules.
+- **Naming conventions:** Components `PascalCase.tsx`; generic reusable hooks in `src/hooks/` are kebab-case (`use-debounced-value.ts`); one-off hooks colocated with the feature that owns them are camelCase matching their sibling file (`useOpenOrderDetails.ts` next to `OrderDetailsDrawer.tsx`); lib/data/action files are kebab-case (`marketing-links-actions.ts`, `customers-types.ts`).
+- Exported functions in `src/lib/` and `src/utils/` consistently carry a short JSDoc block explaining *why* — the tradeoff, the non-obvious invariant, the edge case — never a restatement of *what* the code does. Keep new code to the same standard.
+
+### Development Workflow Rules
+
+- **Branch naming:** `feature/<kebab-case-description>`, `fix/`, `bugfix/`, `chore/`, `perf/` — descriptive slugs, no ticket-number prefixes.
+- **Commit messages:** plain descriptive sentences (imperative or past tense) — not Conventional Commits style (no `feat:`/`fix:` prefixes).
+- **Deploy pipeline:** pushing to `staging` runs `.github/workflows/deploy-staging.yml` (`supabase db push` to the staging project); pushing to `main` runs `.github/workflows/deploy-production.yml` (same, against production). This is the concrete mechanism behind the "migrations are applied by CI only" rule in `.cursor/rules/supabase-migrations.mdc`.
+
+### Critical Don't-Miss Rules
+
+- **`docs/*.md` PRDs describe plans, not necessarily reality** — concrete example: `docs/wiki-feature-prd.md` specifies a Markdown editor (`react-markdown`), but the shipped implementation uses **BlockNote** block JSON instead (confirmed by commit history). `docs/Workshop Tasks PRD.md`'s `bike_tasks`/`checklists` schema has no matching migrations — it hasn't been built yet either. Always verify a PRD's claims against actual migrations/code before trusting it.
+- Never fetch large row sets to `.reduce()`/aggregate in JS — push it into a Postgres View or RPC.
+- **Never apply a migration directly to the staging/production Supabase project** (not via MCP, CLI, or dashboard) — even if a user asks to "make it live now." The only path to remote is merging to `staging`/`main`, which CI deploys automatically. (Full detail in `.cursor/rules/supabase-migrations.mdc`.)
+- `SUPABASE_SERVICE_ROLE_KEY` is used in exactly two places today (Booqable webhook, one sandbox route) — never add a third user-facing usage; it bypasses RLS entirely.
+- The `partner` role is scoped to only their own data via RLS — any new partner-facing query must filter by `partner_id`; partners must stay locked out of Wiki, fleet management, and live bookings.
+- **The Booqable webhook is intentionally "thin"** (`src/app/api/webhooks/booqable/route.ts`): the payload is only used to identify *which* order changed and filter out "ghost" orders (`status: new/concept`) — the actual order/customer/item data is always re-fetched fresh via `syncBooqableOrder`, so duplicate or out-of-order deliveries safely converge. Don't "optimize" by trusting payload fields as current truth. Auth is a static `?secret=` query param against `BOOQABLE_WEBHOOK_SECRET` — not HMAC signature verification.
+- Vercel Hobby tier caps serverless functions at a **10-second execution limit** — any new webhook logic must stay well under that.
+- Supabase free tier **pauses the project after 1 week of inactivity**, which breaks webhook ingestion silently — relevant when debugging "orders not syncing" in non-prod.
+
+---
+
+## Usage Guidelines
+
+**For AI Agents:**
+
+- Read this file before implementing any code.
+- Follow all rules exactly as documented; when in doubt, prefer the more restrictive option.
+- Cross-check `.cursor/rules/*.mdc` for the full detail behind any rule marked as a condensed pointer here.
+- Update this file if a new pattern emerges that future agents would otherwise have to rediscover.
+
+**For Humans:**
+
+- Keep this file lean and focused on agent needs — don't let it grow into general documentation.
+- Update when the technology stack changes or a new feature module ships (e.g. the Workshop bike-task system once it's actually built).
+- Review periodically and remove rules that become obvious over time.
+
+Last Updated: 2026-08-05
