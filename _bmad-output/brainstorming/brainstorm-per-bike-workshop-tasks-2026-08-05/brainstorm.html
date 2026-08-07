@@ -1,0 +1,974 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="dark">
+  <title>The Living Bike Task — Brainstorm Keepsake</title>
+  <style>
+    :root {
+      --ink: #eef4e8;
+      --muted: #aab7aa;
+      --night: #0d1211;
+      --panel: #151d1a;
+      --panel-2: #1b2621;
+      --line: rgba(238, 244, 232, .14);
+      --acid: #dfff52;
+      --mint: #7af5c8;
+      --orange: #ff875f;
+      --blue: #77b7ff;
+      --pink: #ff83bd;
+      --paper: #eee8d8;
+      --paper-ink: #272b25;
+      --max: 1180px;
+    }
+
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at 15% -5%, rgba(122,245,200,.10), transparent 32rem),
+        radial-gradient(circle at 85% 18%, rgba(119,183,255,.08), transparent 28rem),
+        var(--night);
+      font-family: ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      line-height: 1.55;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: "";
+      position: fixed;
+      inset: 0;
+      pointer-events: none;
+      opacity: .22;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.95' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.18'/%3E%3C/svg%3E");
+      z-index: 20;
+      mix-blend-mode: soft-light;
+    }
+
+    a { color: inherit; }
+    button { font: inherit; }
+    .shell { width: min(var(--max), calc(100% - 40px)); margin-inline: auto; }
+    .eyebrow {
+      margin: 0 0 .7rem;
+      color: var(--acid);
+      font-size: .73rem;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+    .section-title {
+      margin: 0;
+      max-width: 830px;
+      font-size: clamp(2.25rem, 6vw, 5.5rem);
+      line-height: .94;
+      letter-spacing: -.055em;
+    }
+    .section-lede {
+      max-width: 720px;
+      margin: 1.25rem 0 0;
+      color: var(--muted);
+      font-size: clamp(1rem, 1.6vw, 1.22rem);
+    }
+
+    .topbar {
+      position: fixed;
+      z-index: 30;
+      left: 50%;
+      bottom: 18px;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      width: min(660px, calc(100% - 24px));
+      padding: 6px;
+      border: 1px solid rgba(255,255,255,.14);
+      border-radius: 999px;
+      background: rgba(13,18,17,.82);
+      box-shadow: 0 18px 60px rgba(0,0,0,.5);
+      backdrop-filter: blur(18px);
+    }
+    .topbar a {
+      flex: 1;
+      padding: 9px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: .73rem;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-align: center;
+      text-decoration: none;
+      text-transform: uppercase;
+      transition: .2s ease;
+    }
+    .topbar a:hover, .topbar a.active { color: var(--night); background: var(--acid); }
+
+    .hero {
+      position: relative;
+      min-height: 100svh;
+      display: grid;
+      align-items: center;
+      padding: 70px 0 110px;
+      overflow: hidden;
+    }
+    .hero-grid {
+      display: grid;
+      grid-template-columns: 1.15fr .85fr;
+      gap: 3rem;
+      align-items: center;
+    }
+    .hero h1 {
+      margin: 0;
+      font-size: clamp(4rem, 10.2vw, 9.6rem);
+      line-height: .79;
+      letter-spacing: -.075em;
+    }
+    .hero h1 span { display: block; color: var(--acid); }
+    .hero-copy {
+      max-width: 640px;
+      margin: 1.6rem 0 0;
+      color: var(--muted);
+      font-size: clamp(1.08rem, 2vw, 1.35rem);
+    }
+    .hero-copy strong { color: var(--ink); }
+    .date-stamp {
+      display: inline-flex;
+      gap: .7rem;
+      align-items: center;
+      margin-top: 2rem;
+      padding: .7rem 1rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      color: var(--muted);
+      font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+      font-size: .76rem;
+      letter-spacing: .06em;
+    }
+    .date-stamp i {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--acid); box-shadow: 0 0 18px var(--acid);
+    }
+
+    .bike-orbit {
+      position: relative;
+      min-height: 520px;
+      display: grid;
+      place-items: center;
+    }
+    .bike-orbit::before, .bike-orbit::after {
+      content: "";
+      position: absolute;
+      border: 1px solid var(--line);
+      border-radius: 50%;
+      animation: orbit 18s linear infinite;
+    }
+    .bike-orbit::before { width: 460px; height: 460px; }
+    .bike-orbit::after { width: 340px; height: 340px; animation-direction: reverse; animation-duration: 12s; }
+    @keyframes orbit { to { transform: rotate(360deg); } }
+    .bike-svg { width: min(520px, 100%); position: relative; z-index: 2; filter: drop-shadow(0 24px 40px rgba(0,0,0,.45)); }
+    .wheel { transform-box: fill-box; transform-origin: center; animation: spin 8s linear infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .orbit-label {
+      position: absolute;
+      z-index: 3;
+      padding: .45rem .7rem;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: var(--panel);
+      color: var(--muted);
+      font: 700 .67rem/1 ui-monospace, monospace;
+      text-transform: uppercase;
+    }
+    .orbit-label.one { top: 9%; left: 6%; }
+    .orbit-label.two { right: 1%; top: 24%; }
+    .orbit-label.three { left: 12%; bottom: 12%; }
+    .orbit-label.four { right: 8%; bottom: 7%; }
+
+    .premise { padding: 120px 0; }
+    .paper-bridge {
+      position: relative;
+      display: grid;
+      grid-template-columns: 1fr 100px 1fr;
+      gap: 1.2rem;
+      align-items: stretch;
+      margin-top: 3rem;
+    }
+    .paper-card, .digital-card {
+      min-height: 390px;
+      padding: 2rem;
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .paper-card {
+      color: var(--paper-ink);
+      background:
+        repeating-linear-gradient(to bottom, transparent 0 31px, rgba(39,43,37,.10) 32px),
+        var(--paper);
+      transform: rotate(-1.2deg);
+      box-shadow: 12px 16px 0 rgba(0,0,0,.18);
+    }
+    .paper-card h3, .digital-card h3 { margin: 0; font-size: 1.8rem; letter-spacing: -.04em; }
+    .paper-list { margin: 1.7rem 0 0; padding: 0; list-style: none; }
+    .paper-list li { display: flex; gap: .75rem; align-items: center; min-height: 32px; font: 600 .9rem/1.2 ui-monospace, monospace; }
+    .box { width: 15px; height: 15px; flex: none; border: 2px solid currentColor; transform: rotate(-3deg); }
+    .paper-sign { margin-top: 2.4rem; display: flex; justify-content: space-between; font: .76rem ui-monospace, monospace; }
+    .digital-card {
+      position: relative;
+      border: 1px solid rgba(223,255,82,.24);
+      border-radius: 24px;
+      background: linear-gradient(145deg, rgba(223,255,82,.08), transparent 50%), var(--panel);
+    }
+    .digital-card::after {
+      content: "LIVING";
+      position: absolute; right: -15px; bottom: 8px;
+      color: rgba(223,255,82,.06);
+      font-size: 6rem; font-weight: 900; letter-spacing: -.08em;
+      transform: rotate(-90deg) translateX(45%);
+    }
+    .digital-list { display: grid; gap: .8rem; margin-top: 1.5rem; position: relative; z-index: 1; }
+    .digital-row {
+      display: grid; grid-template-columns: 22px 1fr auto; gap: .7rem; align-items: center;
+      padding: .8rem; border: 1px solid var(--line); border-radius: 11px; background: rgba(255,255,255,.025);
+    }
+    .digital-row .tick { width: 20px; height: 20px; display: grid; place-items: center; border-radius: 50%; color: var(--night); background: var(--mint); font-weight: 900; }
+    .digital-row small { color: var(--muted); }
+    .bridge-arrow { display: grid; place-items: center; color: var(--acid); font-size: 3rem; }
+    .bridge-arrow span { animation: nudge 1.4s ease-in-out infinite alternate; }
+    @keyframes nudge { to { transform: translateX(12px); } }
+
+    .north-star {
+      margin-top: 3rem;
+      padding: 1.5rem 1.7rem;
+      border-left: 5px solid var(--acid);
+      background: rgba(223,255,82,.06);
+      font-size: clamp(1.25rem, 2.6vw, 2rem);
+      font-weight: 750;
+      letter-spacing: -.025em;
+    }
+    .north-star em { color: var(--acid); font-style: normal; }
+
+    .route { padding: 130px 0; border-top: 1px solid var(--line); }
+    .route-head { display: flex; justify-content: space-between; gap: 2rem; align-items: end; }
+    .route-key { display: flex; gap: .6rem; flex-wrap: wrap; justify-content: flex-end; }
+    .key-pill { padding: .45rem .7rem; border-radius: 999px; font-size: .7rem; font-weight: 800; text-transform: uppercase; }
+    .key-pill.explore { color: var(--blue); background: rgba(119,183,255,.1); }
+    .key-pill.turn { color: var(--orange); background: rgba(255,135,95,.1); }
+    .key-pill.lock { color: var(--acid); background: rgba(223,255,82,.1); }
+
+    .techniques {
+      position: relative;
+      display: grid;
+      grid-template-columns: repeat(12, minmax(250px, 1fr));
+      gap: 1rem;
+      margin-top: 3rem;
+      padding: .5rem 0 1.5rem;
+      overflow-x: auto;
+      scroll-snap-type: x mandatory;
+      scrollbar-color: var(--acid) var(--panel);
+    }
+    .techniques::before {
+      content: "";
+      position: absolute;
+      left: 20px; right: 20px; top: 32px; height: 3px;
+      background: linear-gradient(90deg, var(--blue), var(--orange), var(--acid));
+    }
+    .technique {
+      --c: var(--blue);
+      position: relative;
+      min-height: 410px;
+      margin-top: 45px;
+      padding: 1.35rem;
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      background: var(--panel);
+      scroll-snap-align: start;
+      transition: transform .25s ease, border-color .25s ease;
+    }
+    .technique:hover { transform: translateY(-7px); border-color: var(--c); }
+    .technique::before {
+      content: "";
+      position: absolute;
+      top: -22px; left: 20px;
+      width: 14px; height: 14px;
+      border: 5px solid var(--night); border-radius: 50%; background: var(--c);
+      box-shadow: 0 0 0 1px var(--c), 0 0 18px var(--c);
+    }
+    .technique:nth-child(3n+2) { --c: var(--orange); }
+    .technique:nth-child(3n) { --c: var(--pink); }
+    .technique.locked { --c: var(--acid); background: linear-gradient(160deg, rgba(223,255,82,.08), transparent 55%), var(--panel); }
+    .step-no { color: var(--c); font: 800 .68rem ui-monospace, monospace; letter-spacing: .15em; }
+    .technique h3 { margin: .5rem 0 .8rem; font-size: 1.45rem; line-height: 1.05; letter-spacing: -.035em; }
+    .technique p { margin: 0; color: var(--muted); font-size: .9rem; }
+    .artifact { min-height: 105px; margin: 1.2rem 0; display: grid; place-items: center; }
+    .target { width: 96px; height: 96px; border: 1px solid var(--c); border-radius: 50%; display: grid; place-items: center; box-shadow: inset 0 0 0 15px var(--panel), inset 0 0 0 16px var(--c), inset 0 0 0 31px var(--panel), inset 0 0 0 32px var(--c); }
+    .target::after { content: "2×"; color: var(--c); font-weight: 900; }
+    .roles { width: 100%; display: grid; grid-template-columns: repeat(3, 1fr); gap: .4rem; }
+    .roles span { padding: .65rem .2rem; border: 1px solid var(--line); border-radius: 9px; text-align: center; font-size: .65rem; font-weight: 800; }
+    .roles span:nth-child(2) { background: rgba(255,135,95,.12); }
+    .hazard { width: 100%; padding: 1rem; border: 1px solid var(--orange); background: repeating-linear-gradient(135deg, rgba(255,135,95,.12) 0 12px, transparent 12px 24px); color: var(--orange); text-align: center; font: 900 .8rem ui-monospace, monospace; }
+    .flip { width: 105px; height: 70px; position: relative; transform-style: preserve-3d; animation: flip 5s ease-in-out infinite; }
+    .flip::before, .flip::after { position: absolute; inset: 0; display: grid; place-items: center; border: 1px solid var(--c); border-radius: 10px; backface-visibility: hidden; font: 800 .7rem ui-monospace, monospace; }
+    .flip::before { content: "AUTO ASSIGN?"; }
+    .flip::after { content: "SELF CLAIM"; transform: rotateY(180deg); color: var(--night); background: var(--c); }
+    @keyframes flip { 40%,100% { transform: rotateY(180deg); } }
+    .matrix { width: 105px; display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+    .matrix i { aspect-ratio: 1; border-radius: 3px; background: var(--line); }
+    .matrix i:nth-child(2), .matrix i:nth-child(6), .matrix i:nth-child(12), .matrix i:nth-child(14), .matrix i:nth-child(19), .matrix i:nth-child(23) { background: var(--c); box-shadow: 0 0 10px var(--c); }
+    .fork { position: relative; width: 120px; height: 85px; border-left: 2px solid var(--c); }
+    .fork::before, .fork::after { content: ""; position: absolute; left: -1px; width: 85px; height: 35px; border-top: 2px solid var(--c); border-right: 2px solid var(--c); }
+    .fork::before { top: 12px; transform: skewY(-25deg); }
+    .fork::after { bottom: 5px; transform: skewY(25deg); }
+    .notes { display: flex; align-items: center; }
+    .notes i { width: 48px; height: 48px; margin-left: -10px; border: 1px solid var(--night); background: var(--c); transform: rotate(var(--r)); box-shadow: 0 8px 15px rgba(0,0,0,.25); }
+    .scamper { display: flex; gap: 6px; }
+    .scamper i { width: 19px; height: 70px; border-radius: 5px; background: var(--c); transform: translateY(var(--y)) rotate(var(--r)); opacity: calc(.35 + var(--n)); }
+    .paper-arrow { display: flex; align-items: center; gap: .6rem; font: 800 .7rem ui-monospace, monospace; color: var(--c); }
+    .paper-arrow i { width: 40px; height: 55px; border: 1px solid var(--c); transform: rotate(-7deg); }
+    .tension { width: 125px; position: relative; height: 80px; border-bottom: 3px solid var(--c); transform: rotate(-4deg); }
+    .tension::before, .tension::after { position: absolute; bottom: 8px; font: 800 .62rem ui-monospace, monospace; }
+    .tension::before { content: "LIVE"; left: 0; }
+    .tension::after { content: "STABLE"; right: 0; }
+    .tension i { position: absolute; left: 50%; bottom: -7px; width: 3px; height: 80px; background: var(--c); transform: rotate(4deg); transform-origin: bottom; }
+    .spotlight { width: 95px; height: 95px; display: grid; place-items: center; border: 1px solid var(--c); border-radius: 50%; box-shadow: 0 0 0 12px rgba(223,255,82,.04), 0 0 45px rgba(223,255,82,.18); color: var(--c); font: 900 .65rem ui-monospace, monospace; text-align: center; }
+    .loop { width: 110px; height: 75px; border: 2px solid var(--c); border-radius: 50%; display: grid; place-items: center; position: relative; color: var(--c); font: 800 .66rem ui-monospace, monospace; }
+    .loop::after { content: "›"; position: absolute; right: -5px; top: 8px; padding: 0 4px; background: var(--panel); font-size: 1.5rem; }
+    .takeaway { padding-top: 1rem; border-top: 1px solid var(--line); color: var(--ink) !important; font-weight: 650; }
+
+    .pivot { padding: 120px 0; background: linear-gradient(180deg, transparent, rgba(255,135,95,.035), transparent); }
+    .pivot-grid { display: grid; grid-template-columns: .8fr 1.2fr; gap: 3rem; margin-top: 3rem; align-items: center; }
+    .old-model { position: relative; padding: 2rem; border: 1px dashed rgba(255,135,95,.55); border-radius: 20px; opacity: .74; }
+    .old-model::after {
+      content: "RETIRED";
+      position: absolute; inset: 50% auto auto 50%; transform: translate(-50%,-50%) rotate(-13deg);
+      padding: .35rem .65rem; border: 3px solid var(--orange); color: var(--orange); font: 900 1.3rem ui-monospace, monospace; letter-spacing: .12em;
+    }
+    .old-model h3, .new-model h3 { margin: 0 0 1rem; font-size: 1.35rem; }
+    .generated-items { display: grid; gap: .5rem; }
+    .generated-items span { padding: .7rem; border-radius: 8px; background: rgba(255,255,255,.04); font-size: .8rem; }
+    .new-model { padding: 2rem; border: 1px solid rgba(223,255,82,.35); border-radius: 24px; background: linear-gradient(145deg, rgba(223,255,82,.08), transparent), var(--panel); box-shadow: 0 30px 70px rgba(0,0,0,.22); }
+    .category-rack { display: grid; gap: .7rem; }
+    .category {
+      display: grid; grid-template-columns: 100px 1fr; border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    }
+    .category b { display: grid; place-items: center; padding: .8rem; color: var(--night); background: var(--acid); font-size: .72rem; text-transform: uppercase; }
+    .category span { padding: .8rem; color: var(--muted); font-size: .83rem; }
+    .five {
+      display: flex; flex-wrap: wrap; gap: .45rem; margin-top: 1rem;
+    }
+    .five i { padding: .4rem .6rem; border-radius: 999px; color: var(--mint); background: rgba(122,245,200,.08); font-style: normal; font-size: .7rem; font-weight: 800; }
+
+    .climax {
+      position: relative;
+      padding: 140px 0;
+      overflow: hidden;
+    }
+    .climax::before {
+      content: "";
+      position: absolute; inset: 0;
+      background: radial-gradient(circle at 50% 45%, rgba(223,255,82,.12), transparent 40%);
+    }
+    .climax-head { position: relative; text-align: center; }
+    .climax-head .section-title { margin-inline: auto; font-size: clamp(3.5rem, 9vw, 8.5rem); }
+    .climax-head .section-lede { margin-inline: auto; }
+    .blueprint {
+      position: relative;
+      margin-top: 4.5rem;
+      padding: clamp(1rem, 3vw, 2rem);
+      border: 1px solid rgba(223,255,82,.28);
+      border-radius: 30px;
+      background:
+        linear-gradient(rgba(223,255,82,.035) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(223,255,82,.035) 1px, transparent 1px),
+        rgba(10,16,14,.86);
+      background-size: 28px 28px;
+      box-shadow: 0 40px 100px rgba(0,0,0,.42), inset 0 0 90px rgba(223,255,82,.03);
+    }
+    .authority {
+      display: grid; grid-template-columns: 1fr auto 1fr; gap: 1rem; align-items: center;
+      padding: 1rem; border: 1px solid var(--line); border-radius: 16px; background: rgba(255,255,255,.025);
+    }
+    .authority div { padding: .8rem; }
+    .authority div:last-child { text-align: right; }
+    .authority strong { display: block; color: var(--acid); font-size: 1rem; }
+    .authority span { color: var(--muted); font-size: .8rem; }
+    .authority .link { padding: .3rem; color: var(--acid); font-size: 1.6rem; }
+
+    .flow {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: .7rem;
+      align-items: center;
+      margin-top: 2rem;
+    }
+    .flow-node {
+      position: relative;
+      min-height: 145px;
+      display: flex; flex-direction: column; justify-content: space-between;
+      padding: 1rem;
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      background: var(--panel);
+    }
+    .flow-node:not(:last-child)::after {
+      content: "→";
+      position: absolute; right: -.72rem; top: 50%; z-index: 2;
+      width: 1rem; color: var(--acid); font-weight: 900;
+    }
+    .flow-node small { color: var(--acid); font: 800 .62rem ui-monospace, monospace; letter-spacing: .1em; }
+    .flow-node b { font-size: .95rem; line-height: 1.15; }
+    .flow-node span { color: var(--muted); font-size: .7rem; }
+    .flow-node.return { border-color: var(--blue); }
+    .flow-node.notes { min-height: 145px; width: auto; display: flex; align-items: initial; }
+
+    .change-rule {
+      display: grid; grid-template-columns: 1fr auto 1fr;
+      gap: 1rem; align-items: center;
+      margin-top: 1.2rem; padding: 1.2rem;
+      border: 1px solid rgba(255,135,95,.4); border-radius: 18px;
+      background: rgba(255,135,95,.06);
+    }
+    .change-rule b { display: block; color: var(--orange); }
+    .change-rule p { margin: .2rem 0 0; color: var(--muted); font-size: .8rem; }
+    .change-rule .pulse-arrow { color: var(--orange); font-size: 2rem; animation: nudge 1.4s ease-in-out infinite alternate; }
+
+    .principles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 2rem; }
+    .principle {
+      min-height: 180px; padding: 1.25rem; border-top: 3px solid var(--acid);
+      background: rgba(255,255,255,.035);
+    }
+    .principle .num { color: var(--acid); font: 900 2rem/1 ui-monospace, monospace; }
+    .principle h3 { margin: .8rem 0 .4rem; font-size: 1rem; }
+    .principle p { margin: 0; color: var(--muted); font-size: .78rem; }
+
+    .boundary { padding: 120px 0; border-top: 1px solid var(--line); }
+    .boundary-grid { display: grid; grid-template-columns: 1.3fr .8fr .8fr; gap: 1rem; margin-top: 3rem; }
+    .scope {
+      position: relative;
+      padding: 1.6rem;
+      border-radius: 22px;
+      background: var(--panel);
+      overflow: hidden;
+    }
+    .scope::before { content: ""; position: absolute; inset: 0 auto 0 0; width: 5px; background: var(--tone); }
+    .scope.must { --tone: var(--acid); border: 1px solid rgba(223,255,82,.25); }
+    .scope.should { --tone: var(--blue); border: 1px solid rgba(119,183,255,.22); }
+    .scope.wont { --tone: var(--orange); border: 1px solid rgba(255,135,95,.2); }
+    .scope h3 { margin: 0; color: var(--tone); font: 900 1rem ui-monospace, monospace; letter-spacing: .12em; }
+    .scope .scope-sub { margin: .35rem 0 1.4rem; color: var(--muted); font-size: .78rem; }
+    .scope ul { margin: 0; padding: 0; list-style: none; display: grid; gap: .75rem; }
+    .scope li { position: relative; padding-left: 1.1rem; font-size: .84rem; }
+    .scope li::before { content: ""; position: absolute; left: 0; top: .58em; width: 6px; height: 6px; border-radius: 50%; background: var(--tone); }
+
+    .graveyard { padding: 100px 0 150px; }
+    .filter-row { display: flex; gap: .5rem; flex-wrap: wrap; margin-top: 2rem; }
+    .filter {
+      padding: .6rem .85rem; border: 1px solid var(--line); border-radius: 999px;
+      color: var(--muted); background: transparent; cursor: pointer; font-size: .75rem; font-weight: 800;
+    }
+    .filter.active, .filter:hover { color: var(--night); border-color: var(--orange); background: var(--orange); }
+    .alternatives { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-top: 1.4rem; }
+    .alternative {
+      min-height: 170px; padding: 1.2rem; border: 1px solid var(--line); border-radius: 16px;
+      background: rgba(255,255,255,.025); transition: .2s ease;
+    }
+    .alternative.hidden { display: none; }
+    .alternative .status { color: var(--orange); font: 800 .63rem ui-monospace, monospace; letter-spacing: .12em; text-transform: uppercase; }
+    .alternative[data-kind="later"] .status { color: var(--blue); }
+    .alternative h3 { margin: .6rem 0; font-size: 1rem; }
+    .alternative p { margin: 0; color: var(--muted); font-size: .78rem; }
+
+    .final-word {
+      position: relative;
+      padding: 100px 0 160px;
+      text-align: center;
+      background: var(--acid);
+      color: var(--night);
+      overflow: hidden;
+    }
+    .final-word::before {
+      content: "↻";
+      position: absolute; left: 50%; top: 50%;
+      transform: translate(-50%,-50%);
+      color: rgba(13,18,17,.06);
+      font-size: 35rem; line-height: 1;
+    }
+    .final-word blockquote {
+      position: relative;
+      max-width: 940px;
+      margin: 0 auto;
+      font-size: clamp(2.3rem, 6.2vw, 5.6rem);
+      font-weight: 900;
+      line-height: .95;
+      letter-spacing: -.06em;
+    }
+    .final-word p { position: relative; max-width: 730px; margin: 2rem auto 0; font-size: 1.05rem; font-weight: 650; }
+    .footer-mark { position: relative; margin-top: 3.5rem; font: 800 .7rem ui-monospace, monospace; letter-spacing: .16em; text-transform: uppercase; }
+
+    .reveal { opacity: 0; transform: translateY(24px); transition: opacity .7s ease, transform .7s ease; }
+    .reveal.seen { opacity: 1; transform: none; }
+
+    @media (max-width: 960px) {
+      .hero-grid, .paper-bridge, .pivot-grid { grid-template-columns: 1fr; }
+      .bike-orbit { min-height: 360px; }
+      .paper-bridge { gap: 2rem; }
+      .bridge-arrow { transform: rotate(90deg); }
+      .flow { grid-template-columns: repeat(2, 1fr); }
+      .flow-node:not(:last-child)::after { display: none; }
+      .principles { grid-template-columns: repeat(2, 1fr); }
+      .boundary-grid { grid-template-columns: 1fr; }
+      .alternatives { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 640px) {
+      .shell { width: min(100% - 24px, var(--max)); }
+      .hero { padding-top: 45px; }
+      .hero h1 { font-size: clamp(3.7rem, 22vw, 6rem); }
+      .bike-orbit { min-height: 310px; }
+      .bike-orbit::before { width: 300px; height: 300px; }
+      .bike-orbit::after { width: 220px; height: 220px; }
+      .orbit-label { font-size: .55rem; }
+      .paper-card, .digital-card { min-height: auto; padding: 1.25rem; }
+      .route-head { display: block; }
+      .route-key { justify-content: flex-start; margin-top: 1rem; }
+      .authority, .change-rule { grid-template-columns: 1fr; }
+      .authority div:last-child { text-align: left; }
+      .authority .link, .change-rule .pulse-arrow { transform: rotate(90deg); text-align: center; }
+      .flow { grid-template-columns: 1fr; }
+      .principles, .alternatives { grid-template-columns: 1fr; }
+      .category { grid-template-columns: 85px 1fr; }
+      .topbar a { font-size: .58rem; padding-inline: 4px; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after { scroll-behavior: auto !important; animation: none !important; transition: none !important; }
+      .reveal { opacity: 1; transform: none; }
+    }
+    @media print {
+      .topbar { display: none; }
+      body { background: white; color: #111; }
+      .hero { min-height: auto; }
+      .techniques { grid-template-columns: repeat(3, 1fr); overflow: visible; }
+      .technique { break-inside: avoid; }
+    }
+  </style>
+</head>
+<body>
+  <nav class="topbar" aria-label="Keepsake sections">
+    <a href="#spark">Spark</a>
+    <a href="#journey">Journey</a>
+    <a href="#model">Model</a>
+    <a href="#boundary">Boundary</a>
+    <a href="#archive">Archive</a>
+  </nav>
+
+  <main>
+    <section class="hero" id="spark">
+      <div class="shell hero-grid">
+        <div>
+          <p class="eyebrow">Workshop task pipeline · creative session keepsake</p>
+          <h1>The Living <span>Bike Task</span></h1>
+          <p class="hero-copy">
+            A paper checklist began the ride. The destination became something richer:
+            <strong>a rental-scoped physical-work record</strong> that stays alive as Booqable intent changes,
+            carries independent quality checks, and returns the bike to its required state.
+          </p>
+          <div class="date-stamp"><i></i> 05–07 AUG 2026 · GREENFIELD BRAINSTORM</div>
+        </div>
+        <div class="bike-orbit" aria-label="Animated line drawing of a bicycle surrounded by the workshop task ideas">
+          <span class="orbit-label one">intent</span>
+          <span class="orbit-label two">work</span>
+          <span class="orbit-label three">verification</span>
+          <span class="orbit-label four">restoration</span>
+          <svg class="bike-svg" viewBox="0 0 620 380" role="img" aria-label="Bicycle blueprint">
+            <g fill="none" stroke="#dfff52" stroke-width="4" stroke-linecap="round" stroke-linejoin="round">
+              <g class="wheel">
+                <circle cx="145" cy="260" r="93"/>
+                <circle cx="145" cy="260" r="7" fill="#dfff52"/>
+                <path opacity=".28" d="M145 167v186M52 260h186M80 194l130 132M80 326l130-132"/>
+              </g>
+              <g class="wheel">
+                <circle cx="475" cy="260" r="93"/>
+                <circle cx="475" cy="260" r="7" fill="#dfff52"/>
+                <path opacity=".28" d="M475 167v186M382 260h186M410 194l130 132M410 326l130-132"/>
+              </g>
+              <path d="M145 260l105-140 82 140H145l74-89h161l95 89"/>
+              <path d="M250 120h65M250 120l-21-39M205 78h49M380 171l-14-81M345 88h54"/>
+              <circle cx="332" cy="260" r="25"/>
+              <path d="M332 260l46 27M332 260l-42-27"/>
+            </g>
+            <g fill="#eef4e8" font-family="ui-monospace, monospace" font-size="11">
+              <text x="235" y="111">NOTES</text>
+              <text x="313" y="295">M1 → M2</text>
+              <text x="390" y="160">BOOQABLE INTENT</text>
+            </g>
+          </svg>
+        </div>
+      </div>
+    </section>
+
+    <section class="premise" aria-labelledby="premise-title">
+      <div class="shell">
+        <p class="eyebrow">The starting tension</p>
+        <h2 class="section-title" id="premise-title">Digitize the workshop.<br>Do not replace the world.</h2>
+        <p class="section-lede">Booqable already owns the order lifecycle. The pain lives at the workbench: invisible progress, missing attribution, paper attention flags, and no reliable record of what changed on the bike.</p>
+
+        <div class="paper-bridge reveal">
+          <article class="paper-card">
+            <h3>One paper sheet</h3>
+            <ul class="paper-list">
+              <li><span class="box"></span> Full preparation list</li>
+              <li><span class="box"></span> A critical subset checked twice</li>
+              <li><span class="box"></span> Tyre pressure F ___ R ___ PSI</li>
+              <li><span class="box"></span> Accessories & setup</li>
+              <li><span class="box"></span> Handwritten attention marks</li>
+            </ul>
+            <div class="paper-sign"><span>M1 SIGN ______</span><span>M2 SIGN ______</span></div>
+          </article>
+          <div class="bridge-arrow" aria-hidden="true"><span>→</span></div>
+          <article class="digital-card">
+            <h3>One living task</h3>
+            <div class="digital-list">
+              <div class="digital-row"><span class="tick">✓</span><b>Prep · all required work</b><small>M1</small></div>
+              <div class="digital-row"><span class="tick">✓</span><b>Independent re-check</b><small>M2</small></div>
+              <div class="digital-row"><span class="tick">↻</span><b>Selective reset after change</b><small>LIVE</small></div>
+              <div class="digital-row"><span class="tick">✎</span><b>Shared rental Notes</b><small>BIKE</small></div>
+              <div class="digital-row"><span class="tick">⌂</span><b>Return check & restoration</b><small>RETURN</small></div>
+            </div>
+          </article>
+        </div>
+
+        <div class="north-star reveal">
+          The job is not “complete a checklist.” It is to <em>guarantee bike quality through an independent, selective re-check</em> while preserving what happened to this bike during this rental.
+        </div>
+      </div>
+    </section>
+
+    <section class="route" id="journey" aria-labelledby="journey-title">
+      <div class="shell">
+        <div class="route-head">
+          <div>
+            <p class="eyebrow">The thinking route · swipe the workbench</p>
+            <h2 class="section-title" id="journey-title">Twelve lenses.<br>One sharpening idea.</h2>
+          </div>
+          <div class="route-key" aria-label="Journey legend">
+            <span class="key-pill explore">Explored</span>
+            <span class="key-pill turn">Course correction</span>
+            <span class="key-pill lock">Locked insight</span>
+          </div>
+        </div>
+
+        <div class="techniques" aria-label="Horizontal timeline of brainstorming techniques">
+          <article class="technique">
+            <span class="step-no">01 · FOCUS</span>
+            <h3>Job to Be Done</h3>
+            <div class="artifact"><div class="target"></div></div>
+            <p>The session separated workshop automation from full order-lifecycle ownership.</p>
+            <p class="takeaway">Build the thin Booqable-to-workshop translation layer; keep lifecycle replacement for later.</p>
+          </article>
+
+          <article class="technique">
+            <span class="step-no">02 · EMBODY</span>
+            <h3>Role Playing</h3>
+            <div class="artifact"><div class="roles"><span>M1<br>PREP</span><span>M2<br>VERIFY</span><span>RETURN<br>CHECK</span></div></div>
+            <p>Standing in each mechanic’s shoes exposed value fields, found-and-fixed notes, manager judgment flags, and return restoration.</p>
+            <p class="takeaway">A task is what a mechanic must do—not the whole order and not an order-level blocker.</p>
+          </article>
+
+          <article class="technique">
+            <span class="step-no">03 · BREAK</span>
+            <h3>Failure Analysis</h3>
+            <div class="artifact"><div class="hazard">DO NOT DISTRACT FROM THE BIKE</div></div>
+            <p>The adoption killer was obvious: a cumbersome screen that steals attention from physical work.</p>
+            <p class="takeaway">One bike-focused work surface, earliest-start-date queue, one-tap claiming, and first-writer-wins.</p>
+          </article>
+
+          <article class="technique">
+            <span class="step-no">04 · INVERT</span>
+            <h3>Assumption Reversal</h3>
+            <div class="artifact"><div class="flip"></div></div>
+            <p>Automatic assignment sounded efficient—until real workshop workload and availability entered the room.</p>
+            <p class="takeaway">Self-claim or explicit assignment. One unified template can carry per-item M1/M2 applicability.</p>
+          </article>
+
+          <article class="technique">
+            <span class="step-no">05 · COMBINE</span>
+            <h3>Morphological Analysis</h3>
+            <div class="artifact"><div class="matrix" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div></div>
+            <p>Stable admin templates met volatile Booqable configuration. Dynamic accessory items became the first answer.</p>
+            <p class="takeaway">The task must absorb source changes and invalidate only work made stale.</p>
+          </article>
+
+          <article class="technique">
+            <span class="step-no">06 · BRANCH</span>
+            <h3>Decision Tree Mapping</h3>
+            <div class="artifact"><div class="fork"></div></div>
+            <p>Cancelled, reserved, replaced, changed-to-No, in-progress, complete: each edge case tested identity and history.</p>
+            <p class="takeaway">Same stock ID resumes; replacement creates a fresh task; cancellation locks; reserved keeps work alive.</p>
+          </article>
+
+          <article class="technique">
+            <span class="step-no">07 · PASS</span>
+            <h3>Brain Writing</h3>
+            <div class="artifact"><div class="notes" aria-hidden="true"><i style="--r:-9deg"></i><i style="--r:5deg"></i><i style="--r:-2deg"></i></div></div>
+            <p>A proposed changed-task queue revealed the manager’s real need—then ownership complexity overtook the model.</p>
+            <p class="takeaway">Revalidation should not become a parallel universe. Keep changed work in the ordinary queue.</p>
+          </article>
+
+          <article class="technique">
+            <span class="step-no">08 · REMIX</span>
+            <h3>SCAMPER</h3>
+            <div class="artifact"><div class="scamper" aria-hidden="true"><i style="--y:8px;--r:-9deg;--n:.1"></i><i style="--y:-7px;--r:3deg;--n:.2"></i><i style="--y:3px;--r:8deg;--n:.4"></i><i style="--y:-2px;--r:-3deg;--n:.55"></i></div></div>
+            <p>The special “revalidation” concept was removed. Exact affected items simply reopen through the normal flow.</p>
+            <p class="takeaway">Existing task, normal Needs prep queue, affected work only—no Changed status or separate pipeline.</p>
+          </article>
+
+          <article class="technique">
+            <span class="step-no">09 · PRESERVE</span>
+            <h3>Build on What Works</h3>
+            <div class="artifact"><div class="paper-arrow"><i></i><b>→</b><span>CLEAR<br>INSTRUCTIONS</span></div></div>
+            <p>The paper process’s strongest quality was not paper at all. It was clarity at the point of work.</p>
+            <p class="takeaway">Be concrete when source data allows; when it does not, show Booqable wording verbatim and do not pretend.</p>
+          </article>
+
+          <article class="technique">
+            <span class="step-no">10 · RESOLVE</span>
+            <h3>TRIZ Contradiction</h3>
+            <div class="artifact"><div class="tension"><i></i></div></div>
+            <p>The checklist needs to be live enough for source changes, yet stable enough to use while hands are on the bike.</p>
+            <p class="takeaway">Highlight changed requirements; completing the affected item clears the highlight. No separate acknowledgement.</p>
+          </article>
+
+          <article class="technique locked">
+            <span class="step-no">11 · DISTILL</span>
+            <h3>One Feature Only</h3>
+            <div class="artifact"><div class="spotlight">BIKE<br>CHANGES<br>NOTES</div></div>
+            <p>If one capability survives beyond checklists, it is recording rental-specific physical changes for later reversal.</p>
+            <p class="takeaway">One shared Notes field follows the task into return checking; no cross-rental history and no revision system.</p>
+          </article>
+
+          <article class="technique locked">
+            <span class="step-no">12 · CONNECT</span>
+            <h3>Causal Loop Mapping</h3>
+            <div class="artifact"><div class="loop">SETUP → RENT → RETURN</div></div>
+            <p>Preparation and return became one loop: apply rental intent, independently verify it, then restore or account for it.</p>
+            <p class="takeaway">Separate category-specific Prep and Return templates; return is one mechanic, triggered by Booqable returned status.</p>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="pivot" aria-labelledby="pivot-title">
+      <div class="shell">
+        <p class="eyebrow">The decisive model change</p>
+        <h2 class="section-title" id="pivot-title">From generated instructions<br>to a bounded workshop grammar.</h2>
+        <p class="section-lede">Stakeholder correction made dynamic source change essential. Later, the session found a clearer way to express it: administrators own the work language; Booqable setup categories provide context and selective reset.</p>
+
+        <div class="pivot-grid reveal">
+          <article class="old-model">
+            <h3>Explored: generated accessory items</h3>
+            <div class="generated-items">
+              <span>Install Shimano SPD-SL pedals</span>
+              <span>Verify Shimano SPD-SL pedals</span>
+              <span>Remove deselected accessory</span>
+              <span>Review updated bike configuration</span>
+            </div>
+          </article>
+          <article class="new-model">
+            <h3>Accepted: always-visible admin checklist</h3>
+            <div class="category-rack">
+              <div class="category"><b>Pedals</b><span>Header: “Look · changed from Shimano”<br>Admin items beneath: Install pedals · Check torque</span></div>
+              <div class="category"><b>Saddle</b><span>Booqable value and change context + stable admin-authored work</span></div>
+              <div class="category"><b>Base work</b><span>Configuration-invariant checks remain visible and untouched</span></div>
+            </div>
+            <div class="five" aria-label="Five bounded Booqable setup categories">
+              <i>Pedals</i><i>Saddle</i><i>Wheelset</i><i>Power meter</i><i>Computer mount</i>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="climax" id="model" aria-labelledby="model-title">
+      <div class="shell">
+        <header class="climax-head">
+          <p class="eyebrow">Final synthesis · accepted model</p>
+          <h2 class="section-title" id="model-title">One bike.<br>One living record.</h2>
+          <p class="section-lede">Not a mini order-management system. Not a frozen digital form. A task that translates rental intent into physical work, keeps independent verification honest, and stays with the bike until its rental-specific changes are addressed on return.</p>
+        </header>
+
+        <div class="blueprint reveal">
+          <div class="authority">
+            <div><strong>Booqable</strong><span>Order lifecycle authority · current rental intent · setup values</span></div>
+            <div class="link" aria-hidden="true">⇄</div>
+            <div><strong>Workshop task</strong><span>Physical work · checks · attribution · Notes · restoration</span></div>
+          </div>
+
+          <div class="flow" aria-label="Accepted bike-task lifecycle">
+            <div class="flow-node"><small>01 · TRIGGER</small><b>Reserved order</b><span>Per-bike task enters ordinary queue immediately.</span></div>
+            <div class="flow-node"><small>02 · CLAIM</small><b>Mechanic 1</b><span>One bike at a time; earliest rental start first.</span></div>
+            <div class="flow-node"><small>03 · PREP</small><b>Done / N/A / value</b><span>Required action and value responses block handoff.</span></div>
+            <div class="flow-node"><small>04 · VERIFY</small><b>Independent M2</b><span>Own Done/N/A verification; corrections go in Notes.</span></div>
+            <div class="flow-node notes"><small>05 · CARRY</small><b>Shared Notes</b><span>Latest rental-specific physical changes stay visible.</span></div>
+            <div class="flow-node return"><small>06 · RETURN</small><b>Separate checklist</b><span>One mechanic; category-specific; Booqable returned trigger.</span></div>
+            <div class="flow-node return"><small>07 · CLOSE</small><b>Changes addressed</b><span>Return also acknowledges all preparation Notes.</span></div>
+          </div>
+
+          <div class="change-rule">
+            <div>
+              <b>Booqable setup changes after work begins</b>
+              <p>Category-linked checks become stale. Unaffected checklist results and history remain valid.</p>
+            </div>
+            <div class="pulse-arrow" aria-hidden="true">→</div>
+            <div>
+              <b>The same task returns to normal Prep</b>
+              <p>Unassigned if it was complete or in M2; only reset items run through their configured M1/M2 applicability.</p>
+            </div>
+          </div>
+
+          <div class="principles">
+            <article class="principle"><div class="num">01</div><h3>Living, not final</h3><p>Reserved configuration may change. Before claim it refreshes silently; after work begins it selectively reopens affected work.</p></article>
+            <article class="principle"><div class="num">02</div><h3>Honest responses</h3><p>Action items use explicit Done or N/A. Value items require values and offer no N/A; optional values may remain blank.</p></article>
+            <article class="principle"><div class="num">03</div><h3>Independent quality</h3><p>M2 makes a fresh attestation, may correct the bike after speaking with M1, and records that correction in shared Notes.</p></article>
+            <article class="principle"><div class="num">04</div><h3>Scoped memory</h3><p>Notes follow this rental into return, but do not automatically become a cross-rental physical-bike history.</p></article>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="boundary" id="boundary" aria-labelledby="boundary-title">
+      <div class="shell">
+        <p class="eyebrow">The build line · clearly bounded</p>
+        <h2 class="section-title" id="boundary-title">First release earns trust<br>at the workbench.</h2>
+        <p class="section-lede">The accepted MoSCoW boundary protects the two ideas that make the feature worth building: living Booqable-driven bike work, and rental-specific Notes carried into return.</p>
+
+        <div class="boundary-grid reveal">
+          <article class="scope must">
+            <h3>MUST · FIRST RELEASE</h3>
+            <p class="scope-sub">The accepted product core</p>
+            <ul>
+              <li>Booqable-driven per-bike task queues, ordered by rental start date</li>
+              <li>Versioned, category-specific Prep and Return checklist templates</li>
+              <li>Always-visible admin-authored Prep items with optional links to five setup categories</li>
+              <li>M1 preparation plus independently attributed M2 verification where configured</li>
+              <li>Action responses as Done/N/A; value responses as required or optional values</li>
+              <li>Automatic selective reopening when linked Booqable setup changes after work</li>
+              <li>Shared task Notes for rental-specific bike changes and M2 corrections</li>
+              <li>Return checklist triggered by Booqable returned status, with Notes acknowledgement</li>
+              <li>Attention and audit history; cancellation/removal preserved read-only</li>
+            </ul>
+          </article>
+
+          <article class="scope should">
+            <h3>SHOULD · FOLLOW</h3>
+            <p class="scope-sub">Valuable, not release-defining</p>
+            <ul>
+              <li>Manager at-a-glance counts and date-scope filters</li>
+              <li>Performance views using M1/M2 attribution</li>
+              <li>Changed-work visibility through normal task filtering</li>
+              <li>Broader workshop analytics after trusted usage data exists</li>
+            </ul>
+          </article>
+
+          <article class="scope wont">
+            <h3>WON’T · THIS RELEASE</h3>
+            <p class="scope-sub">Explicitly outside the boundary</p>
+            <ul>
+              <li>Replace Booqable’s full order lifecycle</li>
+              <li>Cross-rental bike history or usage analytics</li>
+              <li>Offline mode and retained unsaved changes</li>
+              <li>Automatic mechanic assignment</li>
+              <li>Generated accessory checklist items</li>
+              <li>Shared Notes revision history</li>
+              <li>Bikefit cross-reference</li>
+              <li>Separate revalidation tasks, statuses, or manager ping flows</li>
+            </ul>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <section class="graveyard" id="archive" aria-labelledby="archive-title">
+      <div class="shell">
+        <p class="eyebrow">The idea parts bin</p>
+        <h2 class="section-title" id="archive-title">Useful roads<br>not taken.</h2>
+        <p class="section-lede">These ideas shaped the accepted model by revealing complexity, false certainty, or a boundary better left for later. They are intentionally distinct from the final design.</p>
+        <div class="filter-row" role="group" aria-label="Filter explored alternatives">
+          <button class="filter active" data-filter="all">All</button>
+          <button class="filter" data-filter="retired">Retired</button>
+          <button class="filter" data-filter="later">Deferred</button>
+        </div>
+        <div class="alternatives">
+          <article class="alternative" data-kind="retired"><span class="status">Retired model</span><h3>Generated accessory checklist items</h3><p>Replaced by always-visible admin-authored items linked to bounded setup categories.</p></article>
+          <article class="alternative" data-kind="retired"><span class="status">Rejected</span><h3>Explicit “Release to workshop” gate</h3><p>There is no real operational readiness moment; reserved tasks are living work that absorbs updates.</p></article>
+          <article class="alternative" data-kind="retired"><span class="status">Simplified away</span><h3>Changed / Revalidation pipeline</h3><p>Changed work returns to ordinary Prep and Re-check queues on the same task.</p></article>
+          <article class="alternative" data-kind="retired"><span class="status">Removed</span><h3>Manager urgent ping</h3><p>No special urgent-mark mechanism; reopened work follows the normal start-date-prioritized queue.</p></article>
+          <article class="alternative" data-kind="retired"><span class="status">Rejected</span><h3>Automatic assignment</h3><p>The system cannot know real-world mechanic workload. Self-claim and explicit assignment remain.</p></article>
+          <article class="alternative" data-kind="retired"><span class="status">Rejected</span><h3>Accessory dependency bundles</h3><p>Too impractical to map accessory changes reliably onto manually authored stable checks.</p></article>
+          <article class="alternative" data-kind="retired"><span class="status">Rejected</span><h3>Admin complete-without-check</h3><p>Would undermine independent quality evidence. Reassignment is allowed; checking remains required.</p></article>
+          <article class="alternative" data-kind="retired"><span class="status">Rejected</span><h3>Separate accessory adjustment tasks</h3><p>Would expand the task model; the existing bike task absorbs reopened setup work.</p></article>
+          <article class="alternative" data-kind="later"><span class="status">Deferred direction</span><h3>Full bike identity history</h3><p>Stock-identifier usage frequency, cumulative parts and modifications remain a separate future feature.</p></article>
+          <article class="alternative" data-kind="later"><span class="status">Deferred direction</span><h3>Full order-lifecycle ownership</h3><p>Booqable already works end-to-end. Replacing it is not the mechanics-workflow problem.</p></article>
+          <article class="alternative" data-kind="later"><span class="status">Deferred concern</span><h3>Offline resilience</h3><p>Unsaved markers and local retry were explored, then explicitly moved out of current scope.</p></article>
+          <article class="alternative" data-kind="later"><span class="status">Parked</span><h3>Bikefit cross-reference</h3><p>A potential connection to existing bikefit data, intentionally not needed now.</p></article>
+        </div>
+      </div>
+    </section>
+
+    <section class="final-word">
+      <div class="shell">
+        <blockquote>Whenever rental intent changes the physical bike, keep the difference actionable until a mechanic confirms the bike matches the required state.</blockquote>
+        <p>That single rule connects setup changes, independent verification, shared Notes, and return restoration—without stealing ownership of the order lifecycle from Booqable.</p>
+        <div class="footer-mark">PER-BIKE WORKSHOP TASKS · SESSION COMPLETE</div>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+      const reveals = document.querySelectorAll(".reveal");
+      if (reduced || !("IntersectionObserver" in window)) {
+        reveals.forEach(el => el.classList.add("seen"));
+      } else {
+        const revealObserver = new IntersectionObserver(entries => {
+          entries.forEach(entry => {
+            if (entry.isIntersecting) {
+              entry.target.classList.add("seen");
+              revealObserver.unobserve(entry.target);
+            }
+          });
+        }, { threshold: 0.14 });
+        reveals.forEach(el => revealObserver.observe(el));
+      }
+
+      const navLinks = [...document.querySelectorAll(".topbar a")];
+      const sections = navLinks
+        .map(link => document.querySelector(link.getAttribute("href")))
+        .filter(Boolean);
+      const navObserver = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          if (entry.isIntersecting) {
+            navLinks.forEach(link => {
+              link.classList.toggle("active", link.getAttribute("href") === `#${entry.target.id}`);
+            });
+          }
+        });
+      }, { rootMargin: "-38% 0px -52% 0px" });
+      sections.forEach(section => navObserver.observe(section));
+
+      const filters = document.querySelectorAll(".filter");
+      const alternatives = document.querySelectorAll(".alternative");
+      filters.forEach(button => {
+        button.addEventListener("click", () => {
+          filters.forEach(item => item.classList.remove("active"));
+          button.classList.add("active");
+          const filter = button.dataset.filter;
+          alternatives.forEach(card => {
+            card.classList.toggle("hidden", filter !== "all" && card.dataset.kind !== filter);
+          });
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
