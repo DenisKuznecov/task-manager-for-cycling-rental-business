@@ -1,0 +1,1838 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Workshop Tasks — Dashboard Information Hierarchy Directions</title>
+  <style>
+    /*
+      Fixed Subframe admin-hub identity used by every direction:
+      brand-primary / brand-600 #D97706
+      brand-50 #FFFBEB
+      brand-100 #FEF3C7
+      brand-800 #92400E
+      neutral text #0F172A
+      subtext #64748B
+      borders #E2E8F0
+      surfaces #FFFFFF / #F8FAFC / #F1F5F9
+      success #0D9488 with pale success #F0FDFA
+      error #DC2626 with pale error #FEF2F2
+    */
+    :root {
+      --brand: #D97706;
+      --brand-50: #FFFBEB;
+      --brand-100: #FEF3C7;
+      --brand-800: #92400E;
+      --ink: #0F172A;
+      --subtext: #64748B;
+      --border: #E2E8F0;
+      --white: #FFFFFF;
+      --surface: #F8FAFC;
+      --surface-strong: #F1F5F9;
+      --success: #0D9488;
+      --success-pale: #F0FDFA;
+      --error: #DC2626;
+      --error-pale: #FEF2F2;
+      --shadow: 0 18px 50px rgba(15, 23, 42, 0.12);
+      --shadow-soft: 0 4px 14px rgba(15, 23, 42, 0.07);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html {
+      background: var(--surface-strong);
+      color: var(--ink);
+      font-family: Geist, "Geist Sans", Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at 14% 0%, rgba(217, 119, 6, 0.08), transparent 28rem),
+        var(--surface-strong);
+    }
+
+    button {
+      font: inherit;
+    }
+
+    .artifact-header {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 54px 32px 28px;
+    }
+
+    .artifact-kicker {
+      margin: 0 0 10px;
+      color: var(--brand-800);
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 0.13em;
+      text-transform: uppercase;
+    }
+
+    .artifact-header h1 {
+      max-width: 920px;
+      margin: 0;
+      font-size: clamp(32px, 5vw, 56px);
+      line-height: 1.02;
+      letter-spacing: -0.045em;
+    }
+
+    .artifact-intro {
+      max-width: 760px;
+      margin: 18px 0 0;
+      color: var(--subtext);
+      font-size: 17px;
+      line-height: 1.6;
+    }
+
+    .artifact-constraint {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 20px;
+      padding: 8px 12px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.78);
+      color: var(--ink);
+      font-size: 12px;
+      font-weight: 750;
+    }
+
+    .artifact-constraint::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--brand);
+      box-shadow: 0 0 0 3px var(--brand-100);
+    }
+
+    main {
+      max-width: 1420px;
+      margin: 0 auto;
+      padding: 0 24px 72px;
+    }
+
+    .direction {
+      margin-top: 34px;
+      padding: 30px;
+      border: 1px solid rgba(226, 232, 240, 0.95);
+      border-radius: 20px;
+      background: rgba(255, 255, 255, 0.82);
+      box-shadow: 0 8px 30px rgba(15, 23, 42, 0.05);
+      backdrop-filter: blur(12px);
+    }
+
+    .direction-heading {
+      display: grid;
+      grid-template-columns: minmax(0, 1.5fr) minmax(270px, 0.72fr);
+      gap: 30px;
+      align-items: end;
+      margin-bottom: 22px;
+    }
+
+    .direction-label {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      color: var(--brand-800);
+      font-size: 12px;
+      font-weight: 850;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .direction-letter {
+      display: inline-grid;
+      width: 30px;
+      height: 30px;
+      place-items: center;
+      border-radius: 8px;
+      background: var(--brand);
+      color: var(--white);
+      font-size: 14px;
+      letter-spacing: 0;
+    }
+
+    .direction h2 {
+      margin: 0;
+      font-size: 28px;
+      line-height: 1.12;
+      letter-spacing: -0.028em;
+    }
+
+    .rationale {
+      max-width: 760px;
+      margin: 10px 0 0;
+      color: var(--subtext);
+      font-size: 14px;
+      line-height: 1.55;
+    }
+
+    .portrait-note {
+      margin: 0;
+      padding: 14px 16px;
+      border-left: 3px solid var(--brand);
+      border-radius: 4px 8px 8px 4px;
+      background: var(--brand-50);
+      color: var(--brand-800);
+      font-size: 12px;
+      line-height: 1.55;
+    }
+
+    .portrait-note strong {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--ink);
+      font-size: 11px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .frame-scroll {
+      overflow-x: auto;
+      padding: 3px 3px 14px;
+    }
+
+    .tablet-frame {
+      min-width: 1100px;
+      overflow: hidden;
+      border: 10px solid #0F172A;
+      border-radius: 24px;
+      background: var(--white);
+      box-shadow: var(--shadow);
+    }
+
+    .browser-chrome {
+      display: grid;
+      grid-template-columns: 82px 1fr 82px;
+      align-items: center;
+      height: 32px;
+      padding: 0 12px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface-strong);
+    }
+
+    .browser-dots {
+      display: flex;
+      gap: 5px;
+    }
+
+    .browser-dots span {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: #CBD5E1;
+    }
+
+    .browser-dots span:first-child {
+      background: var(--brand);
+    }
+
+    .address {
+      justify-self: center;
+      width: min(440px, 62%);
+      padding: 4px 14px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--white);
+      color: var(--subtext);
+      font-size: 9px;
+      text-align: center;
+    }
+
+    .frame-time {
+      color: var(--subtext);
+      font-size: 9px;
+      font-weight: 700;
+      text-align: right;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 174px minmax(0, 1fr);
+      height: 672px;
+      background: var(--white);
+    }
+
+    .sidebar {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      border-right: 1px solid var(--border);
+      background: var(--white);
+    }
+
+    .brand-lockup {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      height: 62px;
+      padding: 0 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .brand-mark {
+      position: relative;
+      width: 28px;
+      height: 28px;
+      border: 2px solid var(--brand);
+      border-radius: 50%;
+    }
+
+    .brand-mark::before,
+    .brand-mark::after {
+      position: absolute;
+      content: "";
+      background: var(--brand);
+    }
+
+    .brand-mark::before {
+      width: 2px;
+      height: 24px;
+      left: 11px;
+      top: 0;
+      transform: rotate(43deg);
+      transform-origin: center;
+    }
+
+    .brand-mark::after {
+      width: 8px;
+      height: 8px;
+      right: -3px;
+      top: 1px;
+      border: 2px solid var(--white);
+      border-radius: 50%;
+    }
+
+    .brand-name {
+      min-width: 0;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      line-height: 1.15;
+    }
+
+    .brand-name small {
+      display: block;
+      margin-top: 2px;
+      color: var(--subtext);
+      font-size: 8px;
+      font-weight: 650;
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+
+    .nav {
+      flex: 1;
+      padding: 16px 10px;
+    }
+
+    .nav-title {
+      padding: 10px 10px 6px;
+      color: var(--subtext);
+      font-size: 8px;
+      font-weight: 850;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+    }
+
+    .nav-item {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-height: 34px;
+      margin-bottom: 3px;
+      padding: 7px 10px;
+      border-radius: 6px;
+      color: #475569;
+      font-size: 10px;
+      font-weight: 700;
+    }
+
+    .nav-item.active {
+      background: var(--brand-50);
+      color: var(--brand-800);
+    }
+
+    .nav-icon {
+      display: grid;
+      width: 17px;
+      height: 17px;
+      place-items: center;
+      border: 1.5px solid currentColor;
+      border-radius: 4px;
+      font-size: 8px;
+      line-height: 1;
+    }
+
+    .sidebar-user {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 14px;
+      border-top: 1px solid var(--border);
+    }
+
+    .avatar {
+      display: grid;
+      width: 30px;
+      height: 30px;
+      flex: 0 0 auto;
+      place-items: center;
+      border-radius: 50%;
+      background: var(--brand-100);
+      color: var(--brand-800);
+      font-size: 10px;
+      font-weight: 850;
+    }
+
+    .user-copy {
+      min-width: 0;
+      font-size: 9px;
+      font-weight: 800;
+      line-height: 1.2;
+    }
+
+    .user-copy small {
+      display: block;
+      margin-top: 2px;
+      color: var(--subtext);
+      font-size: 8px;
+      font-weight: 600;
+    }
+
+    .app-main {
+      display: flex;
+      min-width: 0;
+      flex-direction: column;
+      background: var(--surface);
+    }
+
+    .topbar {
+      display: flex;
+      height: 62px;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      border-bottom: 1px solid var(--border);
+      background: var(--white);
+    }
+
+    .topbar-title {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      font-size: 14px;
+      font-weight: 820;
+      letter-spacing: -0.02em;
+    }
+
+    .topbar-title .nav-icon {
+      width: 23px;
+      height: 23px;
+      color: var(--brand);
+      font-size: 10px;
+    }
+
+    .topbar-side {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sync-state {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      color: var(--subtext);
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .sync-state::before {
+      content: "✓";
+      display: grid;
+      width: 15px;
+      height: 15px;
+      place-items: center;
+      border: 1px solid #99F6E4;
+      border-radius: 50%;
+      background: var(--success-pale);
+      color: var(--success);
+      font-size: 9px;
+      font-weight: 900;
+    }
+
+    .user-chip {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 4px 8px 4px 4px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--white);
+      color: var(--ink);
+      font-size: 9px;
+      font-weight: 750;
+    }
+
+    .user-chip .avatar {
+      width: 24px;
+      height: 24px;
+      font-size: 8px;
+    }
+
+    .dashboard {
+      flex: 1;
+      min-height: 0;
+      padding: 20px 22px;
+      overflow: hidden;
+    }
+
+    .dashboard-heading {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 18px;
+      margin-bottom: 15px;
+    }
+
+    .dashboard-heading h3 {
+      margin: 0;
+      font-size: 22px;
+      line-height: 1.08;
+      letter-spacing: -0.035em;
+    }
+
+    .dashboard-heading p {
+      margin: 5px 0 0;
+      color: var(--subtext);
+      font-size: 10px;
+      line-height: 1.4;
+    }
+
+    .date-chip {
+      flex: 0 0 auto;
+      padding: 7px 10px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: var(--white);
+      color: #475569;
+      font-size: 9px;
+      font-weight: 750;
+    }
+
+    .section-title {
+      display: flex;
+      min-height: 28px;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-bottom: 8px;
+    }
+
+    .section-title-main {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-title h4 {
+      margin: 0;
+      color: var(--ink);
+      font-size: 11px;
+      font-weight: 850;
+      letter-spacing: 0.07em;
+      text-transform: uppercase;
+    }
+
+    .count {
+      display: inline-grid;
+      min-width: 22px;
+      height: 22px;
+      padding: 0 6px;
+      place-items: center;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--white);
+      color: var(--subtext);
+      font-size: 9px;
+      font-weight: 800;
+    }
+
+    .section-hint {
+      color: var(--subtext);
+      font-size: 9px;
+      font-weight: 650;
+    }
+
+    .task-card {
+      min-width: 0;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--white);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .task-card.attention {
+      border: 2px solid var(--brand);
+      box-shadow: 0 0 0 3px var(--brand-100), var(--shadow-soft);
+    }
+
+    .task-card-header {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .bike-name {
+      margin: 0;
+      color: var(--ink);
+      font-size: 15px;
+      font-weight: 850;
+      line-height: 1.15;
+      letter-spacing: -0.025em;
+    }
+
+    .order-line {
+      margin-top: 4px;
+      color: var(--subtext);
+      font-size: 9px;
+      font-weight: 700;
+    }
+
+    .badge-row {
+      display: flex;
+      flex: 0 0 auto;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+      gap: 5px;
+    }
+
+    .badge {
+      display: inline-flex;
+      min-height: 22px;
+      align-items: center;
+      gap: 5px;
+      padding: 4px 7px;
+      border: 1px solid #F59E0B;
+      border-radius: 999px;
+      background: var(--brand-50);
+      color: var(--brand-800);
+      font-size: 8px;
+      font-weight: 850;
+      letter-spacing: 0.04em;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .badge::before {
+      content: "!";
+      display: grid;
+      width: 12px;
+      height: 12px;
+      place-items: center;
+      border: 1px solid currentColor;
+      border-radius: 50%;
+      font-size: 8px;
+    }
+
+    .phase-pill {
+      display: inline-flex;
+      min-height: 22px;
+      align-items: center;
+      padding: 4px 8px;
+      border: 1px solid var(--border);
+      border-radius: 999px;
+      background: var(--surface-strong);
+      color: #334155;
+      font-size: 8px;
+      font-weight: 850;
+      letter-spacing: 0.045em;
+      line-height: 1;
+      text-transform: uppercase;
+    }
+
+    .phase-pill.recheck {
+      border-color: #99F6E4;
+      background: var(--success-pale);
+      color: #115E59;
+    }
+
+    .task-facts {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 8px;
+      margin-top: 12px;
+    }
+
+    .fact {
+      min-width: 0;
+      padding-left: 8px;
+      border-left: 2px solid var(--border);
+    }
+
+    .fact-label {
+      display: block;
+      margin-bottom: 2px;
+      color: var(--subtext);
+      font-size: 7px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .fact-value {
+      display: block;
+      overflow: hidden;
+      color: var(--ink);
+      font-size: 9px;
+      font-weight: 750;
+      line-height: 1.3;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .change-strip {
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+      margin-top: 11px;
+      padding: 9px 10px;
+      border: 1px solid #F59E0B;
+      border-radius: 6px;
+      background: var(--brand-50);
+      color: var(--brand-800);
+      font-size: 9px;
+      font-weight: 720;
+      line-height: 1.35;
+    }
+
+    .change-strip::before {
+      content: "↻";
+      display: grid;
+      width: 18px;
+      height: 18px;
+      flex: 0 0 auto;
+      place-items: center;
+      border: 1px solid currentColor;
+      border-radius: 50%;
+      font-size: 11px;
+      font-weight: 900;
+    }
+
+    .change-strip strong {
+      display: block;
+      color: var(--ink);
+      font-size: 9px;
+    }
+
+    .task-actions {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .progress-copy {
+      color: var(--subtext);
+      font-size: 9px;
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .progress-copy strong {
+      display: block;
+      color: var(--ink);
+      font-size: 10px;
+    }
+
+    .button {
+      display: inline-flex;
+      min-width: 118px;
+      min-height: 46px;
+      align-items: center;
+      justify-content: center;
+      gap: 7px;
+      border: 0;
+      border-radius: 8px;
+      background: var(--brand);
+      color: var(--white);
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: 0.015em;
+      box-shadow: 0 3px 8px rgba(146, 64, 14, 0.18);
+    }
+
+    .button.secondary {
+      border: 2px solid var(--brand);
+      background: var(--white);
+      color: var(--brand-800);
+      box-shadow: none;
+    }
+
+    .button.neutral {
+      border: 2px solid #CBD5E1;
+      background: var(--white);
+      color: var(--ink);
+      box-shadow: none;
+    }
+
+    .button:focus-visible {
+      outline: 3px solid #0F172A;
+      outline-offset: 2px;
+    }
+
+    .action-preview {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--white);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .preview-kicker {
+      color: var(--subtext);
+      font-size: 8px;
+      font-weight: 850;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+    }
+
+    .action-preview h5 {
+      margin: 5px 0 3px;
+      color: var(--ink);
+      font-size: 13px;
+      line-height: 1.25;
+    }
+
+    .action-preview p {
+      margin: 0;
+      color: var(--subtext);
+      font-size: 8px;
+      line-height: 1.35;
+    }
+
+    .outcome-controls {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 8px;
+      margin-top: 10px;
+    }
+
+    .outcome {
+      min-height: 50px;
+      border: 2px solid #0F766E;
+      border-radius: 8px;
+      background: var(--success-pale);
+      color: #115E59;
+      font-size: 10px;
+      font-weight: 900;
+    }
+
+    .outcome::before {
+      content: "✓";
+      margin-right: 6px;
+      font-size: 12px;
+    }
+
+    .outcome.na {
+      border-color: #94A3B8;
+      background: var(--surface);
+      color: #334155;
+    }
+
+    .outcome.na::before {
+      content: "—";
+    }
+
+    .mini-status {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      margin-top: 8px;
+      color: var(--success);
+      font-size: 8px;
+      font-weight: 850;
+    }
+
+    .mini-status::before {
+      content: "✓";
+      display: grid;
+      width: 13px;
+      height: 13px;
+      place-items: center;
+      border: 1px solid #5EEAD4;
+      border-radius: 50%;
+      background: var(--success-pale);
+    }
+
+    /*
+      Direction A exact palette:
+      #D97706, #FFFBEB, #FEF3C7, #92400E, #0F172A, #64748B,
+      #E2E8F0, #FFFFFF, #F8FAFC, #F1F5F9, #0D9488, #F0FDFA,
+      #DC2626, #FEF2F2.
+    */
+    .direction-a .a-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.52fr) minmax(315px, 0.82fr);
+      gap: 16px;
+    }
+
+    .direction-a .my-work-column {
+      min-width: 0;
+    }
+
+    .direction-a .resume-card {
+      padding: 17px;
+    }
+
+    .direction-a .resume-card .bike-name {
+      font-size: 21px;
+    }
+
+    .direction-a .resume-card .task-facts {
+      margin-top: 15px;
+    }
+
+    .direction-a .resume-card .fact {
+      padding-left: 10px;
+    }
+
+    .direction-a .resume-card .fact-value {
+      font-size: 11px;
+    }
+
+    .direction-a .available-stack {
+      display: grid;
+      min-width: 0;
+      gap: 12px;
+      align-content: start;
+    }
+
+    .direction-a .available-card {
+      padding: 13px;
+    }
+
+    .direction-a .available-card .task-facts {
+      grid-template-columns: 1fr 1fr;
+    }
+
+    .direction-a .available-card .fact:last-child {
+      grid-column: 1 / -1;
+    }
+
+    .direction-a .available-card .button {
+      width: 100%;
+      margin-top: 10px;
+    }
+
+    .direction-a .action-preview {
+      margin-top: 12px;
+      padding: 13px;
+    }
+
+    /*
+      Direction B exact palette:
+      #D97706, #FFFBEB, #FEF3C7, #92400E, #0F172A, #64748B,
+      #E2E8F0, #FFFFFF, #F8FAFC, #F1F5F9, #0D9488, #F0FDFA,
+      #DC2626, #FEF2F2.
+    */
+    .direction-b .dashboard {
+      display: flex;
+      flex-direction: column;
+    }
+
+    .direction-b .balanced-grid {
+      display: grid;
+      min-height: 0;
+      flex: 1;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+
+    .direction-b .section-panel {
+      display: flex;
+      min-width: 0;
+      min-height: 0;
+      flex-direction: column;
+      padding: 12px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.72);
+    }
+
+    .direction-b .card-stack {
+      display: grid;
+      gap: 9px;
+    }
+
+    .direction-b .task-card {
+      padding: 12px;
+      box-shadow: none;
+    }
+
+    .direction-b .bike-name {
+      font-size: 14px;
+    }
+
+    .direction-b .task-facts {
+      grid-template-columns: 1fr 1fr 1fr;
+      margin-top: 9px;
+    }
+
+    .direction-b .task-actions {
+      margin-top: 9px;
+    }
+
+    .direction-b .task-actions .button {
+      min-height: 42px;
+    }
+
+    .direction-b .change-strip {
+      margin-top: 8px;
+      padding: 7px 9px;
+    }
+
+    .direction-b .preview-ribbon {
+      display: grid;
+      grid-template-columns: minmax(160px, 0.7fr) minmax(240px, 1fr);
+      gap: 12px;
+      align-items: center;
+      margin-top: 12px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--white);
+      box-shadow: var(--shadow-soft);
+    }
+
+    .direction-b .preview-ribbon .outcome-controls {
+      margin: 0;
+    }
+
+    .direction-b .preview-ribbon .outcome {
+      min-height: 44px;
+    }
+
+    /*
+      Direction C exact palette:
+      #D97706, #FFFBEB, #FEF3C7, #92400E, #0F172A, #64748B,
+      #E2E8F0, #FFFFFF, #F8FAFC, #F1F5F9, #0D9488, #F0FDFA,
+      #DC2626, #FEF2F2.
+    */
+    .direction-c .c-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 272px;
+      gap: 14px;
+      min-height: 0;
+    }
+
+    .direction-c .list-panel {
+      min-width: 0;
+    }
+
+    .direction-c .phase-section {
+      margin-bottom: 12px;
+      overflow: hidden;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--white);
+    }
+
+    .direction-c .phase-section-head {
+      display: grid;
+      grid-template-columns: 154px 1fr;
+      align-items: center;
+      min-height: 36px;
+      padding: 0 11px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .direction-c .phase-section-head h4 {
+      margin: 0;
+      font-size: 10px;
+      font-weight: 850;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .direction-c .phase-columns {
+      display: grid;
+      grid-template-columns: minmax(190px, 1.2fr) 1fr 1fr 112px;
+      gap: 10px;
+      color: var(--subtext);
+      font-size: 7px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .direction-c .task-row {
+      position: relative;
+      display: grid;
+      grid-template-columns: minmax(190px, 1.2fr) 1fr 1fr 112px;
+      gap: 10px;
+      min-height: 72px;
+      align-items: center;
+      padding: 9px 11px 9px 17px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .direction-c .task-row:last-child {
+      border-bottom: 0;
+    }
+
+    .direction-c .task-row::before {
+      position: absolute;
+      left: 0;
+      top: 0;
+      bottom: 0;
+      width: 5px;
+      content: "";
+      background: var(--brand);
+    }
+
+    .direction-c .task-row.recheck::before {
+      background: var(--success);
+    }
+
+    .direction-c .task-row.changed {
+      background: var(--brand-50);
+    }
+
+    .direction-c .row-bike {
+      min-width: 0;
+    }
+
+    .direction-c .row-bike .bike-name {
+      font-size: 13px;
+    }
+
+    .direction-c .row-bike .order-line {
+      font-size: 8px;
+    }
+
+    .direction-c .row-cell {
+      min-width: 0;
+      color: var(--ink);
+      font-size: 9px;
+      font-weight: 730;
+      line-height: 1.35;
+    }
+
+    .direction-c .row-badges {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 4px;
+      align-items: center;
+    }
+
+    .direction-c .row-badges .badge,
+    .direction-c .row-badges .phase-pill {
+      min-height: 20px;
+      padding-top: 3px;
+      padding-bottom: 3px;
+      font-size: 7px;
+    }
+
+    .direction-c .row-cell small {
+      display: block;
+      margin-top: 2px;
+      overflow: hidden;
+      color: var(--subtext);
+      font-size: 8px;
+      font-weight: 650;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .direction-c .row-action .button {
+      width: 100%;
+      min-width: 0;
+      min-height: 44px;
+    }
+
+    .direction-c .row-change {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      margin-top: 5px;
+      color: var(--brand-800);
+      font-size: 8px;
+      font-weight: 850;
+    }
+
+    .direction-c .row-change::before {
+      content: "↻";
+      font-size: 10px;
+    }
+
+    .direction-c .c-side {
+      display: grid;
+      gap: 11px;
+      align-content: start;
+    }
+
+    .direction-c .action-preview {
+      padding: 13px;
+    }
+
+    .phase-key {
+      padding: 13px;
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      background: var(--white);
+    }
+
+    .phase-key h5 {
+      margin: 0 0 9px;
+      font-size: 10px;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+
+    .key-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 7px 0;
+      border-top: 1px solid var(--border);
+      font-size: 9px;
+      font-weight: 750;
+    }
+
+    .key-row:first-of-type {
+      border-top: 0;
+    }
+
+    .key-mark {
+      width: 28px;
+      height: 5px;
+      border-radius: 999px;
+      background: var(--brand);
+    }
+
+    .key-mark.teal {
+      background: var(--success);
+    }
+
+    .key-mark.slate {
+      background: #64748B;
+    }
+
+    .selection-rule {
+      padding: 12px;
+      border: 1px dashed #CBD5E1;
+      border-radius: 10px;
+      background: var(--surface);
+      color: var(--subtext);
+      font-size: 8px;
+      line-height: 1.5;
+    }
+
+    .selection-rule strong {
+      display: block;
+      margin-bottom: 3px;
+      color: var(--ink);
+      font-size: 9px;
+    }
+
+    .artifact-footer {
+      max-width: 1320px;
+      margin: 0 auto;
+      padding: 0 32px 54px;
+      color: var(--subtext);
+      font-size: 12px;
+      line-height: 1.6;
+    }
+
+    @media (max-width: 860px) {
+      .artifact-header {
+        padding: 36px 18px 20px;
+      }
+
+      main {
+        padding: 0 10px 48px;
+      }
+
+      .direction {
+        padding: 18px;
+        border-radius: 14px;
+      }
+
+      .direction-heading {
+        grid-template-columns: 1fr;
+        gap: 14px;
+      }
+
+      .frame-scroll {
+        margin-right: -18px;
+        margin-left: -18px;
+        padding-left: 18px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="artifact-header">
+    <p class="artifact-kicker">Workshop Tasks · hierarchy study</p>
+    <h1>Three ways to make the next workshop action unmistakable.</h1>
+    <p class="artifact-intro">
+      The visual identity stays fixed to the existing Echelon Subframe admin hub.
+      Only the information hierarchy changes: resume-first, balanced landscape, or phase-scannable operations.
+    </p>
+    <div class="artifact-constraint">Tablet-first · glove-safe targets · no hover reliance · light mode</div>
+  </header>
+
+  <main>
+    <article class="direction direction-a" aria-labelledby="direction-a-title">
+      <header class="direction-heading">
+        <div>
+          <div class="direction-label"><span class="direction-letter">A</span> Resume-first hierarchy</div>
+          <h2 id="direction-a-title">My Work owns the visual field</h2>
+          <p class="rationale">
+            The task Egor can resume is the largest object on screen, with current progress and a persistent change state attached to it.
+            Available work remains visible in a narrower secondary rail, preserving fast onward flow without competing with the active bike.
+          </p>
+        </div>
+        <p class="portrait-note">
+          <strong>Portrait adaptation</strong>
+          Collapse the admin rail, keep My Work first, then stack Available Now and the Action Item preview. The resume action stays full-width and at least 52px tall.
+        </p>
+      </header>
+
+      <div class="frame-scroll">
+        <div class="tablet-frame">
+          <div class="browser-chrome">
+            <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="address">admin.echeloncyclinghub.com/workshop/tasks</div>
+            <div class="frame-time">15:46 · Wi-Fi</div>
+          </div>
+          <div class="app-shell">
+            <aside class="sidebar" aria-label="Admin navigation">
+              <div class="brand-lockup">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span class="brand-name">Echelon Hub<small>Admin</small></span>
+              </div>
+              <nav class="nav">
+                <div class="nav-title">Operations</div>
+                <div class="nav-item"><span class="nav-icon">⌂</span>Overview</div>
+                <div class="nav-item"><span class="nav-icon">#</span>Orders</div>
+                <div class="nav-item"><span class="nav-icon">◇</span>Bikes</div>
+                <div class="nav-item active"><span class="nav-icon">✓</span>Workshop Tasks</div>
+                <div class="nav-title">Team</div>
+                <div class="nav-item"><span class="nav-icon">◎</span>Bike Fits</div>
+                <div class="nav-item"><span class="nav-icon">?</span>Wiki</div>
+              </nav>
+              <div class="sidebar-user">
+                <span class="avatar">EK</span>
+                <span class="user-copy">Egor K.<small>Mechanic</small></span>
+              </div>
+            </aside>
+
+            <section class="app-main">
+              <header class="topbar">
+                <div class="topbar-title"><span class="nav-icon">✓</span>Workshop Tasks</div>
+                <div class="topbar-side">
+                  <span class="sync-state">Synced just now</span>
+                  <span class="user-chip"><span class="avatar">EK</span>Egor</span>
+                </div>
+              </header>
+
+              <div class="dashboard">
+                <div class="dashboard-heading">
+                  <div>
+                    <h3>Good afternoon, Egor</h3>
+                    <p>Resume your bike or claim the next available phase.</p>
+                  </div>
+                  <span class="date-chip">Fri, 7 August</span>
+                </div>
+
+                <div class="a-grid">
+                  <section class="my-work-column" aria-label="My Work">
+                    <div class="section-title">
+                      <div class="section-title-main"><h4>My Work</h4><span class="count">1</span></div>
+                      <span class="section-hint">Resume where you left off</span>
+                    </div>
+
+                    <article class="task-card attention resume-card">
+                      <div class="task-card-header">
+                        <div>
+                          <h5 class="bike-name">Trek Domane SL 6</h5>
+                          <div class="order-line">Order #10482 · Sofia R.</div>
+                        </div>
+                        <div class="badge-row">
+                          <span class="badge">Needs attention</span>
+                          <span class="phase-pill">Prep</span>
+                        </div>
+                      </div>
+
+                      <div class="task-facts">
+                        <div class="fact">
+                          <span class="fact-label">Rental dates</span>
+                          <span class="fact-value">12–15 Aug</span>
+                        </div>
+                        <div class="fact">
+                          <span class="fact-label">Assignee</span>
+                          <span class="fact-value">Egor</span>
+                        </div>
+                        <div class="fact">
+                          <span class="fact-label">Phase</span>
+                          <span class="fact-value">Prep in progress</span>
+                        </div>
+                      </div>
+
+                      <div class="change-strip">
+                        <div><strong>Booqable changed at 15:42</strong>Handlebar width changed from 40 to 42 cm. The affected Setup item needs a fresh outcome.</div>
+                      </div>
+
+                      <div class="task-actions">
+                        <div class="progress-copy"><strong>5 of 7 confirmed</strong>2 required items unresolved</div>
+                        <button class="button" type="button">Resume Prep <span aria-hidden="true">→</span></button>
+                      </div>
+                    </article>
+
+                    <aside class="action-preview" aria-label="Action Item tile preview">
+                      <span class="preview-kicker">Task execution preview · Action Item</span>
+                      <h5>Brakes / pads</h5>
+                      <p>Choose one explicit outcome. Each item saves immediately.</p>
+                      <div class="outcome-controls">
+                        <button class="outcome" type="button">Done</button>
+                        <button class="outcome na" type="button">N/A</button>
+                      </div>
+                      <div class="mini-status">Saved confirmation stays on the item</div>
+                    </aside>
+                  </section>
+
+                  <section aria-label="Available Now">
+                    <div class="section-title">
+                      <div class="section-title-main"><h4>Available Now</h4><span class="count">2</span></div>
+                    </div>
+                    <div class="available-stack">
+                      <article class="task-card available-card">
+                        <div class="task-card-header">
+                          <div>
+                            <h5 class="bike-name">Specialized Tarmac SL7</h5>
+                            <div class="order-line">Order #10489 · Leo M.</div>
+                          </div>
+                          <span class="phase-pill">Prep</span>
+                        </div>
+                        <div class="task-facts">
+                          <div class="fact"><span class="fact-label">Rental dates</span><span class="fact-value">16–18 Aug</span></div>
+                          <div class="fact"><span class="fact-label">Assignee</span><span class="fact-value">Unassigned</span></div>
+                          <div class="fact"><span class="fact-label">Phase</span><span class="fact-value">Needs Prep</span></div>
+                        </div>
+                        <button class="button secondary" type="button">Claim Prep</button>
+                      </article>
+
+                      <article class="task-card available-card">
+                        <div class="task-card-header">
+                          <div>
+                            <h5 class="bike-name">Cannondale Synapse Carbon 2</h5>
+                            <div class="order-line">Order #10491 · Maya K.</div>
+                          </div>
+                          <span class="phase-pill recheck">Re-check</span>
+                        </div>
+                        <div class="task-facts">
+                          <div class="fact"><span class="fact-label">Rental dates</span><span class="fact-value">18–22 Aug</span></div>
+                          <div class="fact"><span class="fact-label">Assignee</span><span class="fact-value">Unassigned</span></div>
+                          <div class="fact"><span class="fact-label">Phase</span><span class="fact-value">Needs Re-check</span></div>
+                        </div>
+                        <button class="button secondary" type="button">Claim Re-check</button>
+                      </article>
+                    </div>
+                  </section>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="direction direction-b" aria-labelledby="direction-b-title">
+      <header class="direction-heading">
+        <div>
+          <div class="direction-label"><span class="direction-letter">B</span> Balanced landscape hierarchy</div>
+          <h2 id="direction-b-title">Two equal queues, one glance</h2>
+          <p class="rationale">
+            My Work and Available Now receive equal-width panels so a mounted landscape tablet shows current responsibility and next capacity simultaneously.
+            Repeated card geometry makes facts comparable, while clear section boundaries prevent the two work states from blending.
+          </p>
+        </div>
+        <p class="portrait-note">
+          <strong>Portrait adaptation</strong>
+          Stack the equal panels with My Work first; retain identical card anatomy. The Action Item ribbon becomes a compact tile below both sections with two side-by-side controls.
+        </p>
+      </header>
+
+      <div class="frame-scroll">
+        <div class="tablet-frame">
+          <div class="browser-chrome">
+            <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="address">admin.echeloncyclinghub.com/workshop/tasks</div>
+            <div class="frame-time">15:46 · Wi-Fi</div>
+          </div>
+          <div class="app-shell">
+            <aside class="sidebar" aria-label="Admin navigation">
+              <div class="brand-lockup">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span class="brand-name">Echelon Hub<small>Admin</small></span>
+              </div>
+              <nav class="nav">
+                <div class="nav-title">Operations</div>
+                <div class="nav-item"><span class="nav-icon">⌂</span>Overview</div>
+                <div class="nav-item"><span class="nav-icon">#</span>Orders</div>
+                <div class="nav-item"><span class="nav-icon">◇</span>Bikes</div>
+                <div class="nav-item active"><span class="nav-icon">✓</span>Workshop Tasks</div>
+                <div class="nav-title">Team</div>
+                <div class="nav-item"><span class="nav-icon">◎</span>Bike Fits</div>
+                <div class="nav-item"><span class="nav-icon">?</span>Wiki</div>
+              </nav>
+              <div class="sidebar-user">
+                <span class="avatar">EK</span>
+                <span class="user-copy">Egor K.<small>Mechanic</small></span>
+              </div>
+            </aside>
+
+            <section class="app-main">
+              <header class="topbar">
+                <div class="topbar-title"><span class="nav-icon">✓</span>Workshop Tasks</div>
+                <div class="topbar-side">
+                  <span class="sync-state">Synced just now</span>
+                  <span class="user-chip"><span class="avatar">EK</span>Egor</span>
+                </div>
+              </header>
+
+              <div class="dashboard">
+                <div class="dashboard-heading">
+                  <div>
+                    <h3>Workshop dashboard</h3>
+                    <p>My assigned phases and work that can be claimed now.</p>
+                  </div>
+                  <span class="date-chip">Fri, 7 August</span>
+                </div>
+
+                <div class="balanced-grid">
+                  <section class="section-panel" aria-label="My Work">
+                    <div class="section-title">
+                      <div class="section-title-main"><h4>My Work</h4><span class="count">2</span></div>
+                      <span class="section-hint">Assigned to Egor</span>
+                    </div>
+                    <div class="card-stack">
+                      <article class="task-card attention">
+                        <div class="task-card-header">
+                          <div>
+                            <h5 class="bike-name">Trek Domane SL 6</h5>
+                            <div class="order-line">Order #10482 · Sofia R.</div>
+                          </div>
+                          <div class="badge-row">
+                            <span class="badge">Needs attention</span>
+                            <span class="phase-pill">Prep</span>
+                          </div>
+                        </div>
+                        <div class="task-facts">
+                          <div class="fact"><span class="fact-label">Rental dates</span><span class="fact-value">12–15 Aug</span></div>
+                          <div class="fact"><span class="fact-label">Assignee</span><span class="fact-value">Egor</span></div>
+                          <div class="fact"><span class="fact-label">Phase</span><span class="fact-value">Prep</span></div>
+                        </div>
+                        <div class="change-strip">
+                          <div><strong>Changed at 15:42</strong>Handlebar width 40 → 42 cm</div>
+                        </div>
+                        <div class="task-actions">
+                          <div class="progress-copy"><strong>5 / 7 confirmed</strong>2 unresolved</div>
+                          <button class="button" type="button">Resume Prep</button>
+                        </div>
+                      </article>
+
+                      <article class="task-card">
+                        <div class="task-card-header">
+                          <div>
+                            <h5 class="bike-name">Orbea Orca M30i</h5>
+                            <div class="order-line">Order #10478 · Clara V.</div>
+                          </div>
+                          <span class="phase-pill recheck">Return Check</span>
+                        </div>
+                        <div class="task-facts">
+                          <div class="fact"><span class="fact-label">Rental dates</span><span class="fact-value">4–7 Aug</span></div>
+                          <div class="fact"><span class="fact-label">Assignee</span><span class="fact-value">Egor</span></div>
+                          <div class="fact"><span class="fact-label">Phase</span><span class="fact-value">Return Check</span></div>
+                        </div>
+                        <div class="task-actions">
+                          <div class="progress-copy"><strong>0 / 4 confirmed</strong>2 modifications to address</div>
+                          <button class="button" type="button">Start Return</button>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+
+                  <section class="section-panel" aria-label="Available Now">
+                    <div class="section-title">
+                      <div class="section-title-main"><h4>Available Now</h4><span class="count">2</span></div>
+                      <span class="section-hint">Claim one phase</span>
+                    </div>
+                    <div class="card-stack">
+                      <article class="task-card">
+                        <div class="task-card-header">
+                          <div>
+                            <h5 class="bike-name">Specialized Tarmac SL7</h5>
+                            <div class="order-line">Order #10489 · Leo M.</div>
+                          </div>
+                          <span class="phase-pill">Prep</span>
+                        </div>
+                        <div class="task-facts">
+                          <div class="fact"><span class="fact-label">Rental dates</span><span class="fact-value">16–18 Aug</span></div>
+                          <div class="fact"><span class="fact-label">Assignee</span><span class="fact-value">Unassigned</span></div>
+                          <div class="fact"><span class="fact-label">Phase</span><span class="fact-value">Needs Prep</span></div>
+                        </div>
+                        <div class="task-actions">
+                          <div class="progress-copy"><strong>Ready to claim</strong>10 checklist items</div>
+                          <button class="button secondary" type="button">Claim Prep</button>
+                        </div>
+                      </article>
+
+                      <article class="task-card">
+                        <div class="task-card-header">
+                          <div>
+                            <h5 class="bike-name">Cannondale Synapse Carbon 2</h5>
+                            <div class="order-line">Order #10491 · Maya K.</div>
+                          </div>
+                          <span class="phase-pill recheck">Re-check</span>
+                        </div>
+                        <div class="task-facts">
+                          <div class="fact"><span class="fact-label">Rental dates</span><span class="fact-value">18–22 Aug</span></div>
+                          <div class="fact"><span class="fact-label">Assignee</span><span class="fact-value">Unassigned</span></div>
+                          <div class="fact"><span class="fact-label">Phase</span><span class="fact-value">Needs Re-check</span></div>
+                        </div>
+                        <div class="task-actions">
+                          <div class="progress-copy"><strong>Prep completed by Mila</strong>Independent check needed</div>
+                          <button class="button secondary" type="button">Claim Re-check</button>
+                        </div>
+                      </article>
+                    </div>
+                  </section>
+                </div>
+
+                <aside class="preview-ribbon" aria-label="Action Item tile preview">
+                  <div>
+                    <span class="preview-kicker">Execution preview · Action Item</span>
+                    <h5>Brakes / pads</h5>
+                    <p>Explicit outcome · item saves immediately</p>
+                  </div>
+                  <div class="outcome-controls">
+                    <button class="outcome" type="button">Done</button>
+                    <button class="outcome na" type="button">N/A</button>
+                  </div>
+                </aside>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </article>
+
+    <article class="direction direction-c" aria-labelledby="direction-c-title">
+      <header class="direction-heading">
+        <div>
+          <div class="direction-label"><span class="direction-letter">C</span> Phase-scannable hierarchy</div>
+          <h2 id="direction-c-title">Operational rows for rapid next-task selection</h2>
+          <p class="rationale">
+            Dense but touch-safe rows align phase, dates, ownership, and action into stable columns, making differences visible before opening a task.
+            My Work and Available Now remain separate sections; colored phase rails are supplemental to explicit phase labels and large action buttons.
+          </p>
+        </div>
+        <p class="portrait-note">
+          <strong>Portrait adaptation</strong>
+          Each row becomes a stacked card: bike/order first, then phase + dates + assignee, then a full-width action. Preserve section order and phase labels; never reduce to a color-only rail.
+        </p>
+      </header>
+
+      <div class="frame-scroll">
+        <div class="tablet-frame">
+          <div class="browser-chrome">
+            <div class="browser-dots" aria-hidden="true"><span></span><span></span><span></span></div>
+            <div class="address">admin.echeloncyclinghub.com/workshop/tasks</div>
+            <div class="frame-time">15:46 · Wi-Fi</div>
+          </div>
+          <div class="app-shell">
+            <aside class="sidebar" aria-label="Admin navigation">
+              <div class="brand-lockup">
+                <span class="brand-mark" aria-hidden="true"></span>
+                <span class="brand-name">Echelon Hub<small>Admin</small></span>
+              </div>
+              <nav class="nav">
+                <div class="nav-title">Operations</div>
+                <div class="nav-item"><span class="nav-icon">⌂</span>Overview</div>
+                <div class="nav-item"><span class="nav-icon">#</span>Orders</div>
+                <div class="nav-item"><span class="nav-icon">◇</span>Bikes</div>
+                <div class="nav-item active"><span class="nav-icon">✓</span>Workshop Tasks</div>
+                <div class="nav-title">Team</div>
+                <div class="nav-item"><span class="nav-icon">◎</span>Bike Fits</div>
+                <div class="nav-item"><span class="nav-icon">?</span>Wiki</div>
+              </nav>
+              <div class="sidebar-user">
+                <span class="avatar">EK</span>
+                <span class="user-copy">Egor K.<small>Mechanic</small></span>
+              </div>
+            </aside>
+
+            <section class="app-main">
+              <header class="topbar">
+                <div class="topbar-title"><span class="nav-icon">✓</span>Workshop Tasks</div>
+                <div class="topbar-side">
+                  <span class="sync-state">Synced just now</span>
+                  <span class="user-chip"><span class="avatar">EK</span>Egor</span>
+                </div>
+              </header>
+
+              <div class="dashboard">
+                <div class="dashboard-heading">
+                  <div>
+                    <h3>Choose the next phase</h3>
+                    <p>Scan by phase, timing, and ownership. Open attention appears only on the relevant task.</p>
+                  </div>
+                  <span class="date-chip">Fri, 7 August</span>
+                </div>
+
+                <div class="c-grid">
+                  <div class="list-panel">
+                    <section class="phase-section" aria-label="My Work">
+                      <div class="phase-section-head">
+                        <h4>My Work · 2</h4>
+                        <div class="phase-columns" aria-hidden="true"><span>Bike / order</span><span>Phase / assignee</span><span>Rental dates</span><span>Action</span></div>
+                      </div>
+
+                      <article class="task-row changed">
+                        <div class="row-bike">
+                          <h5 class="bike-name">Trek Domane SL 6</h5>
+                          <div class="order-line">#10482 · Sofia R.</div>
+                          <span class="row-change">Changed 15:42 · Handlebar 40 → 42 cm</span>
+                        </div>
+                        <div class="row-cell">
+                          <div class="row-badges">
+                            <span class="phase-pill">Prep</span>
+                            <span class="badge">Needs attention</span>
+                          </div>
+                          <small>Assignee: Egor</small>
+                        </div>
+                        <div class="row-cell">
+                          12–15 Aug
+                          <small>5 / 7 items confirmed</small>
+                        </div>
+                        <div class="row-action">
+                          <button class="button" type="button">Resume</button>
+                        </div>
+                      </article>
+
+                      <article class="task-row recheck">
+                        <div class="row-bike">
+                          <h5 class="bike-name">Orbea Orca M30i</h5>
+                          <div class="order-line">#10478 · Clara V.</div>
+                        </div>
+                        <div class="row-cell">
+                          <span class="phase-pill recheck">Return Check</span>
+                          <small>Assignee: Egor</small>
+                        </div>
+                        <div class="row-cell">
+                          4–7 Aug
+                          <small>Returned today · 2 modifications</small>
+                        </div>
+                        <div class="row-action">
+                          <button class="button" type="button">Start</button>
+                        </div>
+                      </article>
+                    </section>
+
+                    <section class="phase-section" aria-label="Available Now">
+                      <div class="phase-section-head">
+                        <h4>Available Now · 2</h4>
+                        <div class="phase-columns" aria-hidden="true"><span>Bike / order</span><span>Phase / assignee</span><span>Rental dates</span><span>Action</span></div>
+                      </div>
+
+                      <article class="task-row">
+                        <div class="row-bike">
+                          <h5 class="bike-name">Specialized Tarmac SL7</h5>
+                          <div class="order-line">#10489 · Leo M.</div>
+                        </div>
+                        <div class="row-cell">
+                          <span class="phase-pill">Prep</span>
+                          <small>Assignee: Unassigned</small>
+                        </div>
+                        <div class="row-cell">
+                          16–18 Aug
+                          <small>Needs Prep</small>
+                        </div>
+                        <div class="row-action">
+                          <button class="button secondary" type="button">Claim</button>
+                        </div>
+                      </article>
+
+                      <article class="task-row recheck">
+                        <div class="row-bike">
+                          <h5 class="bike-name">Cannondale Synapse Carbon 2</h5>
+                          <div class="order-line">#10491 · Maya K.</div>
+                        </div>
+                        <div class="row-cell">
+                          <span class="phase-pill recheck">Re-check</span>
+                          <small>Assignee: Unassigned</small>
+                        </div>
+                        <div class="row-cell">
+                          18–22 Aug
+                          <small>Prep completed by Mila</small>
+                        </div>
+                        <div class="row-action">
+                          <button class="button secondary" type="button">Claim</button>
+                        </div>
+                      </article>
+                    </section>
+                  </div>
+
+                  <aside class="c-side">
+                    <section class="action-preview" aria-label="Action Item tile preview">
+                      <span class="preview-kicker">Execution preview · Action Item</span>
+                      <h5>Brakes / pads</h5>
+                      <p>One explicit outcome. Immediate item-level save feedback.</p>
+                      <div class="outcome-controls">
+                        <button class="outcome" type="button">Done</button>
+                        <button class="outcome na" type="button">N/A</button>
+                      </div>
+                      <div class="mini-status">Saved</div>
+                    </section>
+
+                    <section class="phase-key" aria-label="Phase scan key">
+                      <h5>Phase scan key</h5>
+                      <div class="key-row"><span>Prep</span><span class="key-mark"></span></div>
+                      <div class="key-row"><span>Re-check / Return</span><span class="key-mark teal"></span></div>
+                      <div class="key-row"><span>Read phase label first</span><span class="key-mark slate"></span></div>
+                    </section>
+
+                    <div class="selection-rule">
+                      <strong>Fast selection rule</strong>
+                      Section tells Egor whether the task is his. Phase label tells him the work type. The large final control is always the next valid action.
+                    </div>
+                  </aside>
+                </div>
+              </div>
+            </section>
+          </div>
+        </div>
+      </div>
+    </article>
+  </main>
+
+  <footer class="artifact-footer">
+    Static hierarchy study only. Every direction preserves the same mechanic IA, task facts, explicit Action Item outcomes, and existing light Subframe admin-hub identity.
+  </footer>
+</body>
+</html>

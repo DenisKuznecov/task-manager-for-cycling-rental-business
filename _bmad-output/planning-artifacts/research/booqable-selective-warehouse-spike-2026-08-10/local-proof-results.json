@@ -1,0 +1,59 @@
+{
+  "executed_at": "2026-08-10T14:17:00Z",
+  "environment": "local Supabase PostgreSQL only",
+  "remote_systems_mutated": false,
+  "all_passed": true,
+  "assertion_count": 7,
+  "assertions": {
+    "duplicate_snapshot_is_idempotent": {
+      "passed": true,
+      "observed": {
+        "assignment_rows": 1
+      }
+    },
+    "replacement_preserves_historical_assignment": {
+      "passed": true,
+      "observed": {
+        "assignment_rows": 2,
+        "archived_rows": 1
+      }
+    },
+    "out_of_order_snapshot_cannot_regress_state": {
+      "passed": true,
+      "observed": {
+        "order_status": "started",
+        "old_assignment_archived": true
+      }
+    },
+    "failed_snapshot_rolls_back_atomically": {
+      "passed": true,
+      "observed": {
+        "order_status": "started",
+        "order_source_updated_at": "2026-08-10T10:20:00+00:00"
+      }
+    },
+    "durable_event_retry_avoids_manual_row_repair": {
+      "passed": true,
+      "observed": {
+        "event_rows": 1,
+        "status": "succeeded",
+        "attempts": 2
+      }
+    },
+    "checkpointed_reconciliation_resumes_without_replay_damage": {
+      "passed": true,
+      "observed": {
+        "checkpoint_page": 2,
+        "processed_count": 3,
+        "status": "succeeded"
+      }
+    },
+    "reconciliation_repairs_a_missed_webhook_change": {
+      "passed": true,
+      "observed": {
+        "order_status": "stopped",
+        "order_source_updated_at": "2026-08-10T11:00:00+00:00"
+      }
+    }
+  }
+}

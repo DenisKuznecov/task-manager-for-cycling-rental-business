@@ -1,0 +1,5207 @@
+{
+  "generated_at": "2026-08-10T14:13:17.754Z",
+  "mode": "full",
+  "safety": {
+    "methods_used": [
+      "GET"
+    ],
+    "raw_payloads_persisted": false,
+    "customer_pii_persisted": false,
+    "source_ids_persisted_as_sha256_prefixes": true
+  },
+  "orders": {
+    "list_count": 327,
+    "status_counts": {
+      "reserved": 24,
+      "draft": 7,
+      "stopped": 177,
+      "canceled": 116,
+      "started": 2,
+      "archived": 1
+    },
+    "archived_attribute_count": 0,
+    "pages": [
+      {
+        "page": 1,
+        "count": 50,
+        "meta_keys": [],
+        "links_keys": []
+      },
+      {
+        "page": 2,
+        "count": 50,
+        "meta_keys": [],
+        "links_keys": []
+      },
+      {
+        "page": 3,
+        "count": 50,
+        "meta_keys": [],
+        "links_keys": []
+      },
+      {
+        "page": 4,
+        "count": 50,
+        "meta_keys": [],
+        "links_keys": []
+      },
+      {
+        "page": 5,
+        "count": 50,
+        "meta_keys": [],
+        "links_keys": []
+      },
+      {
+        "page": 6,
+        "count": 50,
+        "meta_keys": [],
+        "links_keys": []
+      },
+      {
+        "page": 7,
+        "count": 27,
+        "meta_keys": [],
+        "links_keys": []
+      }
+    ],
+    "detail_scan_count": 327,
+    "orders_with_assignment_rows": 216,
+    "orders_without_assignment_rows": 111
+  },
+  "assignments": {
+    "exact_assignment_rows": 360,
+    "unique_assigned_stock_items": 58,
+    "rows_missing_stock_item_id": 0,
+    "assigned_stock_item_occurrences_with_identifier": 360,
+    "assigned_stock_item_occurrences_without_identifier": 0,
+    "note": "Counts cover observed stock-item assignments. Bike-only classification requires a verified Product/ProductGroup mapping and is not inferred from titles."
+  },
+  "order_details": [
+    {
+      "order_id_hash": "e687a56488fc",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "9055113ac8fc",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "70c2ce0ec1c2",
+      "status": "draft",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "9f63cc5d2a76",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "200d5ca12103",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "61ad170d61cf",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2333d6adba46",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "8df78b002ebd",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "cb1b670122df",
+      "status": "draft",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "3b1e86608af7",
+      "status": "started",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "adf93eb98f3f",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "6bcc8c868b8f",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c510fd757978",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "83648569bfdc",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "df5815c4a0a7",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a82df683b059",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e9dfce8d3177",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c6ac90f58631",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a6121605c081",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "58c78f9a208a",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "41237a0f4b45",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c0452d0a7caf",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 4,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a3f46e4e5689",
+      "status": "started",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e3ba7e57cb6a",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "f50305983170",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "9ce34db33e1e",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 3,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c3af154475bf",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "fd976b8447f1",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d8bbf7d61678",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a1e00e9dff81",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a5d5b906f3a2",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "0fa09e2d4d59",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "726c267eb710",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "6d3e60fbc222",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e2226878cba4",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b657680e9701",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "196f91595ab9",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "481e83e5ad09",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "708c9e36cfe4",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c5ad714237b1",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "bdd0b1a81f26",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "5198e6474af6",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "794634173d1a",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "f2bf4fe960b4",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 5,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "574172a6d852",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1d3a8d9e2af2",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d45981585080",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "86967ae47dad",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1a221d4cdc80",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "44f10e0d1643",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "389f17ca0e5b",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "f95160504408",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "91fd2a163589",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b110e8345c1f",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "8c3c11f3df72",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1920b93f29c1",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b3e255e974ac",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e13aebc5da1b",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2a168e03b1af",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "8b1da8903529",
+      "status": "draft",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "25e2903c000c",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "cb86d4d874a2",
+      "status": "draft",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "3386a19f910e",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "402ec6651d45",
+      "status": "draft",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "420e5b148afb",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "5ff39ec56cb7",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "68ad784c47cc",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "8462bb3d8f33",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 6,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "56bc672393d0",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "efa8fd4f534e",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "8e8336c9741b",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d2204db63409",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ffa5e154b279",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c485bb5d0d4a",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "99cb75c197ca",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "9df97f9a6576",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "be1ba9b48fc6",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e36e0f814d0a",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "11b3f1dca599",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "7aa71db8a8e8",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2f4431513423",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 3,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d26eb6efebf8",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a5c3dfc5489e",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e239a1bae290",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "7b075b4ae227",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "370c0dce6992",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "eec5f1b2fc7b",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "fa32f3f3cb10",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "514fae1a530c",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ae12e64ba818",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "53a963cb0e79",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d5f7990b9ab0",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1f489f1991df",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1535e3e57c01",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "efdfa5a1906e",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d84cfd7178df",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "f90e678bc43f",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1c74654a5540",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c7920791fde8",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "20b3b196f625",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ba3939ea2161",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2d9536d132fb",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ccfad37b952a",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e2a26e9c261b",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a4c0d101dccb",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "abda6d0bfe38",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "afecfa0f0aa7",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "92e8c4d49d8f",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "45de99e1a45d",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a3289ae9c1b5",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "8a5f35a24aad",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "69b83b8ca6b7",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "716bd4348580",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "006226b4c5b8",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "595a2520ef0a",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "4cf8172ae808",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "008ee74ffc1e",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ed47c414a061",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d2b3c6564bfe",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "24a33a272560",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "27183ac51c78",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2187f4f7068a",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "5ba42f440669",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "7afcbd411b5f",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "cac135e5ec60",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 4,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "9ab507ea8f67",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "8635102460a0",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "dbc231c0e3ba",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "6dcd5d0b880c",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 7,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "45a41804fdbf",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b10719cb4fbe",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "86981a0e0961",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "5de48e712064",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "098b9a8e1e08",
+      "status": "reserved",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 4,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "98c1e48e3760",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "62c41b525d11",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 6,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "31ae6c51a1cd",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2865a8c602b0",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "238c2fbc208d",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e19e78904482",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "924072a5b211",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "38320f0ff189",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "fbb27dd64eab",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "6fd69269d736",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 5,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ddad1830838c",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "93f65c9b9311",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "519dc711c4b4",
+      "status": "archived",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ab86f0a07541",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "0fea778a840a",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "86839773756e",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1c287c1f1a2d",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 3,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "f52558556264",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "f197a1548e22",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "6797eefef2f0",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "78d1f970091e",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "97f94c8440e0",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "7a68506e7326",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b88462a733b2",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1f8b7647dda9",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a9c61e03640e",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "fd4c9cc640db",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "14076eb3ff4e",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "bf1aa47eab7a",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "9ce3b112a2c7",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "4c248f56dce4",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 7,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1297b603862e",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ae95ba263f0c",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "0f84401dc032",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "634835be6566",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 5,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "7c315840d597",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "52c247a8d792",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "942d1d507c41",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a211861e071a",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a5c104704672",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d3f0446f6ce4",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "6b6cb0aeed82",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "58d588e16c65",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "cba2bd17cd73",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "560684f42a64",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b8a075c46f5c",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e89fb9621c62",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "404244376277",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "6a5ac38876a0",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d7e4ca62001c",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b50f458d4909",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "427c79fcf7d7",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "481a320733f6",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "03f0b3f165b4",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e1f6633c3746",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 4,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "451c92183d14",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ebab5409e1ca",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "3994e0a0e674",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e74ac55d1119",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b8e83ce0323d",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c5bf34d47b4e",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e36f323413f9",
+      "status": "draft",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 4,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "002002dceea8",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "79202cd75b84",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 6,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "5ac9ecdb7a7d",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2160bfa2f4ff",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 3,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2f420cee8f74",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 3,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2dcca31e8037",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "cb1a44232b3a",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d8cde82aeef9",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "9116694a4871",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 3,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "fe0effcff486",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "220bc0f91c8a",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "21f5d75915f2",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1e895a7e6309",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ab119f3f0750",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a283824884c0",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "440a02d05a40",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1e494b29a9ba",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "dbe3974ef211",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ef271f53c649",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "5600aa97ebf3",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 3,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "8227dd128c1f",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "77dbb9e94c8b",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c722f9d9b084",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "96f06a254908",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d4a02f149c53",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e8669f901505",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "dec12694408f",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "81170d0b3a2d",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "00a936677d6a",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "24cc75165aea",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "49fbc01c90d2",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "73adbb982816",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "be29ead63645",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "f243e196a3a9",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d18d0f27f60e",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b826fc598490",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "9e3378580bb0",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 5,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "bf6fc076158f",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c854573f25e2",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "8202ff3dad26",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 6,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "57c5ea1d002c",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "458679a64cbc",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "0e712d4b63bd",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "301d4cab7c90",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ce27ec4fbb81",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "07a447fe8fab",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "bb0863175395",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "7eb363f9cf92",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d4e05839a60e",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "33a86068af00",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c0bc95f84627",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "9fa53e90de72",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "31252ad65e47",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "481a0ac8332b",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b715c8b8073f",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "508b4a773832",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e085367e116a",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "7ea701e7887b",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2326585442fe",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d42743923ad7",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e171fa2ec346",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c9f52a1552e5",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "79eb7445e3f1",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "4bbee35df3d8",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 3,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "4fb7a44b4d23",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "70a92428ec4f",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "fe3e124d78a6",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ea6ea080372b",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2f8097c9eb61",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2e4f2537ecbd",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e78f05205f24",
+      "status": "draft",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b037a41506ad",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b963bfd07d74",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "52fe1fb3e10f",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b80e8a54748d",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ee5682c4a7d7",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2607e93fc2c0",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "5c3937e057dd",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1685df3641b8",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ed0ace23555f",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "5f329fc08107",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "02247a8e9f5d",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c9e8e27cf094",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "90d8c192d523",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "11e9c44cb6af",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "9aa0ef91758b",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "4ef28b1cd42d",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "f5b0b26389b5",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "150777e7758b",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d05fe587b46e",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a063efdaa5f8",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a90965c2be79",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e5e4e59da41c",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b7d2f0a7fd6a",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "52fd46dce769",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a494bd920f62",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "2293e7bb524b",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a7472293d41e",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "22e7ec0bae90",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "6be60e4f9c2d",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "1984dbaee225",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "75a66f8f357b",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "718750a341f6",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "79ab80053950",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "74e42e649f8e",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "43c4296347e7",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "edbed4422272",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c990b00ed4fc",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "fc546ff36081",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "24a51ba73b64",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "a560f56dd348",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "8e372654d623",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "ee27195ba94e",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 4,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "64536f75e4bc",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c120a3fea058",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "afafc9ac769c",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "fe7f7656b004",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "86405eecd073",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 1,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "30902b32acb9",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d274967f8822",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "d3acc1fb78a4",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 4,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "4860c1abac3f",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "e749c99f698f",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "b01caf164bf7",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 2,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "6fbad7054f81",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "c945af6a704f",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "4af29246b7ef",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "72e026948612",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "66cc29c0ffff",
+      "status": "canceled",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "3f36a78971c7",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "customers",
+        "lines",
+        "plannings"
+      ],
+      "exact_assignment_count": 0,
+      "assignment_rows_missing_stock_item_id": 0
+    },
+    {
+      "order_id_hash": "809fcbe13ad3",
+      "status": "stopped",
+      "archived": false,
+      "included_types": [
+        "barcodes",
+        "customers",
+        "lines",
+        "plannings",
+        "stock_item_plannings",
+        "stock_items"
+      ],
+      "exact_assignment_count": 3,
+      "assignment_rows_missing_stock_item_id": 0
+    }
+  ],
+  "collection_probes": [
+    {
+      "resource": "customers",
+      "supported": true,
+      "status": 200,
+      "first_resource_shape": {
+        "type": "customers",
+        "id_present": true,
+        "attribute_keys": [
+          "archived",
+          "archived_at",
+          "average_order_value_in_cents",
+          "balance_due_in_cents",
+          "created_at",
+          "deposit_type",
+          "deposit_value",
+          "discount_percentage",
+          "email",
+          "email_marketing_consent_updated_at",
+          "email_marketing_consented",
+          "latest_order_at",
+          "legal_type",
+          "merge_suggestion_customer_id",
+          "name",
+          "number",
+          "order_count",
+          "properties",
+          "revenue_in_cents",
+          "stripe_id",
+          "tag_list",
+          "tax_region_id",
+          "updated_at"
+        ],
+        "relationship_keys": []
+      },
+      "meta_keys": []
+    },
+    {
+      "resource": "product_groups",
+      "supported": true,
+      "status": 200,
+      "first_resource_shape": {
+        "type": "product_groups",
+        "id_present": true,
+        "attribute_keys": [
+          "allow_shortage",
+          "archived",
+          "archived_at",
+          "base_price_in_cents",
+          "buffer_time_after",
+          "buffer_time_before",
+          "created_at",
+          "default_purchase_cost_in_cents",
+          "deposit_in_cents",
+          "description",
+          "discountable",
+          "excerpt",
+          "extra_information",
+          "flat_fee_price_in_cents",
+          "group_name",
+          "has_variations",
+          "name",
+          "photo_id",
+          "photo_url",
+          "price_period",
+          "price_ruleset_id",
+          "price_structure_id",
+          "price_type",
+          "product_type",
+          "properties",
+          "seo_description",
+          "seo_title",
+          "shortage_limit",
+          "show_in_store",
+          "sku",
+          "slug",
+          "sorting_weight",
+          "stock_item_properties",
+          "structure_price_in_cents",
+          "tag_list",
+          "tax_category_id",
+          "taxable",
+          "trackable",
+          "tracking_type",
+          "type",
+          "updated_at",
+          "variation",
+          "variation_fields",
+          "weight"
+        ],
+        "relationship_keys": []
+      },
+      "meta_keys": []
+    },
+    {
+      "resource": "products",
+      "supported": true,
+      "status": 200,
+      "first_resource_shape": {
+        "type": "products",
+        "id_present": true,
+        "attribute_keys": [
+          "allow_shortage",
+          "archived",
+          "archived_at",
+          "base_price_in_cents",
+          "buffer_time_after",
+          "buffer_time_before",
+          "created_at",
+          "default_purchase_cost_in_cents",
+          "deposit_in_cents",
+          "description",
+          "discountable",
+          "excerpt",
+          "extra_information",
+          "group_name",
+          "has_variations",
+          "name",
+          "photo_id",
+          "photo_url",
+          "price_period",
+          "price_ruleset_id",
+          "price_structure_id",
+          "price_type",
+          "product_group_id",
+          "product_type",
+          "properties",
+          "seo_description",
+          "seo_title",
+          "shortage_limit",
+          "show_in_store",
+          "sku",
+          "slug",
+          "sorting_weight",
+          "tag_list",
+          "tax_category_id",
+          "taxable",
+          "trackable",
+          "tracking_type",
+          "type",
+          "updated_at",
+          "variation",
+          "variation_values",
+          "weight",
+          "weight_overridden"
+        ],
+        "relationship_keys": []
+      },
+      "meta_keys": []
+    },
+    {
+      "resource": "bundles",
+      "supported": true,
+      "status": 200,
+      "first_resource_shape": {
+        "type": "bundles",
+        "id_present": true,
+        "attribute_keys": [
+          "archived",
+          "archived_at",
+          "created_at",
+          "description",
+          "discountable",
+          "excerpt",
+          "extra_information",
+          "name",
+          "photo_id",
+          "photo_url",
+          "product_type",
+          "seo_description",
+          "seo_title",
+          "show_in_store",
+          "slug",
+          "sorting_weight",
+          "tag_list",
+          "tax_category_id",
+          "taxable",
+          "type",
+          "updated_at"
+        ],
+        "relationship_keys": []
+      },
+      "meta_keys": []
+    },
+    {
+      "resource": "bundle_items",
+      "supported": true,
+      "status": 200,
+      "first_resource_shape": {
+        "type": "bundle_items",
+        "id_present": true,
+        "attribute_keys": [
+          "archived",
+          "archived_at",
+          "bundle_id",
+          "created_at",
+          "discount_percentage",
+          "photo_id",
+          "position",
+          "product_group_id",
+          "product_id",
+          "quantity",
+          "updated_at"
+        ],
+        "relationship_keys": []
+      },
+      "meta_keys": []
+    },
+    {
+      "resource": "stock_items",
+      "supported": true,
+      "status": 200,
+      "first_resource_shape": {
+        "type": "stock_items",
+        "id_present": true,
+        "attribute_keys": [
+          "archived",
+          "archived_at",
+          "created_at",
+          "from",
+          "identifier",
+          "location_id",
+          "product_group_id",
+          "product_id",
+          "properties",
+          "purchase_cost_in_cents",
+          "purchased_at",
+          "status",
+          "stock_item_type",
+          "till",
+          "updated_at"
+        ],
+        "relationship_keys": []
+      },
+      "meta_keys": []
+    },
+    {
+      "resource": "plannings",
+      "supported": true,
+      "status": 200,
+      "first_resource_shape": {
+        "type": "plannings",
+        "id_present": true,
+        "attribute_keys": [
+          "archived",
+          "archived_at",
+          "created_at",
+          "downtime_id",
+          "item_id",
+          "location_shortage_amount",
+          "order_id",
+          "parent_planning_id",
+          "planning_type",
+          "quantity",
+          "reserved",
+          "reserved_from",
+          "reserved_till",
+          "shortage_amount",
+          "start_location_id",
+          "started",
+          "starts_at",
+          "status",
+          "stop_location_id",
+          "stopped",
+          "stops_at",
+          "updated_at"
+        ],
+        "relationship_keys": []
+      },
+      "meta_keys": []
+    },
+    {
+      "resource": "stock_item_plannings",
+      "supported": true,
+      "status": 200,
+      "first_resource_shape": {
+        "type": "stock_item_plannings",
+        "id_present": true,
+        "attribute_keys": [
+          "archived",
+          "archived_at",
+          "created_at",
+          "downtime_id",
+          "order_id",
+          "planning_id",
+          "reserved",
+          "started",
+          "starts_at",
+          "status",
+          "stock_item_id",
+          "stock_item_planning_type",
+          "stopped",
+          "stops_at",
+          "updated_at"
+        ],
+        "relationship_keys": []
+      },
+      "meta_keys": []
+    }
+  ],
+  "observed_resource_shapes": [
+    {
+      "type": "barcodes",
+      "observed_count": 80,
+      "id_present": true,
+      "attribute_keys": [
+        "barcode_type",
+        "created_at",
+        "image_url",
+        "number",
+        "owner_id",
+        "owner_type",
+        "updated_at"
+      ],
+      "relationship_keys": [],
+      "sample_id_hashes": [
+        "be42406a7ba3",
+        "3db511bed850",
+        "bceada5c6a40"
+      ]
+    },
+    {
+      "type": "bundle_items",
+      "observed_count": 1,
+      "id_present": true,
+      "attribute_keys": [
+        "archived",
+        "archived_at",
+        "bundle_id",
+        "created_at",
+        "discount_percentage",
+        "photo_id",
+        "position",
+        "product_group_id",
+        "product_id",
+        "quantity",
+        "updated_at"
+      ],
+      "relationship_keys": [],
+      "sample_id_hashes": [
+        "1af4b27859ee"
+      ]
+    },
+    {
+      "type": "bundles",
+      "observed_count": 1,
+      "id_present": true,
+      "attribute_keys": [
+        "archived",
+        "archived_at",
+        "created_at",
+        "description",
+        "discountable",
+        "excerpt",
+        "extra_information",
+        "name",
+        "photo_id",
+        "photo_url",
+        "product_type",
+        "seo_description",
+        "seo_title",
+        "show_in_store",
+        "slug",
+        "sorting_weight",
+        "tag_list",
+        "tax_category_id",
+        "taxable",
+        "type",
+        "updated_at"
+      ],
+      "relationship_keys": [],
+      "sample_id_hashes": [
+        "8d7daaedd8d9"
+      ]
+    },
+    {
+      "type": "customers",
+      "observed_count": 324,
+      "id_present": true,
+      "attribute_keys": [
+        "archived",
+        "archived_at",
+        "average_order_value_in_cents",
+        "balance_due_in_cents",
+        "created_at",
+        "deposit_type",
+        "deposit_value",
+        "discount_percentage",
+        "email",
+        "email_marketing_consent_updated_at",
+        "email_marketing_consented",
+        "latest_order_at",
+        "legal_type",
+        "merge_suggestion_customer_id",
+        "name",
+        "number",
+        "order_count",
+        "properties",
+        "revenue_in_cents",
+        "stripe_id",
+        "tag_list",
+        "tax_region_id",
+        "updated_at"
+      ],
+      "relationship_keys": [],
+      "sample_id_hashes": [
+        "2daf168e06e2",
+        "dc338558cf23",
+        "49a8f7bdd0b4"
+      ]
+    },
+    {
+      "type": "lines",
+      "observed_count": 2970,
+      "id_present": true,
+      "attribute_keys": [
+        "archived",
+        "archived_at",
+        "bundle_item_id",
+        "charge_label",
+        "charge_length",
+        "created_at",
+        "discountable",
+        "extra_information",
+        "item_id",
+        "line_type",
+        "nested_position",
+        "order_id",
+        "original_charge_label",
+        "original_charge_length",
+        "original_price_each_in_cents",
+        "owner_id",
+        "owner_type",
+        "parent_line_id",
+        "planning_id",
+        "position",
+        "price_each_in_cents",
+        "price_in_cents",
+        "price_rule_values",
+        "price_structure_id",
+        "price_tile_id",
+        "quantity",
+        "relevant",
+        "tax_category_id",
+        "taxable",
+        "title",
+        "updated_at"
+      ],
+      "relationship_keys": [
+        "planning"
+      ],
+      "sample_id_hashes": [
+        "b8628ff0390e",
+        "ba0ec34b2b57",
+        "2ff27a406bcf"
+      ]
+    },
+    {
+      "type": "orders",
+      "observed_count": 654,
+      "id_present": true,
+      "attribute_keys": [
+        "amount_in_cents",
+        "amount_paid_in_cents",
+        "amount_to_be_paid_in_cents",
+        "billing_address_property_id",
+        "coupon_discount_in_cents",
+        "coupon_errors",
+        "coupon_id",
+        "created_at",
+        "customer_id",
+        "delivery_address",
+        "delivery_address_property_id",
+        "deposit_held_in_cents",
+        "deposit_in_cents",
+        "deposit_paid_in_cents",
+        "deposit_refunded_in_cents",
+        "deposit_to_be_paid_in_cents",
+        "deposit_to_refund_in_cents",
+        "deposit_type",
+        "deposit_value",
+        "discount_in_cents",
+        "discount_percentage",
+        "discount_type",
+        "entirely_started",
+        "entirely_stopped",
+        "fulfillment_type",
+        "grand_total_in_cents",
+        "grand_total_with_tax_in_cents",
+        "has_signed_contract",
+        "item_count",
+        "location_shortage",
+        "number",
+        "order_delivery_rate_id",
+        "override_period_restrictions",
+        "paid_in_cents",
+        "payment_status",
+        "price_in_cents",
+        "properties",
+        "shortage",
+        "start_location_id",
+        "starts_at",
+        "status",
+        "status_counts",
+        "statuses",
+        "stop_location_id",
+        "stops_at",
+        "tag_list",
+        "tax_in_cents",
+        "tax_region_id",
+        "to_be_paid_in_cents",
+        "total_discount_in_cents",
+        "total_in_cents",
+        "total_paid_in_cents",
+        "total_to_be_paid_in_cents",
+        "updated_at"
+      ],
+      "relationship_keys": [
+        "customer",
+        "lines"
+      ],
+      "sample_id_hashes": [
+        "e687a56488fc",
+        "9055113ac8fc",
+        "70c2ce0ec1c2"
+      ]
+    },
+    {
+      "type": "plannings",
+      "observed_count": 2876,
+      "id_present": true,
+      "attribute_keys": [
+        "archived",
+        "archived_at",
+        "created_at",
+        "downtime_id",
+        "item_id",
+        "location_shortage_amount",
+        "order_id",
+        "parent_planning_id",
+        "planning_type",
+        "quantity",
+        "reserved",
+        "reserved_from",
+        "reserved_till",
+        "shortage_amount",
+        "start_location_id",
+        "started",
+        "starts_at",
+        "status",
+        "stop_location_id",
+        "stopped",
+        "stops_at",
+        "updated_at"
+      ],
+      "relationship_keys": [
+        "stock_item_plannings"
+      ],
+      "sample_id_hashes": [
+        "43af36b6985d",
+        "1485102272bf",
+        "7f89788f212a"
+      ]
+    },
+    {
+      "type": "product_groups",
+      "observed_count": 1,
+      "id_present": true,
+      "attribute_keys": [
+        "allow_shortage",
+        "archived",
+        "archived_at",
+        "base_price_in_cents",
+        "buffer_time_after",
+        "buffer_time_before",
+        "created_at",
+        "default_purchase_cost_in_cents",
+        "deposit_in_cents",
+        "description",
+        "discountable",
+        "excerpt",
+        "extra_information",
+        "flat_fee_price_in_cents",
+        "group_name",
+        "has_variations",
+        "name",
+        "photo_id",
+        "photo_url",
+        "price_period",
+        "price_ruleset_id",
+        "price_structure_id",
+        "price_type",
+        "product_type",
+        "properties",
+        "seo_description",
+        "seo_title",
+        "shortage_limit",
+        "show_in_store",
+        "sku",
+        "slug",
+        "sorting_weight",
+        "stock_item_properties",
+        "structure_price_in_cents",
+        "tag_list",
+        "tax_category_id",
+        "taxable",
+        "trackable",
+        "tracking_type",
+        "type",
+        "updated_at",
+        "variation",
+        "variation_fields",
+        "weight"
+      ],
+      "relationship_keys": [],
+      "sample_id_hashes": [
+        "66b500d1cce0"
+      ]
+    },
+    {
+      "type": "products",
+      "observed_count": 1,
+      "id_present": true,
+      "attribute_keys": [
+        "allow_shortage",
+        "archived",
+        "archived_at",
+        "base_price_in_cents",
+        "buffer_time_after",
+        "buffer_time_before",
+        "created_at",
+        "default_purchase_cost_in_cents",
+        "deposit_in_cents",
+        "description",
+        "discountable",
+        "excerpt",
+        "extra_information",
+        "group_name",
+        "has_variations",
+        "name",
+        "photo_id",
+        "photo_url",
+        "price_period",
+        "price_ruleset_id",
+        "price_structure_id",
+        "price_type",
+        "product_group_id",
+        "product_type",
+        "properties",
+        "seo_description",
+        "seo_title",
+        "shortage_limit",
+        "show_in_store",
+        "sku",
+        "slug",
+        "sorting_weight",
+        "tag_list",
+        "tax_category_id",
+        "taxable",
+        "trackable",
+        "tracking_type",
+        "type",
+        "updated_at",
+        "variation",
+        "variation_values",
+        "weight",
+        "weight_overridden"
+      ],
+      "relationship_keys": [],
+      "sample_id_hashes": [
+        "505109b9bdbb"
+      ]
+    },
+    {
+      "type": "stock_item_plannings",
+      "observed_count": 361,
+      "id_present": true,
+      "attribute_keys": [
+        "archived",
+        "archived_at",
+        "created_at",
+        "downtime_id",
+        "order_id",
+        "planning_id",
+        "reserved",
+        "started",
+        "starts_at",
+        "status",
+        "stock_item_id",
+        "stock_item_planning_type",
+        "stopped",
+        "stops_at",
+        "updated_at"
+      ],
+      "relationship_keys": [
+        "stock_item"
+      ],
+      "sample_id_hashes": [
+        "b3289ce8c3ca",
+        "b9cb10272f56",
+        "c5bdd6aa66d6"
+      ]
+    },
+    {
+      "type": "stock_items",
+      "observed_count": 361,
+      "id_present": true,
+      "attribute_keys": [
+        "archived",
+        "archived_at",
+        "created_at",
+        "from",
+        "identifier",
+        "location_id",
+        "product_group_id",
+        "product_id",
+        "properties",
+        "purchase_cost_in_cents",
+        "purchased_at",
+        "status",
+        "stock_item_type",
+        "till",
+        "updated_at"
+      ],
+      "relationship_keys": [
+        "barcode"
+      ],
+      "sample_id_hashes": [
+        "b67d1077479e",
+        "c1314b9fc851",
+        "c9e75c5ffa12"
+      ]
+    }
+  ],
+  "runtime": {
+    "started_at": "2026-08-10T14:11:52.812Z",
+    "elapsed_ms": 84950,
+    "request_count": 345,
+    "retry_count": 3,
+    "rate_limit_count": 3,
+    "response_ms_p50": 223,
+    "response_ms_p95": 334,
+    "response_ms_max": 872
+  }
+}
