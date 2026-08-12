@@ -1,0 +1,123 @@
+# STATUS DEFINITIONS:
+# ==================
+# Epic Status:
+#   - backlog: Epic not yet started
+#   - in-progress: Epic actively being worked on
+#   - done: All stories in epic completed
+
+# Story Status:
+#   - backlog: Story only exists in epic file
+#   - ready-for-dev: Story file created, ready for development
+#   - in-progress: Developer actively working on implementation
+#   - review: Implementation complete, ready for review
+#   - done: Story completed
+
+# Retrospective Status:
+#   - optional: Can be completed but not required
+#   - done: Retrospective has been completed
+
+# Action Item Status:
+#   - open: Committed during a retrospective, not yet addressed
+#   - in-progress: Actively being worked on
+#   - done: Completed
+
+# WORKFLOW NOTES:
+# ===============
+# - Epic transitions to 'in-progress' automatically when its first story starts (via build's sprint sync)
+# - Stories can be worked in parallel if team capacity allows
+# - Developer typically creates the next story after the previous one is 'done' to incorporate learnings
+# - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
+# - Retrospective appends its action items to action_items; the status view surfaces open ones
+generated: 08-12-2026 15:55
+last_updated: 08-12-2026 15:55
+project: echelon-cycling-hub-admin
+project_key: NOKEY
+tracking_system: file-system
+story_location: 
+  /Users/denyskuznetsov/Documents/echelon-cycling-hub-admin/echelon-cycling-hub-admin/_bmad-output/implementation-artifacts
+development_status:
+  epic-1: backlog
+  1-1-browse-governed-workshop-checklist-templates: backlog
+  1-2-create-a-draft-checklist-version: backlog
+  1-3-configure-draft-checklist-items: backlog
+  1-4-activate-an-immutable-template-version: backlog
+  1-5-reactivate-and-review-template-history: backlog
+  epic-1-retrospective: optional
+
+  epic-2: backlog
+  2-1-contain-existing-integration-security-risks: backlog
+  2-2-upgrade-to-a-supported-application-runtime: backlog
+  2-3-pin-the-node-and-database-toolchain: backlog
+  2-4-define-versioned-source-envelopes-and-result-semantics: backlog
+  2-5-approve-bike-classification-and-setup-mapping-configuration: backlog
+  2-6-expand-the-canonical-booqable-projection: backlog
+  2-7-preserve-brownfield-projection-consumers: backlog
+  2-8-persist-and-recover-authoritative-refresh-work: backlog
+  2-9-run-bounded-workers-and-reconciliation-sweeps: backlog
+  2-10-apply-canonical-source-state-atomically: backlog
+  2-11-issue-exact-jit-freshness-proofs: backlog
+  2-12-cut-over-every-booqable-writer-and-recovery-caller: backlog
+  2-13-revoke-legacy-source-writers: backlog
+  2-14-establish-the-workshop-rollout-control-plane: backlog
+  epic-2-retrospective: optional
+
+  epic-3: backlog
+  3-1-derive-exact-per-bike-membership-identity: backlog
+  3-2-initialize-bike-tasks-work-cycles-and-prep-snapshots: backlog
+  3-3-reconcile-cancellation-removal-replacement-and-reactivation: backlog
+  3-4-complete-immutable-phase-snapshot-selection: backlog
+  epic-3-retrospective: optional
+
+  epic-4: backlog
+  4-1-inspect-source-backed-workshop-intake: backlog
+  4-2-correct-false-irreversible-derivation: backlog
+  4-3-prove-local-intake-safety: backlog
+  epic-4-retrospective: optional
+
+  epic-5: backlog
+  5-1-work-from-the-mechanic-dashboard: backlog
+  5-2-resolve-claim-races-and-explicit-assignment: backlog
+  5-3-view-phase-aware-bike-task-context: backlog
+  5-4-record-immediate-action-item-outcomes: backlog
+  5-5-autosave-value-item-evidence: backlog
+  5-6-share-notes-and-rental-specific-information: backlog
+  5-7-record-structured-modifications-and-last-touch: backlog
+  5-8-complete-preparation-and-hand-off-the-bike: backlog
+  5-9-perform-independent-m2-re-check: backlog
+  5-10-recover-safely-across-stale-screens-and-failures: backlog
+  epic-5-retrospective: optional
+
+  epic-6: backlog
+  6-1-establish-physically-attested-configuration-baselines: backlog
+  6-2-govern-safe-mapping-and-change-classification: backlog
+  6-3-refresh-source-context-silently-before-first-claim: backlog
+  6-4-reconfirm-changed-work-during-active-preparation: backlog
+  6-5-reopen-re-check-or-resolved-preparation-safely: backlog
+  6-6-enforce-rental-boundaries-and-preserve-change-history: backlog
+  epic-6-retrospective: optional
+
+  epic-7: backlog
+  7-1-record-mechanic-attention-and-found-and-fixed-work: backlog
+  7-2-triage-manager-attention-and-missing-bike-identity: backlog
+  7-3-resolve-attention-by-reason: backlog
+  7-4-assign-and-reassign-exceptional-work: backlog
+  7-5-reset-stale-work-to-a-new-preparation-cycle: backlog
+  7-6-approve-a-cycle-bound-two-person-override: backlog
+  7-7-force-close-abandoned-work: backlog
+  7-8-inspect-workshop-activity: backlog
+  epic-7-retrospective: optional
+
+  epic-8: backlog
+  8-1-trigger-per-bike-return-check-from-authoritative-state: backlog
+  8-2-claim-return-work-with-same-rental-context: backlog
+  8-3-complete-return-checklist-items: backlog
+  8-4-acknowledge-modifications-and-complete-done: backlog
+  8-5-validate-the-end-to-end-return-check-journey: backlog
+  epic-8-retrospective: optional
+
+  epic-9: backlog
+  9-1-prove-the-complete-deployed-workshop-environment: backlog
+  9-2-activate-a-controlled-workshop-pilot: backlog
+  9-3-enable-general-workshop-use: backlog
+  9-4-approve-paper-retirement-from-operational-evidence: backlog
+  epic-9-retrospective: optional
