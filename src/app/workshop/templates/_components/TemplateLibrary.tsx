@@ -1,12 +1,20 @@
 "use client";
 
-import React, { useRef } from "react";
+import React, { useRef, useState, useTransition } from "react";
+import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
+import { FeatherPlus } from "@subframe/core";
+import { Button } from "@/ui/components/Button";
+import { createDraftChecklistVersion } from "@/src/lib/workshop-tasks/actions/checklist-version-actions";
 import {
   WORKSHOP_BIKE_CATEGORIES,
+  WORKSHOP_BIKE_CATEGORY_LABELS,
   WORKSHOP_CHECKLIST_PHASES,
+  WORKSHOP_CHECKLIST_PHASE_LABELS,
   WORKSHOP_CHECKLIST_STATUSES,
   WORKSHOP_CHECKLIST_STATUS_LABELS,
+  type WorkshopBikeCategory,
+  type WorkshopChecklistPhase,
   type WorkshopChecklistTemplate,
   type WorkshopChecklistTemplateFilters,
 } from "@/src/lib/workshop-tasks/types";
@@ -16,15 +24,6 @@ interface TemplateLibraryProps {
   filters: WorkshopChecklistTemplateFilters;
   hasError: boolean;
 }
-
-const PHASE_LABELS = { prep: "Prep", return: "Return" } as const;
-const CATEGORY_LABELS = {
-  "e-city": "E-city",
-  "e-road": "E-road",
-  road: "Road",
-  gravel: "Gravel",
-  mtb: "MTB",
-} as const;
 
 export function applyTemplateLibraryFilter<
   Key extends keyof WorkshopChecklistTemplateFilters,
@@ -50,6 +49,93 @@ export function buildTemplateLibraryHref(
   return query ? `${pathname}?${query}` : pathname;
 }
 
+export function templateVersionHref(id: string): string {
+  return `/workshop/templates/${id}`;
+}
+
+export function createDraftSelectionHint(
+  filters: Pick<WorkshopChecklistTemplateFilters, "phase" | "category">,
+): string | null {
+  const missingPhase = filters.phase === "all";
+  const missingCategory = filters.category === "all";
+
+  if (missingPhase && missingCategory) {
+    return "Select a phase and bike category to create a draft.";
+  }
+  if (missingPhase) return "Select a phase to create a draft.";
+  if (missingCategory) return "Select a bike category to create a draft.";
+  return null;
+}
+
+export function navigationForCreateDraftResult(
+  result: { ok: true; id: string } | { ok: false; error: string },
+): { href: string } | { error: string } {
+  if (!result.ok) return { error: result.error };
+  return { href: templateVersionHref(result.id) };
+}
+
+export type CreateDraftFn = (input: {
+  phase: WorkshopChecklistPhase;
+  bikeCategory: WorkshopBikeCategory;
+}) => Promise<{ ok: true; id: string } | { ok: false; error: string }>;
+
+/**
+ * Shared by the Library button and tests so create wiring can be proven without
+ * a click-renderer. Incomplete or in-flight submits never call the RPC.
+ */
+export async function submitCreateDraft(
+  filters: Pick<WorkshopChecklistTemplateFilters, "phase" | "category">,
+  isPending: boolean,
+  create: CreateDraftFn,
+): Promise<{ href: string } | { error: string } | null> {
+  if (isPending || createDraftSelectionHint(filters) !== null) {
+    return null;
+  }
+
+  const result = await create({
+    phase: filters.phase as WorkshopChecklistPhase,
+    bikeCategory: filters.category as WorkshopBikeCategory,
+  });
+  return navigationForCreateDraftResult(result);
+}
+
+export function CreateDraftControls({
+  filters,
+  isPending,
+  error,
+  onCreate,
+}: {
+  filters: Pick<WorkshopChecklistTemplateFilters, "phase" | "category">;
+  isPending: boolean;
+  error: string | null;
+  onCreate: () => void;
+}) {
+  const hint = createDraftSelectionHint(filters);
+  const submittable = hint === null;
+
+  return (
+    <div className="flex flex-col items-end gap-1">
+      <Button
+        variant="brand-primary"
+        icon={<FeatherPlus />}
+        loading={isPending}
+        disabled={!submittable || isPending}
+        onClick={onCreate}
+      >
+        Create Draft
+      </Button>
+      {hint ? (
+        <span className="text-caption font-caption text-subtext-color">
+          {hint}
+        </span>
+      ) : null}
+      {error ? (
+        <span className="text-caption font-caption text-error-700">{error}</span>
+      ) : null}
+    </div>
+  );
+}
+
 export function TemplateLibrary({
   templates,
   filters,
@@ -59,6 +145,8 @@ export function TemplateLibrary({
   const router = useRouter();
   const currentFilters = useRef(filters);
   currentFilters.current = filters;
+  const [createError, setCreateError] = useState<string | null>(null);
+  const [isCreating, startCreating] = useTransition();
 
   function updateFilter(
     key: keyof WorkshopChecklistTemplateFilters,
@@ -70,12 +158,35 @@ export function TemplateLibrary({
       value as WorkshopChecklistTemplateFilters[typeof key],
     );
     currentFilters.current = next;
+    setCreateError(null);
     router.replace(buildTemplateLibraryHref(pathname, next));
   }
 
+  function handleCreateDraft() {
+    if (isCreating) return;
+    setCreateError(null);
+    startCreating(async () => {
+      const next = await submitCreateDraft(
+        currentFilters.current,
+        false,
+        createDraftChecklistVersion,
+      );
+      if (next == null) return;
+      if ("error" in next) {
+        setCreateError(next.error);
+        return;
+      }
+      router.push(next.href);
+    });
+  }
+
   const filterDescription = [
-    filters.phase !== "all" ? PHASE_LABELS[filters.phase] : null,
-    filters.category !== "all" ? CATEGORY_LABELS[filters.category] : null,
+    filters.phase !== "all"
+      ? WORKSHOP_CHECKLIST_PHASE_LABELS[filters.phase]
+      : null,
+    filters.category !== "all"
+      ? WORKSHOP_BIKE_CATEGORY_LABELS[filters.category]
+      : null,
     filters.status !== "all"
       ? WORKSHOP_CHECKLIST_STATUS_LABELS[filters.status]
       : null,
@@ -85,54 +196,63 @@ export function TemplateLibrary({
 
   return (
     <div className="flex w-full flex-col gap-6">
-      <div className="grid w-full grid-cols-3 gap-4 mobile:grid-cols-1">
-        <label className="flex flex-col gap-2 text-body-bold font-body-bold text-default-font">
-          Phase
-          <select
-            className="h-10 rounded-md border border-solid border-neutral-border bg-default-background px-3 text-body font-body text-default-font focus:outline-none focus:ring-2 focus:ring-brand-600"
-            value={filters.phase}
-            onChange={(event) => updateFilter("phase", event.target.value)}
-          >
-            <option value="all">All phases</option>
-            {WORKSHOP_CHECKLIST_PHASES.map((phase) => (
-              <option key={phase} value={phase}>
-                {PHASE_LABELS[phase]}
-              </option>
-            ))}
-          </select>
-        </label>
+      <div className="flex w-full flex-wrap items-start justify-between gap-3">
+        <div className="grid min-w-0 flex-1 grid-cols-3 gap-4 mobile:grid-cols-1">
+          <label className="flex flex-col gap-2 text-body-bold font-body-bold text-default-font">
+            Phase
+            <select
+              className="h-10 rounded-md border border-solid border-neutral-border bg-default-background px-3 text-body font-body text-default-font focus:outline-none focus:ring-2 focus:ring-brand-600"
+              value={filters.phase}
+              onChange={(event) => updateFilter("phase", event.target.value)}
+            >
+              <option value="all">All phases</option>
+              {WORKSHOP_CHECKLIST_PHASES.map((phase) => (
+                <option key={phase} value={phase}>
+                  {WORKSHOP_CHECKLIST_PHASE_LABELS[phase]}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label className="flex flex-col gap-2 text-body-bold font-body-bold text-default-font">
-          Bike category
-          <select
-            className="h-10 rounded-md border border-solid border-neutral-border bg-default-background px-3 text-body font-body text-default-font focus:outline-none focus:ring-2 focus:ring-brand-600"
-            value={filters.category}
-            onChange={(event) => updateFilter("category", event.target.value)}
-          >
-            <option value="all">All categories</option>
-            {WORKSHOP_BIKE_CATEGORIES.map((category) => (
-              <option key={category} value={category}>
-                {CATEGORY_LABELS[category]}
-              </option>
-            ))}
-          </select>
-        </label>
+          <label className="flex flex-col gap-2 text-body-bold font-body-bold text-default-font">
+            Bike category
+            <select
+              className="h-10 rounded-md border border-solid border-neutral-border bg-default-background px-3 text-body font-body text-default-font focus:outline-none focus:ring-2 focus:ring-brand-600"
+              value={filters.category}
+              onChange={(event) => updateFilter("category", event.target.value)}
+            >
+              <option value="all">All categories</option>
+              {WORKSHOP_BIKE_CATEGORIES.map((category) => (
+                <option key={category} value={category}>
+                  {WORKSHOP_BIKE_CATEGORY_LABELS[category]}
+                </option>
+              ))}
+            </select>
+          </label>
 
-        <label className="flex flex-col gap-2 text-body-bold font-body-bold text-default-font">
-          Status
-          <select
-            className="h-10 rounded-md border border-solid border-neutral-border bg-default-background px-3 text-body font-body text-default-font focus:outline-none focus:ring-2 focus:ring-brand-600"
-            value={filters.status}
-            onChange={(event) => updateFilter("status", event.target.value)}
-          >
-            <option value="all">All statuses</option>
-            {WORKSHOP_CHECKLIST_STATUSES.map((status) => (
-              <option key={status} value={status}>
-                {WORKSHOP_CHECKLIST_STATUS_LABELS[status]}
-              </option>
-            ))}
-          </select>
-        </label>
+          <label className="flex flex-col gap-2 text-body-bold font-body-bold text-default-font">
+            Status
+            <select
+              className="h-10 rounded-md border border-solid border-neutral-border bg-default-background px-3 text-body font-body text-default-font focus:outline-none focus:ring-2 focus:ring-brand-600"
+              value={filters.status}
+              onChange={(event) => updateFilter("status", event.target.value)}
+            >
+              <option value="all">All statuses</option>
+              {WORKSHOP_CHECKLIST_STATUSES.map((status) => (
+                <option key={status} value={status}>
+                  {WORKSHOP_CHECKLIST_STATUS_LABELS[status]}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+
+        <CreateDraftControls
+          filters={filters}
+          isPending={isCreating}
+          error={createError}
+          onCreate={handleCreateDraft}
+        />
       </div>
 
       {!hasError && templates.length === 0 ? (
@@ -171,13 +291,18 @@ export function TemplateLibrary({
               {templates.map((template) => (
                 <tr key={template.id} className="border-t border-solid border-neutral-border">
                   <td className="px-4 py-3 text-body font-body text-default-font">
-                    {PHASE_LABELS[template.phase]}
+                    {WORKSHOP_CHECKLIST_PHASE_LABELS[template.phase]}
                   </td>
                   <td className="px-4 py-3 text-body font-body text-default-font">
-                    {CATEGORY_LABELS[template.bikeCategory]}
+                    {WORKSHOP_BIKE_CATEGORY_LABELS[template.bikeCategory]}
                   </td>
                   <td className="px-4 py-3 text-body font-body text-default-font">
-                    {template.versionNumber}
+                    <Link
+                      href={templateVersionHref(template.id)}
+                      className="text-brand-700 underline focus:outline-none focus:ring-2 focus:ring-brand-600"
+                    >
+                      {template.versionNumber}
+                    </Link>
                   </td>
                   <td className="px-4 py-3 text-body-bold font-body-bold text-default-font">
                     {WORKSHOP_CHECKLIST_STATUS_LABELS[template.status]}
