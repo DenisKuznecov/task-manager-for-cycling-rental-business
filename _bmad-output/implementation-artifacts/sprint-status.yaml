@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 08-12-2026 15:55
-last_updated: 08-13-2026 14:05
+last_updated: 08-13-2026 14:37
 project: echelon-cycling-hub-admin
 project_key: NOKEY
 tracking_system: file-system
@@ -40,7 +40,7 @@ development_status:
   1-1-browse-governed-workshop-checklist-templates: review
   1-2-create-a-draft-checklist-version: done
   1-3-configure-draft-checklist-items: done
-  1-4-activate-an-immutable-template-version: review
+  1-4-activate-an-immutable-template-version: done
   1-5-reactivate-and-review-template-history: backlog
   epic-1-retrospective: optional
 

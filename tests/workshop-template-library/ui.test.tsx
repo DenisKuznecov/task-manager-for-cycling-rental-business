@@ -68,6 +68,7 @@ import {
   activateConfirmCopy,
   activateSubmitInput,
   confirmActivate,
+  isActivateRedirectError,
   missingSetupCategories,
   openActivatePanel,
   startActivateConfirm,
@@ -1006,6 +1007,21 @@ describe("activate version panel", () => {
       expect(settled.pending).toBe(true);
       expect(settled.refresh).toBe(true);
     }
+  });
+
+  it("rethrows a withAuth login redirect instead of showing a panel error", async () => {
+    const redirect = Object.assign(new Error("NEXT_REDIRECT"), {
+      digest: "NEXT_REDIRECT;replace;/login;303;",
+    });
+    const activate = vi.fn().mockRejectedValue(redirect);
+    const stateRef = { current: { ...openState } };
+
+    expect(isActivateRedirectError(redirect)).toBe(true);
+    await expect(
+      confirmActivate(stateRef, DRAFT_VERSION.id, activate),
+    ).rejects.toBe(redirect);
+    expect(stateRef.current.pending).toBe(true);
+    expect(stateRef.current.error).toBeNull();
   });
 
   it("does not reset expected pointers when outer Activate is used while the panel is open", () => {

@@ -69,7 +69,18 @@ context:
 - Given a structurally valid Draft, when Activate commits, then exactly one Active remains for that phase/category, the prior Active (if any) is Superseded, Items on both are unchanged, and referenced versions still cannot be deleted by application roles.
 - Given a fresh or partially applied local schema, when the migration runs again, then it succeeds and application roles still have no version, item, or event DML.
 
+### Review Findings
+
+- [x] [Review][Patch] `confirmActivate` catch swallows `withAuth` login redirect and surfaces the thrown message [`src/app/workshop/templates/[id]/_components/ActivateVersionPanel.tsx:252`]
+- [x] [Review][Dismiss] Non-draft RPC `status` is ignored, so Retry keeps submitting against an already Active/Superseded version — dropped by owner
+- [x] [Review][Dismiss] pgTAP never pins stale DETAIL `activeVersionId`/`activeVersionNumber` when a pairing already has an Active — dropped by owner
+- [x] [Review][Dismiss] Thrown activate path is untested, so dropping the catch would leave the panel pending — dropped by owner
+- [x] [Review][Dismiss] Failed replace/stale activate does not assert the existing Active row is unchanged — dropped by owner
+- [x] [Review][Dismiss] Stale DETAIL with an Active id but no number renders "Current Active: version 0" — dropped by owner
+
 ## Spec Change Log
+
+- 2026-08-13: Code review applied the login-redirect rethrow; remaining five patches dismissed by owner. Story marked done.
 
 ## Design Notes
 

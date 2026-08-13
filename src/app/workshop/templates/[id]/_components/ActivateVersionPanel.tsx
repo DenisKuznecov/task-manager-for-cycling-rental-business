@@ -25,6 +25,20 @@ export const ACTIVATE_CONSEQUENCE_COPY =
 const ACTIVATE_THROWN_FALLBACK =
   "Couldn't activate this checklist version. Please try again.";
 
+/**
+ * `withAuth` redirects via Next's `NEXT_REDIRECT` throw. Catching that in the
+ * panel would show a save error instead of sending the user to login.
+ */
+export function isActivateRedirectError(error: unknown): boolean {
+  return (
+    typeof error === "object" &&
+    error !== null &&
+    "digest" in error &&
+    typeof (error as { digest: unknown }).digest === "string" &&
+    (error as { digest: string }).digest.startsWith("NEXT_REDIRECT")
+  );
+}
+
 export type ActivatePanelState = {
   open: boolean;
   pending: boolean;
@@ -250,6 +264,7 @@ export async function confirmActivate(
     onState?.(next);
     return next;
   } catch (error) {
+    if (isActivateRedirectError(error)) throw error;
     const failed = { ...applyActivateThrown(started, error), refresh: false };
     stateRef.current = failed;
     onState?.(failed);
