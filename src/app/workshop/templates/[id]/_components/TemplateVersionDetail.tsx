@@ -9,6 +9,7 @@ import {
   type WorkshopChecklistVersion,
 } from "@/src/lib/workshop-tasks/types";
 import { DraftChecklistItemsEditor } from "./DraftChecklistItemsEditor";
+import { ActivateVersionPanel } from "./ActivateVersionPanel";
 
 interface TemplateVersionDetailProps {
   version: WorkshopChecklistVersion;
@@ -95,6 +96,8 @@ export function TemplateVersionDetail({ version }: TemplateVersionDetailProps) {
           </dd>
         </div>
       </dl>
+
+      {isDraft ? <ActivateVersionPanel version={version} /> : null}
 
       <section className="flex w-full flex-col items-start gap-3">
         <h2 className="text-heading-3 font-heading-3 text-default-font">

@@ -13,20 +13,38 @@ const { createClient } = vi.hoisted(() => ({ createClient: vi.fn() }));
 
 vi.mock("@/src/utils/supabase/server", () => ({ createClient }));
 
-function mockVersionQuery(result: { data: unknown; error: unknown }) {
-  const query = {
+function mockVersionQuery(
+  result: { data: unknown; error: unknown },
+  activeResult: { data: unknown; error: unknown } = { data: null, error: null },
+) {
+  const versionQuery = {
     eq: vi.fn(),
     order: vi.fn(),
     maybeSingle: vi.fn().mockResolvedValue(result),
   };
-  query.eq.mockReturnValue(query);
-  query.order.mockReturnValue(query);
+  versionQuery.eq.mockReturnValue(versionQuery);
+  versionQuery.order.mockReturnValue(versionQuery);
+
+  const activeQuery = {
+    eq: vi.fn(),
+    maybeSingle: vi.fn().mockResolvedValue(activeResult),
+  };
+  activeQuery.eq.mockReturnValue(activeQuery);
+
   createClient.mockResolvedValue({
     from: vi.fn().mockReturnValue({
-      select: vi.fn().mockReturnValue(query),
+      select: vi.fn((columns: string) => {
+        if (
+          typeof columns === "string" &&
+          columns.includes("workshop_checklist_templates")
+        ) {
+          return versionQuery;
+        }
+        return activeQuery;
+      }),
     }),
   });
-  return query;
+  return { versionQuery, activeQuery };
 }
 
 describe("workshop template URL filters", () => {
@@ -140,9 +158,10 @@ describe("loadWorkshopChecklistVersion", () => {
     const { loadWorkshopChecklistVersion } = await import(
       "@/src/lib/workshop-tasks/data"
     );
-    const query = mockVersionQuery({
+    const { versionQuery } = mockVersionQuery({
       data: {
         id: "11111111-1111-1111-1111-111111111111",
+        template_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         version_number: 2,
         status: "draft",
         created_at: "2026-08-13T00:00:00.000Z",
@@ -170,10 +189,11 @@ describe("loadWorkshopChecklistVersion", () => {
         createdBy: "user-1",
         revision: 1,
         items: [],
+        currentActive: null,
       },
       error: null,
     });
-    expect(query.order).toHaveBeenCalledWith("position", {
+    expect(versionQuery.order).toHaveBeenCalledWith("position", {
       referencedTable: "workshop_checklist_items",
       ascending: true,
     });
@@ -186,6 +206,7 @@ describe("loadWorkshopChecklistVersion", () => {
     mockVersionQuery({
       data: {
         id: "11111111-1111-1111-1111-111111111111",
+        template_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         version_number: 2,
         status: "draft",
         created_at: "2026-08-13T00:00:00.000Z",
@@ -256,6 +277,7 @@ describe("loadWorkshopChecklistVersion", () => {
     mockVersionQuery({
       data: {
         id: "11111111-1111-1111-1111-111111111111",
+        template_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         version_number: 2,
         status: "draft",
         created_at: "2026-08-13T00:00:00.000Z",
@@ -295,6 +317,90 @@ describe("loadWorkshopChecklistVersion", () => {
         setupCategory: null,
       },
     ]);
+  });
+
+  it("maps the current Active sibling for the same template pairing", async () => {
+    const { loadWorkshopChecklistVersion } = await import(
+      "@/src/lib/workshop-tasks/data"
+    );
+    const { activeQuery } = mockVersionQuery(
+      {
+        data: {
+          id: "11111111-1111-1111-1111-111111111111",
+          template_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          version_number: 2,
+          status: "draft",
+          created_at: "2026-08-13T00:00:00.000Z",
+          created_by: "user-1",
+          revision: 1,
+          workshop_checklist_templates: {
+            phase: "prep",
+            bike_category: "road",
+          },
+          workshop_checklist_items: [],
+        },
+        error: null,
+      },
+      {
+        data: {
+          id: "22222222-2222-4222-8222-222222222222",
+          version_number: 1,
+        },
+        error: null,
+      },
+    );
+
+    const result = await loadWorkshopChecklistVersion(
+      "11111111-1111-1111-1111-111111111111",
+    );
+
+    expect(result.error).toBeNull();
+    expect(result.version?.currentActive).toEqual({
+      id: "22222222-2222-4222-8222-222222222222",
+      versionNumber: 1,
+    });
+    expect(activeQuery.eq).toHaveBeenCalledWith(
+      "template_id",
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    );
+    expect(activeQuery.eq).toHaveBeenCalledWith("status", "active");
+  });
+
+  it("returns a failed Active sibling query as an error instead of omitting the pointer", async () => {
+    const { loadWorkshopChecklistVersion } = await import(
+      "@/src/lib/workshop-tasks/data"
+    );
+    const error = { message: "active pointer unavailable" };
+    mockVersionQuery(
+      {
+        data: {
+          id: "11111111-1111-1111-1111-111111111111",
+          template_id: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          version_number: 2,
+          status: "draft",
+          created_at: "2026-08-13T00:00:00.000Z",
+          created_by: "user-1",
+          revision: 1,
+          workshop_checklist_templates: {
+            phase: "prep",
+            bike_category: "road",
+          },
+          workshop_checklist_items: [],
+        },
+        error: null,
+      },
+      { data: null, error },
+    );
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      loadWorkshopChecklistVersion("11111111-1111-1111-1111-111111111111"),
+    ).resolves.toEqual({
+      version: null,
+      error: "active pointer unavailable",
+    });
+    expect(errorSpy).toHaveBeenCalledWith("loadWorkshopChecklistVersion:", error);
+    errorSpy.mockRestore();
   });
 
   it("treats a malformed id as not-found without querying", async () => {

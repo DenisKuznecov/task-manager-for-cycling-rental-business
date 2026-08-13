@@ -2,7 +2,7 @@
 title: 'Configure Draft Checklist Items'
 type: 'feature'
 created: '2026-08-13'
-status: 'in-progress'
+status: 'done'
 baseline_commit: '7d17bc834a07ed0f5078e7dabb7f134c679955ce'
 review_loop_iteration: 0
 context:

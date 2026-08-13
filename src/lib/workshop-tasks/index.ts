@@ -3,7 +3,11 @@ export {
   loadWorkshopChecklistVersion,
 } from "./data";
 export { createDraftChecklistVersion } from "./actions/checklist-version-actions";
-export type { CreateDraftChecklistVersionResult } from "./actions/checklist-version-actions";
+export { activateChecklistVersion } from "./actions/checklist-version-actions";
+export type {
+  CreateDraftChecklistVersionResult,
+  ActivateChecklistVersionResult,
+} from "./actions/checklist-version-actions";
 export {
   addDraftChecklistItem,
   removeDraftChecklistItem,
@@ -16,6 +20,7 @@ export {
 } from "./checklist-item-mutation";
 export {
   AddDraftChecklistItemInputSchema,
+  ActivateChecklistVersionInputSchema,
   CreateDraftChecklistVersionInputSchema,
   DEFAULT_WORKSHOP_CHECKLIST_TEMPLATE_FILTERS,
   DraftChecklistItemFieldsSchema,
@@ -40,6 +45,7 @@ export {
 } from "./types";
 export type {
   AddDraftChecklistItemInput,
+  ActivateChecklistVersionInput,
   CreateDraftChecklistVersionInput,
   DraftChecklistItemFields,
   RemoveDraftChecklistItemInput,
@@ -47,6 +53,7 @@ export type {
   UpdateDraftChecklistItemInput,
   WorkshopBikeCategory,
   WorkshopBikeCategoryFilter,
+  WorkshopChecklistActivePointer,
   WorkshopChecklistItem,
   WorkshopChecklistItemType,
   WorkshopChecklistPhase,

@@ -185,6 +185,11 @@ export interface WorkshopChecklistItem {
   setupCategory: WorkshopSetupCategory | null;
 }
 
+export interface WorkshopChecklistActivePointer {
+  id: string;
+  versionNumber: number;
+}
+
 export interface WorkshopChecklistVersion {
   id: string;
   phase: WorkshopChecklistPhase;
@@ -195,7 +200,22 @@ export interface WorkshopChecklistVersion {
   createdBy: string | null;
   revision: number;
   items: readonly WorkshopChecklistItem[];
+  currentActive: WorkshopChecklistActivePointer | null;
 }
+
+/**
+ * expectedActiveVersionId is required and null means "no Active". Replacing a
+ * different Active than the one shown must be stale, not a silent supersede.
+ */
+export const ActivateChecklistVersionInputSchema = z.object({
+  versionId: z.string().uuid(),
+  expectedRevision: z.number().int().positive(),
+  expectedActiveVersionId: z.string().uuid().nullable(),
+});
+
+export type ActivateChecklistVersionInput = z.infer<
+  typeof ActivateChecklistVersionInputSchema
+>;
 
 export interface WorkshopChecklistTemplateFilters {
   phase: WorkshopChecklistPhaseFilter;

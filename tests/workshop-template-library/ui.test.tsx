@@ -34,6 +34,7 @@ vi.mock("next/link", () => ({
 
 vi.mock("@/src/lib/workshop-tasks/actions/checklist-version-actions", () => ({
   createDraftChecklistVersion: vi.fn(),
+  activateChecklistVersion: vi.fn(),
 }));
 
 vi.mock("@/src/lib/workshop-tasks/actions/checklist-item-actions", () => ({
@@ -61,7 +62,19 @@ import {
   submitDraftItemFields,
   syncDraftEditorFromVersion,
 } from "@/src/app/workshop/templates/[id]/_components/DraftChecklistItemsEditor";
+import {
+  ActivateConfirmBody,
+  applyActivateResult,
+  activateConfirmCopy,
+  activateSubmitInput,
+  confirmActivate,
+  missingSetupCategories,
+  openActivatePanel,
+  startActivateConfirm,
+  submitActivateVersion,
+} from "@/src/app/workshop/templates/[id]/_components/ActivateVersionPanel";
 import { M2_REQUIRES_M1_MESSAGE } from "@/src/lib/workshop-tasks/types";
+import type { WorkshopChecklistVersion } from "@/src/lib/workshop-tasks/types";
 import WorkshopTemplateLibraryPage from "@/src/app/workshop/templates/page";
 import TemplateVersionDetailPage from "@/src/app/workshop/templates/[id]/page";
 import {
@@ -364,6 +377,7 @@ describe("TemplateVersionDetailPage", () => {
         createdBy: "user-1",
         revision: 1,
         items: [],
+        currentActive: null,
       },
       error: null,
     });
@@ -379,6 +393,7 @@ describe("TemplateVersionDetailPage", () => {
     expect(markup).toContain("Draft");
     expect(markup).toContain("This version has no items yet.");
     expect(markup).toContain("Add Item");
+    expect(markup).toContain(">Activate<");
     expect(markup).not.toContain("Couldn&#x27;t load");
     expect(notFound).not.toHaveBeenCalled();
   });
@@ -394,6 +409,10 @@ describe("TemplateVersionDetailPage", () => {
         createdAt: "2026-08-13T00:00:00.000Z",
         createdBy: "user-1",
         revision: 4,
+        currentActive: {
+          id: "11111111-1111-1111-1111-111111111111",
+          versionNumber: 1,
+        },
         items: [
           {
             id: "item-1",
@@ -422,6 +441,7 @@ describe("TemplateVersionDetailPage", () => {
     expect(markup).not.toContain(">Save<");
     expect(markup).not.toContain("Move up");
     expect(markup).not.toContain(">Remove<");
+    expect(markup).not.toContain(">Activate<");
   });
 
   it("renders Draft items with Save, Move, and Remove controls", async () => {
@@ -435,6 +455,7 @@ describe("TemplateVersionDetailPage", () => {
         createdAt: "2026-08-13T00:00:00.000Z",
         createdBy: "user-1",
         revision: 3,
+        currentActive: null,
         items: [
           {
             id: "item-1",
@@ -472,6 +493,7 @@ describe("TemplateVersionDetailPage", () => {
     expect(markup).toContain("Move up");
     expect(markup).toContain(">Remove<");
     expect(markup).toContain("Add Item");
+    expect(markup).toContain(">Activate<");
   });
 
   it("renders Superseded items as a readable list without edit controls", async () => {
@@ -485,6 +507,7 @@ describe("TemplateVersionDetailPage", () => {
         createdAt: "2026-08-13T00:00:00.000Z",
         createdBy: "user-1",
         revision: 6,
+        currentActive: null,
         items: [
           {
             id: "item-1",
@@ -513,6 +536,7 @@ describe("TemplateVersionDetailPage", () => {
     expect(markup).not.toContain(">Save<");
     expect(markup).not.toContain("Move up");
     expect(markup).not.toContain(">Remove<");
+    expect(markup).not.toContain(">Activate<");
   });
 });
 
@@ -693,5 +717,316 @@ describe("draft checklist item editor helpers", () => {
     expect(synced.itemDrafts["item-1"]).toEqual(matching);
     expect(synced.itemDrafts["item-2"]).toEqual(dirty);
     expect(synced.itemOrder).toEqual(["item-1", "item-2"]);
+  });
+});
+
+const DRAFT_VERSION: WorkshopChecklistVersion = {
+  id: "11111111-1111-1111-1111-111111111111",
+  phase: "prep",
+  bikeCategory: "road",
+  versionNumber: 2,
+  status: "draft",
+  createdAt: "2026-08-13T00:00:00.000Z",
+  createdBy: "user-1",
+  revision: 3,
+  items: [
+    {
+      id: "item-1",
+      label: "Check headset",
+      position: 1,
+      type: "action",
+      required: true,
+      m1: true,
+      m2: false,
+      setupCategory: "pedals",
+    },
+  ],
+  currentActive: {
+    id: "22222222-2222-4222-8222-222222222222",
+    versionNumber: 1,
+  },
+};
+
+function confirmActivateButtonOpenTag(markup: string): string {
+  const buttons = markup.match(/<button\b[^>]*>[\s\S]*?<\/button>/g) ?? [];
+  const activateButton = buttons.find((button) =>
+    />Activate</.test(button),
+  );
+  if (!activateButton) {
+    throw new Error("Confirm Activate button not found");
+  }
+  const openTag = activateButton.match(/<button\b[^>]*>/);
+  if (!openTag) {
+    throw new Error("Confirm Activate button open tag not found");
+  }
+  return openTag[0];
+}
+
+describe("activate version panel", () => {
+  const openState = {
+    open: true,
+    pending: false,
+    error: null,
+    stale: false,
+    expectedRevision: DRAFT_VERSION.revision,
+    expectedActiveVersionId: DRAFT_VERSION.currentActive?.id ?? null,
+  };
+
+  it("names phase, category, version, current Active, and future-only consequence", () => {
+    const copy = activateConfirmCopy(DRAFT_VERSION);
+    const markup = renderToStaticMarkup(
+      React.createElement(ActivateConfirmBody, {
+        version: DRAFT_VERSION,
+        pending: false,
+        error: null,
+        stale: false,
+        onConfirm: () => {},
+        onCancel: () => {},
+      }),
+    );
+
+    expect(copy.phase).toBe("Prep");
+    expect(copy.category).toBe("Road");
+    expect(copy.versionLabel).toBe("Version 2");
+    expect(copy.currentActive).toBe("Current Active: version 1.");
+    expect(copy.consequence).toContain("future Bike Tasks only");
+    expect(markup).toContain("Prep");
+    expect(markup).toContain("Road");
+    expect(markup).toContain("Version 2");
+    expect(markup).toContain("Current Active: version 1.");
+    expect(markup).toContain("future Bike Tasks only");
+    expect(markup).toContain("bg-brand-600");
+    expect(markup).not.toContain("bg-error-600");
+  });
+
+  it("names the first-activate empty Active pointer without a Current Active version", () => {
+    const firstActivate = { ...DRAFT_VERSION, currentActive: null };
+    const copy = activateConfirmCopy(firstActivate);
+    const markup = renderToStaticMarkup(
+      React.createElement(ActivateConfirmBody, {
+        version: firstActivate,
+        pending: false,
+        error: null,
+        stale: false,
+        onConfirm: () => {},
+        onCancel: () => {},
+      }),
+    );
+
+    expect(copy.currentActive).toBe(
+      "There is no Active version for this pairing yet.",
+    );
+    expect(markup).toContain("There is no Active version for this pairing yet.");
+    expect(markup).not.toContain("Current Active: version");
+  });
+
+  it("shows missing Setup Category coverage without treating it as a gate", () => {
+    expect(missingSetupCategories(DRAFT_VERSION.items)).toEqual([
+      "saddle",
+      "wheelset",
+      "power-meter",
+      "computer-mount",
+    ]);
+    const markup = renderToStaticMarkup(
+      React.createElement(ActivateConfirmBody, {
+        version: DRAFT_VERSION,
+        pending: false,
+        error: null,
+        stale: false,
+        onConfirm: () => {},
+        onCancel: () => {},
+      }),
+    );
+
+    expect(markup).toContain("Missing coverage does not block activation");
+    expect(markup).toContain("Saddle");
+    expect(markup).toContain(">Activate<");
+    expect(
+      hasDisabledHtmlAttribute(confirmActivateButtonOpenTag(markup)),
+    ).toBe(false);
+  });
+
+  it("keeps the panel open on stale and only advances expected pointers from the server", () => {
+    expect(
+      applyActivateResult(
+        {
+          ...openState,
+          pending: true,
+        },
+        {
+          ok: false,
+          error: "Checklist version is stale",
+          stale: true,
+          revision: 5,
+          status: "draft",
+          activeVersionId: "33333333-3333-4333-8333-333333333333",
+          activeVersionNumber: 4,
+        },
+      ),
+    ).toEqual({
+      open: true,
+      pending: false,
+      error: "Checklist version is stale",
+      stale: true,
+      expectedRevision: 5,
+      expectedActiveVersionId: "33333333-3333-4333-8333-333333333333",
+      reportedActive: {
+        id: "33333333-3333-4333-8333-333333333333",
+        versionNumber: 4,
+      },
+      refresh: false,
+    });
+  });
+
+  it("maps a null Active DETAIL onto expectedActiveVersionId null", () => {
+    const next = applyActivateResult(
+      {
+        ...openState,
+        pending: true,
+      },
+      {
+        ok: false,
+        error: "Checklist version is stale",
+        stale: true,
+        revision: 5,
+        status: "draft",
+        activeVersionId: null,
+      },
+    );
+
+    expect(next.expectedActiveVersionId).toBeNull();
+    expect(next.reportedActive).toBeNull();
+    expect(
+      activateConfirmCopy(DRAFT_VERSION, next.reportedActive).currentActive,
+    ).toBe("There is no Active version for this pairing yet.");
+    expect(
+      activateConfirmCopy(DRAFT_VERSION, next.reportedActive).currentActive,
+    ).not.toContain("Current Active: version");
+  });
+
+  it("Retry payload uses DETAIL-advanced pointers instead of page props", () => {
+    const next = applyActivateResult(
+      { ...openState, pending: true },
+      {
+        ok: false,
+        error: "Checklist version is stale",
+        stale: true,
+        revision: 5,
+        status: "draft",
+        activeVersionId: "33333333-3333-4333-8333-333333333333",
+        activeVersionNumber: 4,
+      },
+    );
+
+    expect(activateSubmitInput(DRAFT_VERSION.id, next)).toEqual({
+      versionId: DRAFT_VERSION.id,
+      expectedRevision: 5,
+      expectedActiveVersionId: "33333333-3333-4333-8333-333333333333",
+    });
+    expect(next.expectedRevision).not.toBe(DRAFT_VERSION.revision);
+    expect(next.expectedActiveVersionId).not.toBe(
+      DRAFT_VERSION.currentActive?.id,
+    );
+    expect(
+      activateConfirmCopy(DRAFT_VERSION, next.reportedActive).currentActive,
+    ).toBe("Current Active: version 4.");
+  });
+
+  it("stays pending until refresh after a successful activate", () => {
+    expect(
+      applyActivateResult(
+        {
+          open: true,
+          pending: true,
+          error: null,
+          stale: false,
+          expectedRevision: 3,
+          expectedActiveVersionId: null,
+        },
+        { ok: true, revision: 4 },
+      ),
+    ).toEqual({
+      open: true,
+      pending: true,
+      error: null,
+      stale: false,
+      expectedRevision: 3,
+      expectedActiveVersionId: null,
+      refresh: true,
+    });
+  });
+
+  it("does not call activate again while pending", async () => {
+    const activate = vi.fn();
+
+    await expect(
+      submitActivateVersion(
+        {
+          versionId: DRAFT_VERSION.id,
+          expectedRevision: 3,
+          expectedActiveVersionId: DRAFT_VERSION.currentActive?.id ?? null,
+        },
+        true,
+        activate,
+      ),
+    ).resolves.toBeNull();
+    expect(activate).not.toHaveBeenCalled();
+  });
+
+  it("sets pending before the await so a second confirm does not call activate", async () => {
+    let release!: (result: {
+      ok: true;
+      revision: number;
+    }) => void;
+    const activate = vi.fn(
+      () =>
+        new Promise<{ ok: true; revision: number }>((resolve) => {
+          release = resolve;
+        }),
+    );
+    const stateRef = { current: { ...openState } };
+
+    const first = confirmActivate(stateRef, DRAFT_VERSION.id, activate);
+    expect(stateRef.current.pending).toBe(true);
+    expect(startActivateConfirm(stateRef.current)).toBeNull();
+    expect(activate).toHaveBeenCalledTimes(1);
+    expect(activate).toHaveBeenCalledWith(
+      activateSubmitInput(DRAFT_VERSION.id, openState),
+    );
+
+    await expect(
+      confirmActivate(stateRef, DRAFT_VERSION.id, activate),
+    ).resolves.toBe("skipped");
+    expect(activate).toHaveBeenCalledTimes(1);
+
+    release({ ok: true, revision: 4 });
+    const settled = await first;
+    expect(settled).not.toBe("skipped");
+    if (settled !== "skipped") {
+      expect(settled.pending).toBe(true);
+      expect(settled.refresh).toBe(true);
+    }
+  });
+
+  it("does not reset expected pointers when outer Activate is used while the panel is open", () => {
+    const openWithDetail = {
+      ...openState,
+      expectedRevision: 5,
+      expectedActiveVersionId: "33333333-3333-4333-8333-333333333333",
+      reportedActive: {
+        id: "33333333-3333-4333-8333-333333333333",
+        versionNumber: 4,
+      },
+    };
+
+    expect(openActivatePanel(openWithDetail, DRAFT_VERSION)).toEqual(
+      openWithDetail,
+    );
+    expect(
+      openActivatePanel(
+        { ...openState, open: false },
+        DRAFT_VERSION,
+      ).expectedRevision,
+    ).toBe(DRAFT_VERSION.revision);
   });
 });

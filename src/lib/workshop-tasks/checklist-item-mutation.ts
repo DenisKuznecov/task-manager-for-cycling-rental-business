@@ -15,6 +15,8 @@ export type ChecklistItemMutationResult =
       stale?: boolean;
       revision?: number;
       status?: WorkshopChecklistStatus;
+      activeVersionId?: string | null;
+      activeVersionNumber?: number;
     };
 
 type RpcFailure = {
@@ -22,10 +24,15 @@ type RpcFailure = {
   details?: string | null;
 };
 
+const VERSION_ID_PATTERN =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function parseRpcDetail(details: string | null | undefined): {
   stale?: boolean;
   revision?: number;
   status?: WorkshopChecklistStatus;
+  activeVersionId?: string | null;
+  activeVersionNumber?: number;
 } {
   if (!details) return {};
   try {
@@ -33,17 +40,30 @@ function parseRpcDetail(details: string | null | undefined): {
       stale?: unknown;
       revision?: unknown;
       status?: unknown;
+      activeVersionId?: unknown;
+      activeVersionNumber?: unknown;
     };
     const status =
       typeof parsed.status === "string" &&
       (WORKSHOP_CHECKLIST_STATUSES as readonly string[]).includes(parsed.status)
         ? (parsed.status as WorkshopChecklistStatus)
         : undefined;
+    const activeVersionId =
+      parsed.activeVersionId === null
+        ? null
+        : typeof parsed.activeVersionId === "string" &&
+            VERSION_ID_PATTERN.test(parsed.activeVersionId)
+          ? parsed.activeVersionId
+          : undefined;
     return {
       stale: parsed.stale === true,
       revision:
         typeof parsed.revision === "number" ? parsed.revision : undefined,
       status,
+      ...(activeVersionId !== undefined ? { activeVersionId } : {}),
+      ...(typeof parsed.activeVersionNumber === "number"
+        ? { activeVersionNumber: parsed.activeVersionNumber }
+        : {}),
     };
   } catch {
     return {};
@@ -51,11 +71,12 @@ function parseRpcDetail(details: string | null | undefined): {
 }
 
 /**
- * Stale RPC failures must carry the current revision/status so Retry can
- * resubmit without silently merging the user's still-open field values.
+ * Stale RPC failures must carry the current revision/status/Active identity so
+ * Retry can resubmit without silently rebasing the user's confirmation.
  */
 export function mapChecklistItemRpcError(
   error: RpcFailure,
+  fallback = ITEM_MUTATION_FALLBACK,
 ): Extract<ChecklistItemMutationResult, { ok: false }> {
   const detail = parseRpcDetail(error.details);
   const stale =
@@ -63,9 +84,15 @@ export function mapChecklistItemRpcError(
 
   return {
     ok: false,
-    error: workshopUserFacingError(error.message, ITEM_MUTATION_FALLBACK),
+    error: workshopUserFacingError(error.message, fallback),
     ...(stale ? { stale: true } : {}),
     ...(detail.revision !== undefined ? { revision: detail.revision } : {}),
     ...(detail.status !== undefined ? { status: detail.status } : {}),
+    ...(detail.activeVersionId !== undefined
+      ? { activeVersionId: detail.activeVersionId }
+      : {}),
+    ...(detail.activeVersionNumber !== undefined
+      ? { activeVersionNumber: detail.activeVersionNumber }
+      : {}),
   };
 }

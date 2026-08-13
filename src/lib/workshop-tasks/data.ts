@@ -1,5 +1,6 @@
 import { createClient } from "@/src/utils/supabase/server";
 import type {
+  WorkshopChecklistActivePointer,
   WorkshopChecklistItem,
   WorkshopChecklistTemplate,
   WorkshopChecklistTemplateFilters,
@@ -33,6 +34,7 @@ type WorkshopChecklistItemRow = {
 
 type WorkshopChecklistVersionRow = {
   id: string;
+  template_id: string;
   version_number: number;
   status: string;
   created_at: string;
@@ -118,10 +120,18 @@ function nestedChecklistItemRows(
   return Array.isArray(value) ? value : [value];
 }
 
+function mapActivePointerRow(
+  row: { id: string; version_number: number } | null,
+): WorkshopChecklistActivePointer | null {
+  if (!row) return null;
+  return { id: row.id, versionNumber: row.version_number };
+}
+
 /**
  * Distinguishes a missing version (`version: null`, no error → `notFound()`)
  * from a failed query (`error` set → retryable banner). Malformed ids are
- * treated as unknown rather than as a database failure.
+ * treated as unknown rather than as a database failure. Current Active is a
+ * sibling row for the same template, not a client-side scan of the library.
  */
 export async function loadWorkshopChecklistVersion(
   id: string,
@@ -136,6 +146,7 @@ export async function loadWorkshopChecklistVersion(
     .select(
       `
       id,
+      template_id,
       version_number,
       status,
       created_at,
@@ -174,10 +185,22 @@ export async function loadWorkshopChecklistVersion(
   const row = data as unknown as WorkshopChecklistVersionRow;
   const template = row.workshop_checklist_templates;
 
-  if (!template || Array.isArray(template)) {
+  if (!template || Array.isArray(template) || !row.template_id) {
     const relationError = "Checklist version is missing its template pairing.";
     console.error("loadWorkshopChecklistVersion:", relationError);
     return { version: null, error: relationError };
+  }
+
+  const { data: activeRow, error: activeError } = await supabase
+    .from("workshop_checklist_versions")
+    .select("id, version_number")
+    .eq("template_id", row.template_id)
+    .eq("status", "active")
+    .maybeSingle();
+
+  if (activeError) {
+    console.error("loadWorkshopChecklistVersion:", activeError);
+    return { version: null, error: activeError.message };
   }
 
   const items = nestedChecklistItemRows(row.workshop_checklist_items).map(
@@ -196,6 +219,9 @@ export async function loadWorkshopChecklistVersion(
       createdBy: row.created_by,
       revision: row.revision,
       items,
+      currentActive: mapActivePointerRow(
+        activeRow as { id: string; version_number: number } | null,
+      ),
     },
     error: null,
   };

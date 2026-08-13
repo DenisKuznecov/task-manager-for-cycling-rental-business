@@ -114,6 +114,152 @@ describe("createDraftChecklistVersion", () => {
   });
 });
 
+const ACTIVE_ID = "33333333-3333-4333-8333-333333333333";
+
+describe("activateChecklistVersion", () => {
+  beforeEach(() => {
+    createClient.mockReset();
+    revalidatePath.mockReset();
+  });
+
+  it("returns a Zod error without calling the RPC for a missing version id", async () => {
+    const { activateChecklistVersion } = await import(
+      "@/src/lib/workshop-tasks/actions/checklist-version-actions"
+    );
+    const rpc = vi.fn();
+    createClient.mockResolvedValue({ rpc });
+
+    await expect(
+      activateChecklistVersion({
+        versionId: "not-a-uuid",
+        expectedRevision: 1,
+        expectedActiveVersionId: null,
+      } as never),
+    ).resolves.toEqual({
+      ok: false,
+      error: expect.any(String),
+    });
+    expect(rpc).not.toHaveBeenCalled();
+    expect(revalidatePath).not.toHaveBeenCalled();
+  });
+
+  it("revalidates library, activated detail, and superseded detail after success", async () => {
+    const { activateChecklistVersion } = await import(
+      "@/src/lib/workshop-tasks/actions/checklist-version-actions"
+    );
+    const rpc = vi.fn().mockResolvedValue({ data: 4, error: null });
+    createClient.mockResolvedValue({ rpc });
+
+    await expect(
+      activateChecklistVersion({
+        versionId: VERSION_ID,
+        expectedRevision: 3,
+        expectedActiveVersionId: ACTIVE_ID,
+      }),
+    ).resolves.toEqual({ ok: true, revision: 4 });
+
+    expect(rpc).toHaveBeenCalledWith("activate_checklist_version", {
+      version_id: VERSION_ID,
+      expected_revision: 3,
+      expected_active_version_id: ACTIVE_ID,
+    });
+    expect(revalidatePath).toHaveBeenCalledWith("/workshop/templates");
+    expect(revalidatePath).toHaveBeenCalledWith(
+      `/workshop/templates/${VERSION_ID}`,
+    );
+    expect(revalidatePath).toHaveBeenCalledWith(
+      `/workshop/templates/${ACTIVE_ID}`,
+    );
+  });
+
+  it("does not revalidate a superseded route when there is no current Active", async () => {
+    const { activateChecklistVersion } = await import(
+      "@/src/lib/workshop-tasks/actions/checklist-version-actions"
+    );
+    const rpc = vi.fn().mockResolvedValue({ data: 2, error: null });
+    createClient.mockResolvedValue({ rpc });
+
+    await expect(
+      activateChecklistVersion({
+        versionId: VERSION_ID,
+        expectedRevision: 1,
+        expectedActiveVersionId: null,
+      }),
+    ).resolves.toEqual({ ok: true, revision: 2 });
+
+    expect(revalidatePath).toHaveBeenCalledTimes(2);
+    expect(revalidatePath).toHaveBeenCalledWith("/workshop/templates");
+    expect(revalidatePath).toHaveBeenCalledWith(
+      `/workshop/templates/${VERSION_ID}`,
+    );
+  });
+
+  it("maps stale Active identity without claiming success", async () => {
+    const { activateChecklistVersion } = await import(
+      "@/src/lib/workshop-tasks/actions/checklist-version-actions"
+    );
+    const error = {
+      message: "Checklist version is stale",
+      details: JSON.stringify({
+        stale: true,
+        revision: 6,
+        status: "draft",
+        activeVersionId: ACTIVE_ID,
+        activeVersionNumber: 2,
+      }),
+    };
+    const rpc = vi.fn().mockResolvedValue({ data: null, error });
+    createClient.mockResolvedValue({ rpc });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      activateChecklistVersion({
+        versionId: VERSION_ID,
+        expectedRevision: 3,
+        expectedActiveVersionId: null,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      error: "Checklist version is stale",
+      stale: true,
+      revision: 6,
+      status: "draft",
+      activeVersionId: ACTIVE_ID,
+      activeVersionNumber: 2,
+    });
+    expect(revalidatePath).not.toHaveBeenCalled();
+    expect(errorSpy).toHaveBeenCalledWith("activateChecklistVersion:", error);
+    errorSpy.mockRestore();
+  });
+
+  it("uses stable production copy for RPC failures", async () => {
+    const { activateChecklistVersion } = await import(
+      "@/src/lib/workshop-tasks/actions/checklist-version-actions"
+    );
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "relation workshop_checklist_versions does not exist" },
+    });
+    createClient.mockResolvedValue({ rpc });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubEnv("NODE_ENV", "production");
+
+    await expect(
+      activateChecklistVersion({
+        versionId: VERSION_ID,
+        expectedRevision: 1,
+        expectedActiveVersionId: null,
+      }),
+    ).resolves.toEqual({
+      ok: false,
+      error: "Could not activate this checklist version. Please try again.",
+    });
+
+    vi.unstubAllEnvs();
+    errorSpy.mockRestore();
+  });
+});
+
 const VERSION_ID = "11111111-1111-4111-8111-111111111111";
 const ITEM_ID = "22222222-2222-4222-8222-222222222222";
 
@@ -319,6 +465,51 @@ describe("mapChecklistItemRpcError", () => {
       stale: true,
       revision: 4,
       status: "draft",
+    });
+  });
+
+  it("maps stale Active identity from RPC DETAIL", () => {
+    expect(
+      mapChecklistItemRpcError({
+        message: "Checklist version is stale",
+        details: JSON.stringify({
+          stale: true,
+          revision: 6,
+          status: "draft",
+          activeVersionId: "33333333-3333-4333-8333-333333333333",
+          activeVersionNumber: 2,
+        }),
+      }),
+    ).toEqual({
+      ok: false,
+      error: "Checklist version is stale",
+      stale: true,
+      revision: 6,
+      status: "draft",
+      activeVersionId: "33333333-3333-4333-8333-333333333333",
+      activeVersionNumber: 2,
+    });
+  });
+
+  it("maps a null Active identity from stale RPC DETAIL", () => {
+    expect(
+      mapChecklistItemRpcError({
+        message: "Checklist version is stale",
+        details: JSON.stringify({
+          stale: true,
+          revision: 2,
+          status: "draft",
+          activeVersionId: null,
+          activeVersionNumber: null,
+        }),
+      }),
+    ).toEqual({
+      ok: false,
+      error: "Checklist version is stale",
+      stale: true,
+      revision: 2,
+      status: "draft",
+      activeVersionId: null,
     });
   });
 });
