@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { loadWorkshopChecklistVersion } from "@/src/lib/workshop-tasks";
 import { DataLoadError } from "@/src/components/DataLoadError";
+import { workshopUserFacingError } from "@/src/lib/workshop-tasks/error-messages";
 import { TemplateVersionDetail } from "./_components/TemplateVersionDetail";
 
 export default async function TemplateVersionDetailPage({
@@ -18,7 +19,10 @@ export default async function TemplateVersionDetailPage({
       <div className="container max-w-none flex w-full flex-col items-start gap-6 bg-default-background py-12">
         <DataLoadError
           title="Couldn't load this checklist version"
-          message={error}
+          message={workshopUserFacingError(
+            error,
+            "We couldn't load this checklist version. Please try again.",
+          )}
         />
         <Link
           href={`/workshop/templates/${id}`}

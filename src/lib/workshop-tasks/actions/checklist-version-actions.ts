@@ -9,6 +9,7 @@ import {
   CreateDraftChecklistVersionInputSchema,
   type CreateDraftChecklistVersionInput,
 } from "@/src/lib/workshop-tasks/types";
+import { workshopUserFacingError } from "@/src/lib/workshop-tasks/error-messages";
 
 function firstZodErrorMessage(error: ZodError): string {
   return error.issues[0]?.message ?? "Invalid checklist pairing.";
@@ -45,7 +46,13 @@ async function createDraftChecklistVersionAction(
 
   if (error) {
     console.error("createDraftChecklistVersion:", error);
-    return { ok: false, error: error.message };
+    return {
+      ok: false,
+      error: workshopUserFacingError(
+        error.message,
+        "Could not create a draft checklist version. Please try again.",
+      ),
+    };
   }
 
   const id = typeof data === "string" ? data : null;

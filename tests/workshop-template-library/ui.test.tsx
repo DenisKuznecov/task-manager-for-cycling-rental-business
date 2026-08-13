@@ -52,6 +52,7 @@ import TemplateVersionDetailPage from "@/src/app/workshop/templates/[id]/page";
 import {
   applyTemplateLibraryFilter,
   buildTemplateLibraryHref,
+  createDraftAndNavigate,
   createDraftSelectionHint,
   submitCreateDraft,
   TemplateLibrary,
@@ -174,6 +175,27 @@ describe("TemplateLibrary", () => {
       phase: "prep",
       bikeCategory: "road",
     });
+  });
+
+  it("wires a successful button action to navigation", async () => {
+    const create = vi.fn().mockResolvedValue({ ok: true, id: "draft-id" });
+    const navigate = vi.fn();
+    const showError = vi.fn();
+
+    await createDraftAndNavigate(
+      { phase: "prep", category: "road" },
+      false,
+      create,
+      navigate,
+      showError,
+    );
+
+    expect(create).toHaveBeenCalledWith({
+      phase: "prep",
+      bikeCategory: "road",
+    });
+    expect(navigate).toHaveBeenCalledWith("/workshop/templates/draft-id");
+    expect(showError).not.toHaveBeenCalled();
   });
 
   it("surfaces a retryable create failure without claiming success", async () => {

@@ -88,4 +88,27 @@ describe("createDraftChecklistVersion", () => {
     expect(errorSpy).toHaveBeenCalledWith("createDraftChecklistVersion:", error);
     errorSpy.mockRestore();
   });
+
+  it("uses stable production copy for RPC failures", async () => {
+    const { createDraftChecklistVersion } = await import(
+      "@/src/lib/workshop-tasks/actions/checklist-version-actions"
+    );
+    const rpc = vi.fn().mockResolvedValue({
+      data: null,
+      error: { message: "relation workshop_checklist_versions does not exist" },
+    });
+    createClient.mockResolvedValue({ rpc });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+    vi.stubEnv("NODE_ENV", "production");
+
+    await expect(
+      createDraftChecklistVersion({ phase: "prep", bikeCategory: "road" }),
+    ).resolves.toEqual({
+      ok: false,
+      error: "Could not create a draft checklist version. Please try again.",
+    });
+
+    vi.unstubAllEnvs();
+    errorSpy.mockRestore();
+  });
 });

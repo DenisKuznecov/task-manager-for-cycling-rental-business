@@ -99,6 +99,26 @@ export async function submitCreateDraft(
   return navigationForCreateDraftResult(result);
 }
 
+/**
+ * Keeps the button's action and navigation behavior together so callers do not
+ * accidentally create a draft without taking the user to its persisted detail.
+ */
+export async function createDraftAndNavigate(
+  filters: Pick<WorkshopChecklistTemplateFilters, "phase" | "category">,
+  isPending: boolean,
+  create: CreateDraftFn,
+  navigate: (href: string) => void,
+  showError: (error: string) => void,
+): Promise<void> {
+  const next = await submitCreateDraft(filters, isPending, create);
+  if (next == null) return;
+  if ("error" in next) {
+    showError(next.error);
+    return;
+  }
+  navigate(next.href);
+}
+
 export function CreateDraftControls({
   filters,
   isPending,
@@ -166,17 +186,13 @@ export function TemplateLibrary({
     if (isCreating) return;
     setCreateError(null);
     startCreating(async () => {
-      const next = await submitCreateDraft(
+      await createDraftAndNavigate(
         currentFilters.current,
         false,
         createDraftChecklistVersion,
+        (href) => router.push(href),
+        setCreateError,
       );
-      if (next == null) return;
-      if ("error" in next) {
-        setCreateError(next.error);
-        return;
-      }
-      router.push(next.href);
     });
   }
 

@@ -132,3 +132,10 @@ Authenticated roles have no INSERT grant, so `insert({})` cannot allocate a vers
 - Unit tests pin disable, submit wiring, detail success, and loader mapping.
   [`ui.test.tsx:134`](../../tests/workshop-template-library/ui.test.tsx#L134)
 
+### Review Findings
+
+- [ ] [Review][Patch] Prevent duplicate draft allocation on rapid clicks [src/app/workshop/templates/_components/TemplateLibrary.tsx:165]
+- [ ] [Review][Patch] Make the detail-load retry reliably re-fetch route data [src/app/workshop/templates/[id]/page.tsx:23]
+- [x] [Review][Patch] Keep database error details out of production UI [src/lib/workshop-tasks/actions/checklist-version-actions.ts:46]
+- [ ] [Review][Patch] Exercise advisory-lock contention with independent database transactions [supabase/tests/database/workshop-tasks/002_create_draft_checklist_version.pgtap.sql:161]
+- [x] [Review][Patch] Test the rendered Create Draft button’s action and navigation wiring [tests/workshop-template-library/ui.test.tsx:167]
