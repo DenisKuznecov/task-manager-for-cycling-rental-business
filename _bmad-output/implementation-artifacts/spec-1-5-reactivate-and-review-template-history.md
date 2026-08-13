@@ -2,7 +2,7 @@
 title: 'Reactivate and Review Template History'
 type: 'feature'
 created: '2026-08-13'
-status: 'in-progress'
+status: 'done'
 baseline_commit: 'b4546fba41e5f30ef75a7b6159699030918042d7'
 review_loop_iteration: 0
 context:
@@ -130,10 +130,3 @@ Reactivate is a sibling RPC, not a flag on activate: the status guard is `supers
 
 - Unit I/O matrix: confirm copy, history, events-error, stale Retry, hidden control.
   [`ui.test.tsx:1222`](../../tests/workshop-template-library/ui.test.tsx#L1222)
-
-### Review Findings
-
-- [ ] [Review][Patch] Concurrent Reactivate reports an invalid-status error instead of stale [supabase/migrations/20260813160000_reactivate_checklist_version.sql:117]
-- [ ] [Review][Patch] Stale response with no Active pointer displays the obsolete Active version [src/app/workshop/templates/[id]/_components/ReactivateVersionPanel.tsx:101]
-- [ ] [Review][Patch] Thrown action errors hide development diagnostics [src/app/workshop/templates/[id]/_components/ReactivateVersionPanel.tsx:148]
-- [ ] [Review][Patch] Trailing blank lines fail the diff whitespace check [tests/workshop-template-library/types-and-data.test.ts:694]
