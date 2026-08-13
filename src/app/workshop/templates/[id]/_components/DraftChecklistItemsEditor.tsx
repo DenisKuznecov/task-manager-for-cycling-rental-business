@@ -21,7 +21,7 @@ import {
   reorderDraftChecklistItems,
   updateDraftChecklistItem,
 } from "@/src/lib/workshop-tasks/actions/checklist-item-actions";
-import type { ChecklistItemMutationResult } from "@/src/lib/workshop-tasks/actions/checklist-item-actions";
+import type { ChecklistItemMutationResult } from "@/src/lib/workshop-tasks/checklist-item-mutation";
 import {
   DraftChecklistItemFieldsSchema,
   LABEL_REQUIRED_MESSAGE,

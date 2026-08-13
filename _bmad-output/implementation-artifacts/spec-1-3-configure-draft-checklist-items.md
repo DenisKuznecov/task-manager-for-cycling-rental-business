@@ -2,7 +2,7 @@
 title: 'Configure Draft Checklist Items'
 type: 'feature'
 created: '2026-08-13'
-status: 'done'
+status: 'in-progress'
 baseline_commit: '7d17bc834a07ed0f5078e7dabb7f134c679955ce'
 review_loop_iteration: 0
 context:
@@ -125,3 +125,14 @@ Authenticated roles still have no table DML, so item mutations cannot use `inser
 
 - Unit tests pin RPC contracts, empty+Add, Draft-with-items, and stale keep.
   [`ui.test.tsx:427`](../../tests/workshop-template-library/ui.test.tsx#L427)
+
+### Review Findings
+
+- [x] [Review][Patch] Bind item updates to the submitted version ID and revalidate the actual version route [src/lib/workshop-tasks/actions/checklist-item-actions.ts:93]
+- [ ] [Review][Patch] Treat non-Draft mutation denials as authoritative stale status updates [src/lib/workshop-tasks/actions/checklist-item-actions.ts:74]
+- [ ] [Review][Patch] Provide a recovery path for stale reorders whose submitted item sequence is no longer a full permutation [src/app/workshop/templates/[id]/_components/DraftChecklistItemsEditor.tsx:442]
+- [ ] [Review][Patch] Reconcile client fields with server-normalized values after a successful mutation [src/app/workshop/templates/[id]/_components/DraftChecklistItemsEditor.tsx:165]
+- [ ] [Review][Patch] Reject null `required` values at the RPC boundary [supabase/migrations/20260813120000_configure_draft_checklist_items.sql:368]
+- [ ] [Review][Patch] Persist normalized checklist-item labels for direct RPC callers [supabase/migrations/20260813120000_configure_draft_checklist_items.sql:381]
+- [ ] [Review][Patch] Scope pending state to the affected control instead of disabling every editor action [src/app/workshop/templates/[id]/_components/DraftChecklistItemsEditor.tsx:561]
+- [x] [Review][Defer] Add an interaction-level draft editor mutation test [tests/workshop-template-library/ui.test.tsx:427] — deferred, pre-existing

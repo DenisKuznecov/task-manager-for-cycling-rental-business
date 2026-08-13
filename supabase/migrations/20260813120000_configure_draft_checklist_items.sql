@@ -413,7 +413,10 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS public.update_draft_checklist_item(uuid, integer, text, text, boolean, boolean, boolean, text);
+
 CREATE OR REPLACE FUNCTION public.update_draft_checklist_item(
+  version_id uuid,
   item_id uuid,
   expected_revision integer,
   label text,
@@ -429,7 +432,7 @@ SECURITY DEFINER
 SET search_path = ''
 AS $$
 DECLARE
-  v_version_id uuid;
+  v_item_version_id uuid;
   v_ctx record;
   v_role public.user_role;
 BEGIN
@@ -445,19 +448,24 @@ BEGIN
   END IF;
 
   SELECT item.version_id
-  INTO v_version_id
+  INTO v_item_version_id
   FROM public.workshop_checklist_items AS item
   WHERE item.id = item_id;
 
-  IF v_version_id IS NULL THEN
+  IF v_item_version_id IS NULL THEN
     RAISE EXCEPTION 'Checklist item not found'
       USING ERRCODE = 'P0002';
+  END IF;
+
+  IF v_item_version_id IS DISTINCT FROM version_id THEN
+    RAISE EXCEPTION 'Checklist item does not belong to checklist version'
+      USING ERRCODE = '22023';
   END IF;
 
   SELECT *
   INTO STRICT v_ctx
   FROM public.prepare_draft_checklist_item_mutation(
-    v_version_id,
+    version_id,
     expected_revision
   );
 
@@ -648,7 +656,7 @@ $$;
 
 COMMENT ON FUNCTION public.add_draft_checklist_item(uuid, integer, text, text, boolean, boolean, boolean, text) IS
   'Admin/Manager-only Draft item insert. Locks (bike_category, phase), matches expected_revision, and records item_added.';
-COMMENT ON FUNCTION public.update_draft_checklist_item(uuid, integer, text, text, boolean, boolean, boolean, text) IS
+COMMENT ON FUNCTION public.update_draft_checklist_item(uuid, uuid, integer, text, text, boolean, boolean, boolean, text) IS
   'Admin/Manager-only Draft item update. Locks (bike_category, phase), matches expected_revision, and records item_updated.';
 COMMENT ON FUNCTION public.remove_draft_checklist_item(uuid, integer) IS
   'Admin/Manager-only Draft item delete. Writes item_removed before deleting so events need no item FK.';
@@ -679,7 +687,7 @@ REVOKE ALL ON FUNCTION public.assert_draft_checklist_item_fields(text, text, boo
   FROM PUBLIC, anon, authenticated;
 REVOKE ALL ON FUNCTION public.add_draft_checklist_item(uuid, integer, text, text, boolean, boolean, boolean, text)
   FROM PUBLIC, anon;
-REVOKE ALL ON FUNCTION public.update_draft_checklist_item(uuid, integer, text, text, boolean, boolean, boolean, text)
+REVOKE ALL ON FUNCTION public.update_draft_checklist_item(uuid, uuid, integer, text, text, boolean, boolean, boolean, text)
   FROM PUBLIC, anon;
 REVOKE ALL ON FUNCTION public.remove_draft_checklist_item(uuid, integer)
   FROM PUBLIC, anon;
@@ -689,7 +697,7 @@ REVOKE ALL ON FUNCTION public.reorder_draft_checklist_items(uuid, integer, uuid[
 GRANT SELECT ON TABLE public.workshop_checklist_items TO authenticated;
 GRANT EXECUTE ON FUNCTION public.add_draft_checklist_item(uuid, integer, text, text, boolean, boolean, boolean, text)
   TO authenticated;
-GRANT EXECUTE ON FUNCTION public.update_draft_checklist_item(uuid, integer, text, text, boolean, boolean, boolean, text)
+GRANT EXECUTE ON FUNCTION public.update_draft_checklist_item(uuid, uuid, integer, text, text, boolean, boolean, boolean, text)
   TO authenticated;
 GRANT EXECUTE ON FUNCTION public.remove_draft_checklist_item(uuid, integer)
   TO authenticated;

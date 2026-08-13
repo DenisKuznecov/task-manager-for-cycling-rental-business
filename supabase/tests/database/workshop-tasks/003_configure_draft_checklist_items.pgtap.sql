@@ -1,6 +1,6 @@
 begin;
 
-select plan(50);
+select plan(51);
 
 select has_table(
   'public',
@@ -22,7 +22,7 @@ select has_function(
 select has_function(
   'public',
   'update_draft_checklist_item',
-  array['uuid', 'integer', 'text', 'text', 'boolean', 'boolean', 'boolean', 'text'],
+  array['uuid', 'uuid', 'integer', 'text', 'text', 'boolean', 'boolean', 'boolean', 'text'],
   'Draft item update is a privileged database capability'
 );
 select has_function(
@@ -431,6 +431,7 @@ select set_config(
 select lives_ok(
   $$
     select public.update_draft_checklist_item(
+      (select draft_id from spec13_ctx),
       (select id from public.workshop_checklist_items
        where version_id = (select draft_id from spec13_ctx)
          and position = 1),
@@ -464,6 +465,25 @@ select results_eq(
     'item_updated'
   )$$,
   'Manager update is attributed and increments revision'
+);
+
+select throws_ok(
+  $$
+    select public.update_draft_checklist_item(
+      (select draft_id from spec13_ctx),
+      (select sibling_item_id from spec13_ctx),
+      4,
+      'Should not write',
+      'action',
+      false,
+      true,
+      false,
+      null
+    )
+  $$,
+  '22023',
+  'Checklist item does not belong to checklist version',
+  'Update rejects an item from a different version'
 );
 
 select lives_ok(
@@ -639,6 +659,7 @@ select throws_ok(
 select throws_ok(
   $$
     select public.update_draft_checklist_item(
+      (select active_id from spec13_ctx),
       (select sibling_item_id from spec13_ctx),
       (select revision from public.workshop_checklist_versions
        where id = (select active_id from spec13_ctx)),

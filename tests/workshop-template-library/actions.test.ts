@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { mapChecklistItemRpcError } from "@/src/lib/workshop-tasks/checklist-item-mutation";
 
 const { createClient, revalidatePath } = vi.hoisted(() => ({
   createClient: vi.fn(),
@@ -208,6 +209,7 @@ describe("draft checklist item actions", () => {
     ).resolves.toEqual({ ok: true, revision: 3 });
 
     expect(rpc).toHaveBeenCalledWith("update_draft_checklist_item", {
+      version_id: VERSION_ID,
       item_id: ITEM_ID,
       expected_revision: 2,
       label: "Check tires",
@@ -301,5 +303,22 @@ describe("draft checklist item actions", () => {
     expect(revalidatePath).toHaveBeenCalledWith(
       `/workshop/templates/${VERSION_ID}`,
     );
+  });
+});
+
+describe("mapChecklistItemRpcError", () => {
+  it("preserves valid stale metadata from an RPC failure", () => {
+    expect(
+      mapChecklistItemRpcError({
+        message: "Checklist version is stale",
+        details: JSON.stringify({ stale: true, revision: 4, status: "draft" }),
+      }),
+    ).toEqual({
+      ok: false,
+      error: "Checklist version is stale",
+      stale: true,
+      revision: 4,
+      status: "draft",
+    });
   });
 });

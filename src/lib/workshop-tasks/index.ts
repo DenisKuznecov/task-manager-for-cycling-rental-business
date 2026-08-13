@@ -6,12 +6,14 @@ export { createDraftChecklistVersion } from "./actions/checklist-version-actions
 export type { CreateDraftChecklistVersionResult } from "./actions/checklist-version-actions";
 export {
   addDraftChecklistItem,
-  mapChecklistItemRpcError,
   removeDraftChecklistItem,
   reorderDraftChecklistItems,
   updateDraftChecklistItem,
 } from "./actions/checklist-item-actions";
-export type { ChecklistItemMutationResult } from "./actions/checklist-item-actions";
+export {
+  mapChecklistItemRpcError,
+  type ChecklistItemMutationResult,
+} from "./checklist-item-mutation";
 export {
   AddDraftChecklistItemInputSchema,
   CreateDraftChecklistVersionInputSchema,
