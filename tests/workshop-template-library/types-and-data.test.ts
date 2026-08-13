@@ -4,6 +4,7 @@ import {
   DraftChecklistItemFieldsSchema,
   LABEL_REQUIRED_MESSAGE,
   M2_REQUIRES_M1_MESSAGE,
+  ReactivateChecklistVersionInputSchema,
   normalizeWorkshopBikeCategory,
   normalizeWorkshopChecklistPhase,
   normalizeWorkshopChecklistStatus,
@@ -120,6 +121,30 @@ describe("workshop template URL filters", () => {
       }).success,
     ).toBe(true);
   });
+
+  it("requires a non-null Active uuid for reactivate", () => {
+    expect(
+      ReactivateChecklistVersionInputSchema.safeParse({
+        versionId: "11111111-1111-4111-8111-111111111111",
+        expectedRevision: 3,
+        expectedActiveVersionId: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      ReactivateChecklistVersionInputSchema.safeParse({
+        versionId: "11111111-1111-4111-8111-111111111111",
+        expectedRevision: 3,
+        expectedActiveVersionId: "",
+      }).success,
+    ).toBe(false);
+    expect(
+      ReactivateChecklistVersionInputSchema.safeParse({
+        versionId: "11111111-1111-4111-8111-111111111111",
+        expectedRevision: 3,
+        expectedActiveVersionId: "33333333-3333-4333-8333-333333333333",
+      }).success,
+    ).toBe(true);
+  });
 });
 
 describe("loadWorkshopChecklistVersion", () => {
@@ -181,6 +206,7 @@ describe("loadWorkshopChecklistVersion", () => {
     ).resolves.toEqual({
       version: {
         id: "11111111-1111-1111-1111-111111111111",
+        templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         phase: "prep",
         bikeCategory: "road",
         versionNumber: 2,
@@ -523,3 +549,146 @@ describe("loadWorkshopChecklistTemplates", () => {
     errorSpy.mockRestore();
   });
 });
+
+function mockEventsQuery(result: { data: unknown; error: unknown }) {
+  const query = {
+    eq: vi.fn(),
+    in: vi.fn(),
+    order: vi.fn(),
+  };
+  query.eq.mockReturnValue(query);
+  query.in.mockReturnValue(query);
+  query.order.mockReturnValueOnce(query).mockResolvedValueOnce(result);
+  createClient.mockResolvedValue({
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue(query),
+    }),
+  });
+  return query;
+}
+
+describe("loadWorkshopChecklistEvents", () => {
+  beforeEach(() => {
+    createClient.mockReset();
+  });
+
+  it("loads activated and reactivated events for a template in occurred_at order", async () => {
+    const { loadWorkshopChecklistEvents } = await import(
+      "@/src/lib/workshop-tasks/data"
+    );
+    const query = mockEventsQuery({
+      data: [
+        {
+          id: "event-1",
+          event_type: "activated",
+          actor_id: "actor-1",
+          occurred_at: "2026-08-13T10:00:00.000Z",
+          version_id: "11111111-1111-1111-1111-111111111111",
+          version_number: 1,
+          revision: 2,
+          superseded_version_id: null,
+        },
+        {
+          id: "event-2",
+          event_type: "reactivated",
+          actor_id: "actor-2",
+          occurred_at: "2026-08-13T12:00:00.000Z",
+          version_id: "11111111-1111-1111-1111-111111111111",
+          version_number: 1,
+          revision: 5,
+          superseded_version_id: "22222222-2222-4222-8222-222222222222",
+        },
+      ],
+      error: null,
+    });
+
+    await expect(
+      loadWorkshopChecklistEvents("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+    ).resolves.toEqual({
+      events: [
+        {
+          id: "event-1",
+          eventType: "activated",
+          actorId: "actor-1",
+          occurredAt: "2026-08-13T10:00:00.000Z",
+          versionId: "11111111-1111-1111-1111-111111111111",
+          versionNumber: 1,
+          revision: 2,
+          supersededVersionId: null,
+        },
+        {
+          id: "event-2",
+          eventType: "reactivated",
+          actorId: "actor-2",
+          occurredAt: "2026-08-13T12:00:00.000Z",
+          versionId: "11111111-1111-1111-1111-111111111111",
+          versionNumber: 1,
+          revision: 5,
+          supersededVersionId: "22222222-2222-4222-8222-222222222222",
+        },
+      ],
+      error: null,
+    });
+
+    expect(query.eq).toHaveBeenCalledWith(
+      "template_id",
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    );
+    expect(query.in).toHaveBeenCalledWith("event_type", [
+      "activated",
+      "reactivated",
+    ]);
+    expect(query.order).toHaveBeenCalledWith("occurred_at", {
+      ascending: true,
+    });
+    expect(query.order).toHaveBeenCalledWith("id", { ascending: true });
+  });
+
+  it("returns an empty fallback and logs a contextual query failure", async () => {
+    const { loadWorkshopChecklistEvents } = await import(
+      "@/src/lib/workshop-tasks/data"
+    );
+    const error = { message: "events unavailable" };
+    mockEventsQuery({ data: null, error });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      loadWorkshopChecklistEvents("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+    ).resolves.toEqual({ events: [], error: "events unavailable" });
+
+    expect(errorSpy).toHaveBeenCalledWith("loadWorkshopChecklistEvents:", error);
+    errorSpy.mockRestore();
+  });
+
+  it("treats a blank query error message as a failed load", async () => {
+    const { loadWorkshopChecklistEvents } = await import(
+      "@/src/lib/workshop-tasks/data"
+    );
+    const error = { message: "" };
+    mockEventsQuery({ data: null, error });
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
+
+    await expect(
+      loadWorkshopChecklistEvents("aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"),
+    ).resolves.toEqual({
+      events: [],
+      error: "Failed to load activation history",
+    });
+
+    expect(errorSpy).toHaveBeenCalledWith("loadWorkshopChecklistEvents:", error);
+    errorSpy.mockRestore();
+  });
+
+  it("treats a malformed template id as empty without querying", async () => {
+    const { loadWorkshopChecklistEvents } = await import(
+      "@/src/lib/workshop-tasks/data"
+    );
+
+    await expect(loadWorkshopChecklistEvents("not-a-uuid")).resolves.toEqual({
+      events: [],
+      error: null,
+    });
+    expect(createClient).not.toHaveBeenCalled();
+  });
+});
+

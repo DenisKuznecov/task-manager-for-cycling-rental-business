@@ -7,8 +7,10 @@ import { withAuth } from "@/src/utils/auth/with-auth";
 import {
   ActivateChecklistVersionInputSchema,
   CreateDraftChecklistVersionInputSchema,
+  ReactivateChecklistVersionInputSchema,
   type ActivateChecklistVersionInput,
   type CreateDraftChecklistVersionInput,
+  type ReactivateChecklistVersionInput,
 } from "@/src/lib/workshop-tasks/types";
 import {
   firstZodErrorMessage,
@@ -129,5 +131,56 @@ async function activateChecklistVersionAction(
       `/workshop/templates/${parsed.data.expectedActiveVersionId}`,
     );
   }
+  return { ok: true, revision };
+}
+
+export type ReactivateChecklistVersionResult = ChecklistItemMutationResult;
+
+const REACTIVATE_FALLBACK =
+  "Could not reactivate this checklist version. Please try again.";
+
+/**
+ * Reactivates a Superseded version through the privileged RPC so the Active
+ * pointer, supersede, revision bumps, and attributed event commit together.
+ * Both version routes are revalidated because success always supersedes the
+ * required current Active.
+ */
+export const reactivateChecklistVersion = withAuth(
+  "reactivateChecklistVersion",
+  reactivateChecklistVersionAction,
+);
+
+async function reactivateChecklistVersionAction(
+  _user: User,
+  input: ReactivateChecklistVersionInput,
+): Promise<ReactivateChecklistVersionResult> {
+  const parsed = ReactivateChecklistVersionInputSchema.safeParse(input);
+  if (!parsed.success) {
+    return { ok: false, error: firstZodErrorMessage(parsed.error) };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("reactivate_checklist_version", {
+    version_id: parsed.data.versionId,
+    expected_revision: parsed.data.expectedRevision,
+    expected_active_version_id: parsed.data.expectedActiveVersionId,
+  });
+
+  if (error) {
+    console.error("reactivateChecklistVersion:", error);
+    return mapChecklistItemRpcError(error, REACTIVATE_FALLBACK);
+  }
+
+  const revision = revisionFromRpc(data);
+  if (revision == null) {
+    console.error("reactivateChecklistVersion: missing revision", data);
+    return { ok: false, error: REACTIVATE_FALLBACK };
+  }
+
+  revalidatePath("/workshop/templates");
+  revalidatePath(`/workshop/templates/${parsed.data.versionId}`);
+  revalidatePath(
+    `/workshop/templates/${parsed.data.expectedActiveVersionId}`,
+  );
   return { ok: true, revision };
 }

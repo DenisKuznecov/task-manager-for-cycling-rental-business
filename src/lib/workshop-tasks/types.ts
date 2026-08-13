@@ -192,6 +192,7 @@ export interface WorkshopChecklistActivePointer {
 
 export interface WorkshopChecklistVersion {
   id: string;
+  templateId: string;
   phase: WorkshopChecklistPhase;
   bikeCategory: WorkshopBikeCategory;
   versionNumber: number;
@@ -201,6 +202,37 @@ export interface WorkshopChecklistVersion {
   revision: number;
   items: readonly WorkshopChecklistItem[];
   currentActive: WorkshopChecklistActivePointer | null;
+}
+
+export const WORKSHOP_CHECKLIST_ACTIVATION_EVENT_TYPES = [
+  "activated",
+  "reactivated",
+] as const;
+
+export type WorkshopChecklistActivationEventType =
+  (typeof WORKSHOP_CHECKLIST_ACTIVATION_EVENT_TYPES)[number];
+
+export const WORKSHOP_CHECKLIST_ACTIVATION_EVENT_LABELS: Record<
+  WorkshopChecklistActivationEventType,
+  string
+> = {
+  activated: "Activated",
+  reactivated: "Reactivated",
+};
+
+/**
+ * Template-scoped activation/reactivation history. Actor identity is the stored
+ * uuid — detail does not join profiles.
+ */
+export interface WorkshopChecklistEvent {
+  id: string;
+  eventType: WorkshopChecklistActivationEventType;
+  actorId: string;
+  occurredAt: string;
+  versionId: string;
+  versionNumber: number;
+  revision: number;
+  supersededVersionId: string | null;
 }
 
 /**
@@ -215,6 +247,20 @@ export const ActivateChecklistVersionInputSchema = z.object({
 
 export type ActivateChecklistVersionInput = z.infer<
   typeof ActivateChecklistVersionInputSchema
+>;
+
+/**
+ * A superseded row implies an Active exists, so expectedActiveVersionId is a
+ * required uuid. A mismatch is stale, not a silent rebase onto the current Active.
+ */
+export const ReactivateChecklistVersionInputSchema = z.object({
+  versionId: z.string().uuid(),
+  expectedRevision: z.number().int().positive(),
+  expectedActiveVersionId: z.string().uuid(),
+});
+
+export type ReactivateChecklistVersionInput = z.infer<
+  typeof ReactivateChecklistVersionInputSchema
 >;
 
 export interface WorkshopChecklistTemplateFilters {

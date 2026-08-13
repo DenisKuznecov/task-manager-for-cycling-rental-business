@@ -1,9 +1,12 @@
 import React from "react";
-import Link from "next/link";
 import { notFound } from "next/navigation";
-import { loadWorkshopChecklistVersion } from "@/src/lib/workshop-tasks";
+import {
+  loadWorkshopChecklistEvents,
+  loadWorkshopChecklistVersion,
+} from "@/src/lib/workshop-tasks";
 import { DataLoadError } from "@/src/components/DataLoadError";
 import { workshopUserFacingError } from "@/src/lib/workshop-tasks/error-messages";
+import { RetryLoadButton } from "../_components/RetryLoadButton";
 import { TemplateVersionDetail } from "./_components/TemplateVersionDetail";
 
 export default async function TemplateVersionDetailPage({
@@ -24,12 +27,7 @@ export default async function TemplateVersionDetailPage({
             "We couldn't load this checklist version. Please try again.",
           )}
         />
-        <Link
-          href={`/workshop/templates/${id}`}
-          className="text-body-bold font-body-bold text-brand-700 underline focus:outline-none focus:ring-2 focus:ring-brand-600"
-        >
-          Retry
-        </Link>
+        <RetryLoadButton />
       </div>
     );
   }
@@ -38,9 +36,24 @@ export default async function TemplateVersionDetailPage({
     notFound();
   }
 
+  const { events, error: eventsError } = await loadWorkshopChecklistEvents(
+    version.templateId,
+  );
+
   return (
     <div className="container max-w-none flex w-full flex-col items-start gap-6 bg-default-background py-12">
-      <TemplateVersionDetail version={version} />
+      <TemplateVersionDetail
+        version={version}
+        events={events}
+        eventsError={
+          eventsError
+            ? workshopUserFacingError(
+                eventsError,
+                "We couldn't load activation history. Please try again.",
+              )
+            : null
+        }
+      />
     </div>
   );
 }

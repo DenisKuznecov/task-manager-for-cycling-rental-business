@@ -5,10 +5,12 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const {
   loadWorkshopChecklistTemplates,
   loadWorkshopChecklistVersion,
+  loadWorkshopChecklistEvents,
   notFound,
 } = vi.hoisted(() => ({
   loadWorkshopChecklistTemplates: vi.fn(),
   loadWorkshopChecklistVersion: vi.fn(),
+  loadWorkshopChecklistEvents: vi.fn(),
   notFound: vi.fn(() => {
     throw new Error("NEXT_NOT_FOUND");
   }),
@@ -35,6 +37,7 @@ vi.mock("next/link", () => ({
 vi.mock("@/src/lib/workshop-tasks/actions/checklist-version-actions", () => ({
   createDraftChecklistVersion: vi.fn(),
   activateChecklistVersion: vi.fn(),
+  reactivateChecklistVersion: vi.fn(),
 }));
 
 vi.mock("@/src/lib/workshop-tasks/actions/checklist-item-actions", () => ({
@@ -47,6 +50,7 @@ vi.mock("@/src/lib/workshop-tasks/actions/checklist-item-actions", () => ({
 vi.mock("@/src/lib/workshop-tasks", () => ({
   loadWorkshopChecklistTemplates,
   loadWorkshopChecklistVersion,
+  loadWorkshopChecklistEvents,
   normalizeWorkshopChecklistPhase: (value: string | undefined) =>
     value === "prep" || value === "return" ? value : "all",
   normalizeWorkshopBikeCategory: (value: string | undefined) =>
@@ -74,6 +78,19 @@ import {
   startActivateConfirm,
   submitActivateVersion,
 } from "@/src/app/workshop/templates/[id]/_components/ActivateVersionPanel";
+import {
+  ReactivateConfirmBody,
+  applyReactivateResult,
+  applyReactivateThrown,
+  canSubmitReactivate,
+  confirmReactivate,
+  openReactivatePanel,
+  reactivateConfirmCopy,
+  reactivateSubmitInput,
+  startReactivateConfirm,
+  submitReactivateVersion,
+} from "@/src/app/workshop/templates/[id]/_components/ReactivateVersionPanel";
+import { refreshCurrentLoad } from "@/src/app/workshop/templates/_components/RetryLoadButton";
 import { M2_REQUIRES_M1_MESSAGE } from "@/src/lib/workshop-tasks/types";
 import type { WorkshopChecklistVersion } from "@/src/lib/workshop-tasks/types";
 import WorkshopTemplateLibraryPage from "@/src/app/workshop/templates/page";
@@ -322,16 +339,23 @@ describe("WorkshopTemplateLibraryPage", () => {
     expect(markup).toContain("Couldn&#x27;t load checklist templates");
     expect(markup).toContain("database unavailable");
     expect(markup).toContain("Retry");
+    expect(markup).toContain('type="button"');
     expect(markup).not.toContain("No checklist versions found");
-    expect(markup).toContain(
-      "/workshop/templates?phase=prep&amp;category=road&amp;status=active",
-    );
+    expect(markup).not.toContain("/workshop/templates?phase=prep");
+  });
+
+  it("Retry re-runs the current loader without changing the URL", () => {
+    const refresh = vi.fn();
+    refreshCurrentLoad({ refresh });
+    expect(refresh).toHaveBeenCalledOnce();
   });
 });
 
 describe("TemplateVersionDetailPage", () => {
   beforeEach(() => {
     loadWorkshopChecklistVersion.mockReset();
+    loadWorkshopChecklistEvents.mockReset();
+    loadWorkshopChecklistEvents.mockResolvedValue({ events: [], error: null });
     notFound.mockClear();
   });
 
@@ -349,6 +373,8 @@ describe("TemplateVersionDetailPage", () => {
     expect(markup).toContain("Couldn&#x27;t load this checklist version");
     expect(markup).toContain("database unavailable");
     expect(markup).toContain("Retry");
+    expect(markup).toContain('type="button"');
+    expect(loadWorkshopChecklistEvents).not.toHaveBeenCalled();
     expect(notFound).not.toHaveBeenCalled();
   });
 
@@ -370,6 +396,7 @@ describe("TemplateVersionDetailPage", () => {
     loadWorkshopChecklistVersion.mockResolvedValue({
       version: {
         id: "11111111-1111-1111-1111-111111111111",
+        templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         phase: "prep",
         bikeCategory: "road",
         versionNumber: 2,
@@ -393,8 +420,10 @@ describe("TemplateVersionDetailPage", () => {
     expect(markup).toContain("Version 2");
     expect(markup).toContain("Draft");
     expect(markup).toContain("This version has no items yet.");
+    expect(markup).toContain("No activation or reactivation events yet.");
     expect(markup).toContain("Add Item");
     expect(markup).toContain(">Activate<");
+    expect(markup).not.toContain(">Reactivate<");
     expect(markup).not.toContain("Couldn&#x27;t load");
     expect(notFound).not.toHaveBeenCalled();
   });
@@ -403,6 +432,7 @@ describe("TemplateVersionDetailPage", () => {
     loadWorkshopChecklistVersion.mockResolvedValue({
       version: {
         id: "11111111-1111-1111-1111-111111111111",
+        templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         phase: "prep",
         bikeCategory: "road",
         versionNumber: 1,
@@ -443,12 +473,14 @@ describe("TemplateVersionDetailPage", () => {
     expect(markup).not.toContain("Move up");
     expect(markup).not.toContain(">Remove<");
     expect(markup).not.toContain(">Activate<");
+    expect(markup).not.toContain(">Reactivate<");
   });
 
   it("renders Draft items with Save, Move, and Remove controls", async () => {
     loadWorkshopChecklistVersion.mockResolvedValue({
       version: {
         id: "11111111-1111-1111-1111-111111111111",
+        templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         phase: "prep",
         bikeCategory: "road",
         versionNumber: 2,
@@ -495,12 +527,14 @@ describe("TemplateVersionDetailPage", () => {
     expect(markup).toContain(">Remove<");
     expect(markup).toContain("Add Item");
     expect(markup).toContain(">Activate<");
+    expect(markup).not.toContain(">Reactivate<");
   });
 
   it("renders Superseded items as a readable list without edit controls", async () => {
     loadWorkshopChecklistVersion.mockResolvedValue({
       version: {
         id: "11111111-1111-1111-1111-111111111111",
+        templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
         phase: "prep",
         bikeCategory: "road",
         versionNumber: 1,
@@ -538,6 +572,124 @@ describe("TemplateVersionDetailPage", () => {
     expect(markup).not.toContain("Move up");
     expect(markup).not.toContain(">Remove<");
     expect(markup).not.toContain(">Activate<");
+    expect(markup).toContain(">Reactivate<");
+  });
+
+  it("renders creator and activation history from stored identities", async () => {
+    loadWorkshopChecklistVersion.mockResolvedValue({
+      version: {
+        id: "11111111-1111-1111-1111-111111111111",
+        templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        phase: "prep",
+        bikeCategory: "road",
+        versionNumber: 1,
+        status: "superseded",
+        createdAt: "2026-08-13T00:00:00.000Z",
+        createdBy: "user-1",
+        revision: 6,
+        currentActive: {
+          id: "22222222-2222-4222-8222-222222222222",
+          versionNumber: 2,
+        },
+        items: [],
+      },
+      error: null,
+    });
+    loadWorkshopChecklistEvents.mockResolvedValue({
+      events: [
+        {
+          id: "event-1",
+          eventType: "activated",
+          actorId: "actor-activate",
+          occurredAt: "2026-08-13T10:00:00.000Z",
+          versionId: "11111111-1111-1111-1111-111111111111",
+          versionNumber: 1,
+          revision: 2,
+          supersededVersionId: null,
+        },
+        {
+          id: "event-2",
+          eventType: "reactivated",
+          actorId: "actor-reactivate",
+          occurredAt: "2026-08-13T12:00:00.000Z",
+          versionId: "11111111-1111-1111-1111-111111111111",
+          versionNumber: 1,
+          revision: 5,
+          supersededVersionId: "22222222-2222-4222-8222-222222222222",
+        },
+      ],
+      error: null,
+    });
+
+    const page = await TemplateVersionDetailPage({
+      params: Promise.resolve({ id: "11111111-1111-1111-1111-111111111111" }),
+    });
+    const markup = renderToStaticMarkup(page);
+
+    expect(markup).toContain("Created by");
+    expect(markup).toContain("user-1");
+    expect(markup).toContain("Created at");
+    expect(markup).toContain("Activated");
+    expect(markup).toContain("Reactivated");
+    expect(markup).toContain("Version 1");
+    expect(markup).toContain("actor-activate");
+    expect(markup).toContain("actor-reactivate");
+    expect(markup).toContain(">Reactivate<");
+    expect(loadWorkshopChecklistEvents).toHaveBeenCalledWith(
+      "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+    );
+  });
+
+  it("keeps the version readable when activation history fails", async () => {
+    loadWorkshopChecklistVersion.mockResolvedValue({
+      version: {
+        id: "11111111-1111-1111-1111-111111111111",
+        templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+        phase: "prep",
+        bikeCategory: "road",
+        versionNumber: 1,
+        status: "superseded",
+        createdAt: "2026-08-13T00:00:00.000Z",
+        createdBy: "user-1",
+        revision: 6,
+        currentActive: {
+          id: "22222222-2222-4222-8222-222222222222",
+          versionNumber: 2,
+        },
+        items: [
+          {
+            id: "item-1",
+            label: "Check tires",
+            position: 1,
+            type: "action",
+            required: true,
+            m1: true,
+            m2: false,
+            setupCategory: "wheelset",
+          },
+        ],
+      },
+      error: null,
+    });
+    loadWorkshopChecklistEvents.mockResolvedValue({
+      events: [],
+      error: "events unavailable",
+    });
+
+    const page = await TemplateVersionDetailPage({
+      params: Promise.resolve({ id: "11111111-1111-1111-1111-111111111111" }),
+    });
+    const markup = renderToStaticMarkup(page);
+
+    expect(markup).toContain("Check tires");
+    expect(markup).toContain("Superseded");
+    expect(markup).toContain("user-1");
+    expect(markup).toContain("Couldn&#x27;t load activation history");
+    expect(markup).toContain("events unavailable");
+    expect(markup).toContain("Retry");
+    expect(markup).toContain('type="button"');
+    expect(markup).not.toContain("Couldn&#x27;t load this checklist version");
+    expect(notFound).not.toHaveBeenCalled();
   });
 });
 
@@ -723,6 +875,7 @@ describe("draft checklist item editor helpers", () => {
 
 const DRAFT_VERSION: WorkshopChecklistVersion = {
   id: "11111111-1111-1111-1111-111111111111",
+  templateId: "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
   phase: "prep",
   bikeCategory: "road",
   versionNumber: 2,
@@ -1046,3 +1199,301 @@ describe("activate version panel", () => {
     ).toBe(DRAFT_VERSION.revision);
   });
 });
+
+const SUPERSEDED_VERSION: WorkshopChecklistVersion = {
+  ...DRAFT_VERSION,
+  status: "superseded",
+  revision: 6,
+};
+
+function confirmReactivateButtonOpenTag(markup: string): string {
+  const buttons = markup.match(/<button\b[^>]*>[\s\S]*?<\/button>/g) ?? [];
+  const reactivateButton = buttons.find((button) => />Reactivate</.test(button));
+  if (!reactivateButton) {
+    throw new Error("Confirm Reactivate button not found");
+  }
+  const openTag = reactivateButton.match(/<button\b[^>]*>/);
+  if (!openTag) {
+    throw new Error("Confirm Reactivate button open tag not found");
+  }
+  return openTag[0];
+}
+
+describe("reactivate version panel", () => {
+  const openState = {
+    open: true,
+    pending: false,
+    error: null,
+    stale: false,
+    expectedRevision: SUPERSEDED_VERSION.revision,
+    expectedActiveVersionId: SUPERSEDED_VERSION.currentActive?.id ?? "",
+  };
+
+  it("names phase, category, version, current Active, and future-only consequence", () => {
+    const copy = reactivateConfirmCopy(SUPERSEDED_VERSION);
+    const markup = renderToStaticMarkup(
+      React.createElement(ReactivateConfirmBody, {
+        version: SUPERSEDED_VERSION,
+        pending: false,
+        error: null,
+        stale: false,
+        canSubmit: true,
+        onConfirm: () => {},
+        onCancel: () => {},
+      }),
+    );
+
+    expect(copy.phase).toBe("Prep");
+    expect(copy.category).toBe("Road");
+    expect(copy.versionLabel).toBe("Version 2");
+    expect(copy.currentActive).toBe("Current Active: version 1.");
+    expect(copy.consequence).toContain("future Bike Tasks only");
+    expect(markup).toContain("Prep");
+    expect(markup).toContain("Road");
+    expect(markup).toContain("Version 2");
+    expect(markup).toContain("Current Active: version 1.");
+    expect(markup).toContain("future Bike Tasks only");
+    expect(markup).toContain("bg-brand-600");
+    expect(markup).not.toContain("bg-error-600");
+    expect(
+      hasDisabledHtmlAttribute(confirmReactivateButtonOpenTag(markup)),
+    ).toBe(false);
+  });
+
+  it("keeps the panel open on stale and only advances expected pointers from the server", () => {
+    expect(
+      applyReactivateResult(
+        {
+          ...openState,
+          pending: true,
+        },
+        {
+          ok: false,
+          error: "Checklist version is stale",
+          stale: true,
+          revision: 7,
+          status: "superseded",
+          activeVersionId: "33333333-3333-4333-8333-333333333333",
+          activeVersionNumber: 4,
+        },
+      ),
+    ).toEqual({
+      open: true,
+      pending: false,
+      error: "Checklist version is stale",
+      stale: true,
+      expectedRevision: 7,
+      expectedActiveVersionId: "33333333-3333-4333-8333-333333333333",
+      reportedActive: {
+        id: "33333333-3333-4333-8333-333333333333",
+        versionNumber: 4,
+      },
+      refresh: false,
+    });
+  });
+
+  it("Retry payload uses DETAIL-advanced pointers instead of page props", () => {
+    const next = applyReactivateResult(
+      { ...openState, pending: true },
+      {
+        ok: false,
+        error: "Checklist version is stale",
+        stale: true,
+        revision: 7,
+        status: "superseded",
+        activeVersionId: "33333333-3333-4333-8333-333333333333",
+        activeVersionNumber: 4,
+      },
+    );
+
+    expect(reactivateSubmitInput(SUPERSEDED_VERSION.id, next)).toEqual({
+      versionId: SUPERSEDED_VERSION.id,
+      expectedRevision: 7,
+      expectedActiveVersionId: "33333333-3333-4333-8333-333333333333",
+    });
+    expect(next.expectedRevision).not.toBe(SUPERSEDED_VERSION.revision);
+    expect(next.expectedActiveVersionId).not.toBe(
+      SUPERSEDED_VERSION.currentActive?.id,
+    );
+    expect(
+      reactivateConfirmCopy(SUPERSEDED_VERSION, next.reportedActive)
+        .currentActive,
+    ).toBe("Current Active: version 4.");
+  });
+
+  it("does not silently rebase onto a null Active DETAIL", () => {
+    const next = applyReactivateResult(
+      {
+        ...openState,
+        pending: true,
+      },
+      {
+        ok: false,
+        error: "Checklist version is stale",
+        stale: true,
+        revision: 7,
+        status: "superseded",
+        activeVersionId: null,
+      },
+    );
+
+    expect(next.expectedActiveVersionId).toBe(openState.expectedActiveVersionId);
+    expect(next.reportedActive).toBeUndefined();
+    expect(next.open).toBe(true);
+    expect(next.refresh).toBe(false);
+    expect(
+      reactivateConfirmCopy(SUPERSEDED_VERSION, next.reportedActive)
+        .currentActive,
+    ).toBe("Current Active: version 1.");
+  });
+
+  it("stays pending until refresh after a successful reactivate", () => {
+    expect(
+      applyReactivateResult(
+        {
+          open: true,
+          pending: true,
+          error: null,
+          stale: false,
+          expectedRevision: 6,
+          expectedActiveVersionId:
+            SUPERSEDED_VERSION.currentActive?.id ?? "",
+        },
+        { ok: true, revision: 7 },
+      ),
+    ).toEqual({
+      open: true,
+      pending: true,
+      error: null,
+      stale: false,
+      expectedRevision: 6,
+      expectedActiveVersionId: SUPERSEDED_VERSION.currentActive?.id ?? "",
+      refresh: true,
+    });
+  });
+
+  it("does not call reactivate again while pending", async () => {
+    const reactivate = vi.fn();
+
+    await expect(
+      submitReactivateVersion(
+        {
+          versionId: SUPERSEDED_VERSION.id,
+          expectedRevision: 6,
+          expectedActiveVersionId: SUPERSEDED_VERSION.currentActive?.id ?? "",
+        },
+        true,
+        reactivate,
+      ),
+    ).resolves.toBeNull();
+    expect(reactivate).not.toHaveBeenCalled();
+  });
+
+  it("sets pending before the await so a second confirm does not call reactivate", async () => {
+    let release!: (result: {
+      ok: true;
+      revision: number;
+    }) => void;
+    const reactivate = vi.fn(
+      () =>
+        new Promise<{ ok: true; revision: number }>((resolve) => {
+          release = resolve;
+        }),
+    );
+    const stateRef = { current: { ...openState } };
+
+    const first = confirmReactivate(
+      stateRef,
+      SUPERSEDED_VERSION.id,
+      reactivate,
+    );
+    expect(stateRef.current.pending).toBe(true);
+    expect(startReactivateConfirm(stateRef.current)).toBeNull();
+    expect(reactivate).toHaveBeenCalledTimes(1);
+    expect(reactivate).toHaveBeenCalledWith(
+      reactivateSubmitInput(SUPERSEDED_VERSION.id, openState),
+    );
+
+    await expect(
+      confirmReactivate(stateRef, SUPERSEDED_VERSION.id, reactivate),
+    ).resolves.toBe("skipped");
+    expect(reactivate).toHaveBeenCalledTimes(1);
+
+    release({ ok: true, revision: 7 });
+    const settled = await first;
+    expect(settled).not.toBe("skipped");
+    if (settled !== "skipped") {
+      expect(settled.pending).toBe(true);
+      expect(settled.refresh).toBe(true);
+    }
+  });
+
+  it("rethrows a withAuth login redirect instead of showing a panel error", async () => {
+    const redirect = Object.assign(new Error("NEXT_REDIRECT"), {
+      digest: "NEXT_REDIRECT;replace;/login;303;",
+    });
+    const reactivate = vi.fn().mockRejectedValue(redirect);
+    const stateRef = { current: { ...openState } };
+
+    expect(isActivateRedirectError(redirect)).toBe(true);
+    await expect(
+      confirmReactivate(stateRef, SUPERSEDED_VERSION.id, reactivate),
+    ).rejects.toBe(redirect);
+    expect(stateRef.current.pending).toBe(true);
+    expect(stateRef.current.error).toBeNull();
+  });
+
+  it("keeps the panel open with stable copy after a thrown failure", async () => {
+    const reactivate = vi.fn().mockRejectedValue(new Error("relation missing"));
+    const stateRef = { current: { ...openState } };
+
+    await expect(
+      confirmReactivate(stateRef, SUPERSEDED_VERSION.id, reactivate),
+    ).resolves.toEqual({
+      ...openState,
+      pending: false,
+      stale: false,
+      error: "Couldn't reactivate this checklist version. Please try again.",
+      refresh: false,
+    });
+    expect(applyReactivateThrown(openState, new Error("relation missing"))).toEqual({
+      ...openState,
+      pending: false,
+      stale: false,
+      error: "Couldn't reactivate this checklist version. Please try again.",
+    });
+  });
+
+  it("does not start confirm without a valid Active uuid", () => {
+    expect(canSubmitReactivate("")).toBe(false);
+    expect(
+      startReactivateConfirm({
+        ...openState,
+        expectedActiveVersionId: "",
+      }),
+    ).toBeNull();
+  });
+
+  it("does not reset expected pointers when outer Reactivate is used while the panel is open", () => {
+    const openWithDetail = {
+      ...openState,
+      expectedRevision: 7,
+      expectedActiveVersionId: "33333333-3333-4333-8333-333333333333",
+      reportedActive: {
+        id: "33333333-3333-4333-8333-333333333333",
+        versionNumber: 4,
+      },
+    };
+
+    expect(openReactivatePanel(openWithDetail, SUPERSEDED_VERSION)).toEqual(
+      openWithDetail,
+    );
+    expect(
+      openReactivatePanel(
+        { ...openState, open: false },
+        SUPERSEDED_VERSION,
+      ).expectedRevision,
+    ).toBe(SUPERSEDED_VERSION.revision);
+  });
+});
+

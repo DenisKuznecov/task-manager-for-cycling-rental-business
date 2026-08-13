@@ -1,12 +1,15 @@
 export {
+  loadWorkshopChecklistEvents,
   loadWorkshopChecklistTemplates,
   loadWorkshopChecklistVersion,
 } from "./data";
 export { createDraftChecklistVersion } from "./actions/checklist-version-actions";
 export { activateChecklistVersion } from "./actions/checklist-version-actions";
+export { reactivateChecklistVersion } from "./actions/checklist-version-actions";
 export type {
   CreateDraftChecklistVersionResult,
   ActivateChecklistVersionResult,
+  ReactivateChecklistVersionResult,
 } from "./actions/checklist-version-actions";
 export {
   addDraftChecklistItem,
@@ -26,6 +29,7 @@ export {
   DraftChecklistItemFieldsSchema,
   LABEL_REQUIRED_MESSAGE,
   M2_REQUIRES_M1_MESSAGE,
+  ReactivateChecklistVersionInputSchema,
   RemoveDraftChecklistItemInputSchema,
   ReorderDraftChecklistItemsInputSchema,
   UpdateDraftChecklistItemInputSchema,
@@ -34,6 +38,8 @@ export {
   normalizeWorkshopChecklistStatus,
   WORKSHOP_BIKE_CATEGORIES,
   WORKSHOP_BIKE_CATEGORY_LABELS,
+  WORKSHOP_CHECKLIST_ACTIVATION_EVENT_LABELS,
+  WORKSHOP_CHECKLIST_ACTIVATION_EVENT_TYPES,
   WORKSHOP_CHECKLIST_ITEM_TYPE_LABELS,
   WORKSHOP_CHECKLIST_ITEM_TYPES,
   WORKSHOP_CHECKLIST_PHASES,
@@ -48,12 +54,15 @@ export type {
   ActivateChecklistVersionInput,
   CreateDraftChecklistVersionInput,
   DraftChecklistItemFields,
+  ReactivateChecklistVersionInput,
   RemoveDraftChecklistItemInput,
   ReorderDraftChecklistItemsInput,
   UpdateDraftChecklistItemInput,
   WorkshopBikeCategory,
   WorkshopBikeCategoryFilter,
+  WorkshopChecklistActivationEventType,
   WorkshopChecklistActivePointer,
+  WorkshopChecklistEvent,
   WorkshopChecklistItem,
   WorkshopChecklistItemType,
   WorkshopChecklistPhase,

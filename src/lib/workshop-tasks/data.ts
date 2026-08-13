@@ -1,10 +1,12 @@
 import { createClient } from "@/src/utils/supabase/server";
-import type {
-  WorkshopChecklistActivePointer,
-  WorkshopChecklistItem,
-  WorkshopChecklistTemplate,
-  WorkshopChecklistTemplateFilters,
-  WorkshopChecklistVersion,
+import {
+  WORKSHOP_CHECKLIST_ACTIVATION_EVENT_TYPES,
+  type WorkshopChecklistActivePointer,
+  type WorkshopChecklistEvent,
+  type WorkshopChecklistItem,
+  type WorkshopChecklistTemplate,
+  type WorkshopChecklistTemplateFilters,
+  type WorkshopChecklistVersion,
 } from "./types";
 
 type WorkshopChecklistTemplateViewRow = {
@@ -210,6 +212,7 @@ export async function loadWorkshopChecklistVersion(
   return {
     version: {
       id: row.id,
+      templateId: row.template_id,
       phase: template.phase as WorkshopChecklistVersion["phase"],
       bikeCategory:
         template.bike_category as WorkshopChecklistVersion["bikeCategory"],
@@ -223,6 +226,67 @@ export async function loadWorkshopChecklistVersion(
         activeRow as { id: string; version_number: number } | null,
       ),
     },
+    error: null,
+  };
+}
+
+type WorkshopChecklistEventRow = {
+  id: string;
+  event_type: string;
+  actor_id: string;
+  occurred_at: string;
+  version_id: string;
+  version_number: number;
+  revision: number;
+  superseded_version_id: string | null;
+};
+
+function mapEventRow(row: WorkshopChecklistEventRow): WorkshopChecklistEvent {
+  return {
+    id: row.id,
+    eventType: row.event_type as WorkshopChecklistEvent["eventType"],
+    actorId: row.actor_id,
+    occurredAt: row.occurred_at,
+    versionId: row.version_id,
+    versionNumber: row.version_number,
+    revision: row.revision,
+    supersededVersionId: row.superseded_version_id,
+  };
+}
+
+/**
+ * Template-scoped `activated`/`reactivated` rows via the existing
+ * (template_id, occurred_at) index. Item events are excluded. A failed load
+ * returns an empty list so the version detail can still render.
+ */
+export async function loadWorkshopChecklistEvents(
+  templateId: string,
+): Promise<{ events: WorkshopChecklistEvent[]; error: string | null }> {
+  if (!VERSION_ID_PATTERN.test(templateId)) {
+    return { events: [], error: null };
+  }
+
+  const supabase = await createClient();
+  const { data, error } = await supabase
+    .from("workshop_checklist_events")
+    .select(
+      "id, event_type, actor_id, occurred_at, version_id, version_number, revision, superseded_version_id",
+    )
+    .eq("template_id", templateId)
+    .in("event_type", [...WORKSHOP_CHECKLIST_ACTIVATION_EVENT_TYPES])
+    .order("occurred_at", { ascending: true })
+    .order("id", { ascending: true });
+
+  if (error) {
+    console.error("loadWorkshopChecklistEvents:", error);
+    return {
+      events: [],
+      error: error.message || "Failed to load activation history",
+    };
+  }
+
+  return {
+    events: ((data as WorkshopChecklistEventRow[] | null) ?? []).map(mapEventRow),
     error: null,
   };
 }
