@@ -13,11 +13,24 @@ export const WORKSHOP_CHECKLIST_STATUSES = [
   "active",
   "superseded",
 ] as const;
+export const WORKSHOP_CHECKLIST_ITEM_TYPES = ["action", "value"] as const;
+export const WORKSHOP_SETUP_CATEGORIES = [
+  "pedals",
+  "saddle",
+  "wheelset",
+  "power-meter",
+  "computer-mount",
+] as const;
+export const M2_REQUIRES_M1_MESSAGE = "M2 requires M1";
+export const LABEL_REQUIRED_MESSAGE = "Label is required";
 
 export type WorkshopChecklistPhase = (typeof WORKSHOP_CHECKLIST_PHASES)[number];
 export type WorkshopBikeCategory = (typeof WORKSHOP_BIKE_CATEGORIES)[number];
 export type WorkshopChecklistStatus =
   (typeof WORKSHOP_CHECKLIST_STATUSES)[number];
+export type WorkshopChecklistItemType =
+  (typeof WORKSHOP_CHECKLIST_ITEM_TYPES)[number];
+export type WorkshopSetupCategory = (typeof WORKSHOP_SETUP_CATEGORIES)[number];
 export type WorkshopChecklistPhaseFilter = WorkshopChecklistPhase | "all";
 export type WorkshopBikeCategoryFilter = WorkshopBikeCategory | "all";
 export type WorkshopChecklistStatusFilter = WorkshopChecklistStatus | "all";
@@ -50,6 +63,95 @@ export const WORKSHOP_CHECKLIST_STATUS_LABELS: Record<
   superseded: "Superseded",
 };
 
+export const WORKSHOP_CHECKLIST_ITEM_TYPE_LABELS: Record<
+  WorkshopChecklistItemType,
+  string
+> = {
+  action: "Action",
+  value: "Value",
+};
+
+export const WORKSHOP_SETUP_CATEGORY_LABELS: Record<
+  WorkshopSetupCategory,
+  string
+> = {
+  pedals: "Pedals",
+  saddle: "Saddle",
+  wheelset: "Wheelset",
+  "power-meter": "Power meter",
+  "computer-mount": "Computer mount",
+};
+
+/**
+ * Shared item-field shape so client and server actions reject M2 without M1
+ * with the same field-level copy the RPC uses.
+ */
+const DraftChecklistItemFieldsObjectSchema = z.object({
+  label: z.string().trim().min(1, LABEL_REQUIRED_MESSAGE),
+  type: z.enum(WORKSHOP_CHECKLIST_ITEM_TYPES),
+  required: z.boolean(),
+  m1: z.boolean(),
+  m2: z.boolean(),
+  setupCategory: z.enum(WORKSHOP_SETUP_CATEGORIES).nullable(),
+});
+
+function rejectM2WithoutM1(
+  value: { m1: boolean; m2: boolean },
+  ctx: z.RefinementCtx,
+) {
+  if (value.m2 && !value.m1) {
+    ctx.addIssue({
+      code: "custom",
+      path: ["m2"],
+      message: M2_REQUIRES_M1_MESSAGE,
+    });
+  }
+}
+
+export const DraftChecklistItemFieldsSchema =
+  DraftChecklistItemFieldsObjectSchema.superRefine(rejectM2WithoutM1);
+
+export const AddDraftChecklistItemInputSchema =
+  DraftChecklistItemFieldsObjectSchema.extend({
+    versionId: z.string().uuid(),
+    expectedRevision: z.number().int().positive(),
+  }).superRefine(rejectM2WithoutM1);
+
+export const UpdateDraftChecklistItemInputSchema =
+  DraftChecklistItemFieldsObjectSchema.extend({
+    versionId: z.string().uuid(),
+    itemId: z.string().uuid(),
+    expectedRevision: z.number().int().positive(),
+  }).superRefine(rejectM2WithoutM1);
+
+export const RemoveDraftChecklistItemInputSchema = z.object({
+  versionId: z.string().uuid(),
+  itemId: z.string().uuid(),
+  expectedRevision: z.number().int().positive(),
+});
+
+export const ReorderDraftChecklistItemsInputSchema = z.object({
+  versionId: z.string().uuid(),
+  expectedRevision: z.number().int().positive(),
+  itemIds: z.array(z.string().uuid()),
+});
+
+export type DraftChecklistItemFields = z.infer<
+  typeof DraftChecklistItemFieldsSchema
+>;
+export type AddDraftChecklistItemInput = z.infer<
+  typeof AddDraftChecklistItemInputSchema
+>;
+export type UpdateDraftChecklistItemInput = z.infer<
+  typeof UpdateDraftChecklistItemInputSchema
+>;
+export type RemoveDraftChecklistItemInput = z.infer<
+  typeof RemoveDraftChecklistItemInputSchema
+>;
+export type ReorderDraftChecklistItemsInput = z.infer<
+  typeof ReorderDraftChecklistItemsInputSchema
+>;
+
 /**
  * Server actions reject unspecified Library filters here so an `all` pairing
  * never reaches the privileged RPC or gets defaulted to a real phase/category.
@@ -72,6 +174,17 @@ export interface WorkshopChecklistTemplate {
   createdAt: string;
 }
 
+export interface WorkshopChecklistItem {
+  id: string;
+  label: string;
+  position: number;
+  type: WorkshopChecklistItemType;
+  required: boolean;
+  m1: boolean;
+  m2: boolean;
+  setupCategory: WorkshopSetupCategory | null;
+}
+
 export interface WorkshopChecklistVersion {
   id: string;
   phase: WorkshopChecklistPhase;
@@ -81,7 +194,7 @@ export interface WorkshopChecklistVersion {
   createdAt: string;
   createdBy: string | null;
   revision: number;
-  items: readonly [];
+  items: readonly WorkshopChecklistItem[];
 }
 
 export interface WorkshopChecklistTemplateFilters {

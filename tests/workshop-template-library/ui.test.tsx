@@ -16,7 +16,7 @@ const {
 
 vi.mock("next/navigation", () => ({
   usePathname: () => "/workshop/templates",
-  useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
+  useRouter: () => ({ replace: vi.fn(), push: vi.fn(), refresh: vi.fn() }),
   notFound,
 }));
 
@@ -36,6 +36,13 @@ vi.mock("@/src/lib/workshop-tasks/actions/checklist-version-actions", () => ({
   createDraftChecklistVersion: vi.fn(),
 }));
 
+vi.mock("@/src/lib/workshop-tasks/actions/checklist-item-actions", () => ({
+  addDraftChecklistItem: vi.fn(),
+  updateDraftChecklistItem: vi.fn(),
+  removeDraftChecklistItem: vi.fn(),
+  reorderDraftChecklistItems: vi.fn(),
+}));
+
 vi.mock("@/src/lib/workshop-tasks", () => ({
   loadWorkshopChecklistTemplates,
   loadWorkshopChecklistVersion,
@@ -47,6 +54,14 @@ vi.mock("@/src/lib/workshop-tasks", () => ({
     value === "active" ? value : "all",
 }));
 
+import {
+  applyChecklistItemMutationResult,
+  buildReorderInput,
+  moveItemIds,
+  submitDraftItemFields,
+  syncDraftEditorFromVersion,
+} from "@/src/app/workshop/templates/[id]/_components/DraftChecklistItemsEditor";
+import { M2_REQUIRES_M1_MESSAGE } from "@/src/lib/workshop-tasks/types";
 import WorkshopTemplateLibraryPage from "@/src/app/workshop/templates/page";
 import TemplateVersionDetailPage from "@/src/app/workshop/templates/[id]/page";
 import {
@@ -363,7 +378,320 @@ describe("TemplateVersionDetailPage", () => {
     expect(markup).toContain("Version 2");
     expect(markup).toContain("Draft");
     expect(markup).toContain("This version has no items yet.");
+    expect(markup).toContain("Add Item");
     expect(markup).not.toContain("Couldn&#x27;t load");
     expect(notFound).not.toHaveBeenCalled();
+  });
+
+  it("renders Active items as a readable list without edit controls", async () => {
+    loadWorkshopChecklistVersion.mockResolvedValue({
+      version: {
+        id: "11111111-1111-1111-1111-111111111111",
+        phase: "prep",
+        bikeCategory: "road",
+        versionNumber: 1,
+        status: "active",
+        createdAt: "2026-08-13T00:00:00.000Z",
+        createdBy: "user-1",
+        revision: 4,
+        items: [
+          {
+            id: "item-1",
+            label: "Check tires",
+            position: 1,
+            type: "action",
+            required: true,
+            m1: true,
+            m2: false,
+            setupCategory: "wheelset",
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const page = await TemplateVersionDetailPage({
+      params: Promise.resolve({ id: "11111111-1111-1111-1111-111111111111" }),
+    });
+    const markup = renderToStaticMarkup(page);
+
+    expect(markup).toContain("Check tires");
+    expect(markup).toContain("Action");
+    expect(markup).toContain("Wheelset");
+    expect(markup).not.toContain("Add Item");
+    expect(markup).not.toContain(">Save<");
+    expect(markup).not.toContain("Move up");
+    expect(markup).not.toContain(">Remove<");
+  });
+
+  it("renders Draft items with Save, Move, and Remove controls", async () => {
+    loadWorkshopChecklistVersion.mockResolvedValue({
+      version: {
+        id: "11111111-1111-1111-1111-111111111111",
+        phase: "prep",
+        bikeCategory: "road",
+        versionNumber: 2,
+        status: "draft",
+        createdAt: "2026-08-13T00:00:00.000Z",
+        createdBy: "user-1",
+        revision: 3,
+        items: [
+          {
+            id: "item-1",
+            label: "Check headset",
+            position: 1,
+            type: "action",
+            required: true,
+            m1: true,
+            m2: false,
+            setupCategory: null,
+          },
+          {
+            id: "item-2",
+            label: "Record torque",
+            position: 2,
+            type: "value",
+            required: false,
+            m1: true,
+            m2: true,
+            setupCategory: "saddle",
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const page = await TemplateVersionDetailPage({
+      params: Promise.resolve({ id: "11111111-1111-1111-1111-111111111111" }),
+    });
+    const markup = renderToStaticMarkup(page);
+
+    expect(markup).toContain("Check headset");
+    expect(markup).toContain("Record torque");
+    expect(markup).toContain(">Save<");
+    expect(markup).toContain("Move up");
+    expect(markup).toContain(">Remove<");
+    expect(markup).toContain("Add Item");
+  });
+
+  it("renders Superseded items as a readable list without edit controls", async () => {
+    loadWorkshopChecklistVersion.mockResolvedValue({
+      version: {
+        id: "11111111-1111-1111-1111-111111111111",
+        phase: "prep",
+        bikeCategory: "road",
+        versionNumber: 1,
+        status: "superseded",
+        createdAt: "2026-08-13T00:00:00.000Z",
+        createdBy: "user-1",
+        revision: 6,
+        items: [
+          {
+            id: "item-1",
+            label: "Check tires",
+            position: 1,
+            type: "action",
+            required: true,
+            m1: true,
+            m2: false,
+            setupCategory: "wheelset",
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const page = await TemplateVersionDetailPage({
+      params: Promise.resolve({ id: "11111111-1111-1111-1111-111111111111" }),
+    });
+    const markup = renderToStaticMarkup(page);
+
+    expect(markup).toContain("Check tires");
+    expect(markup).toContain("Action");
+    expect(markup).toContain("Wheelset");
+    expect(markup).not.toContain("Add Item");
+    expect(markup).not.toContain(">Save<");
+    expect(markup).not.toContain("Move up");
+    expect(markup).not.toContain(">Remove<");
+  });
+});
+
+describe("draft checklist item editor helpers", () => {
+  it("rejects M2 without M1 without calling save", async () => {
+    const save = vi.fn();
+
+    await expect(
+      submitDraftItemFields(
+        {
+          label: "Headset",
+          type: "action",
+          required: false,
+          m1: false,
+          m2: true,
+          setupCategory: null,
+        },
+        false,
+        save,
+      ),
+    ).resolves.toEqual({
+      ok: false,
+      error: M2_REQUIRES_M1_MESSAGE,
+      field: "m2",
+    });
+    expect(save).not.toHaveBeenCalled();
+  });
+
+  it("keeps entered values and current revision/status on stale", () => {
+    expect(
+      applyChecklistItemMutationResult(
+        { revision: 2, status: "draft" },
+        {
+          ok: false,
+          error: "Checklist version is stale",
+          stale: true,
+          revision: 5,
+          status: "draft",
+        },
+      ),
+    ).toEqual({
+      revision: 5,
+      status: "draft",
+      keepValues: true,
+      saved: false,
+      stale: true,
+      error: "Checklist version is stale",
+    });
+  });
+
+  it("marks Saved only after the new revision returns", () => {
+    expect(
+      applyChecklistItemMutationResult(
+        { revision: 2, status: "draft" },
+        { ok: true, revision: 3 },
+      ),
+    ).toEqual({
+      revision: 3,
+      status: "draft",
+      keepValues: false,
+      saved: true,
+      stale: false,
+      error: null,
+    });
+  });
+
+  it("builds a reorder payload from the full item id list", () => {
+    const ids = ["item-a", "item-b", "item-c"];
+    const moved = moveItemIds(ids, "item-c", "up");
+
+    expect(moved).toEqual(["item-a", "item-c", "item-b"]);
+    expect(
+      buildReorderInput("version-1", 3, moved ?? []),
+    ).toEqual({
+      versionId: "version-1",
+      expectedRevision: 3,
+      itemIds: ["item-a", "item-c", "item-b"],
+    });
+  });
+
+  it("does not overwrite kept drafts when a newer version arrives while stale", () => {
+    const kept = {
+      label: "In-progress edit",
+      type: "action" as const,
+      required: false,
+      m1: true,
+      m2: false,
+      setupCategory: null,
+    };
+    const synced = syncDraftEditorFromVersion(
+      {
+        stale: true,
+        revision: 5,
+        status: "draft",
+        itemDrafts: { "item-1": kept },
+        itemOrder: ["item-1"],
+      },
+      {
+        revision: 6,
+        status: "draft",
+        items: [
+          {
+            id: "item-1",
+            label: "Server label",
+            position: 1,
+            type: "action",
+            required: true,
+            m1: true,
+            m2: false,
+            setupCategory: null,
+          },
+        ],
+      },
+    );
+
+    expect(synced.revision).toBe(5);
+    expect(synced.itemDrafts["item-1"]).toEqual(kept);
+    expect(synced.itemOrder).toEqual(["item-1"]);
+  });
+
+  it("keeps dirty drafts and resets matching rows when not stale", () => {
+    const dirty = {
+      label: "Still editing",
+      type: "value" as const,
+      required: false,
+      m1: true,
+      m2: true,
+      setupCategory: "saddle" as const,
+    };
+    const matching = {
+      label: "Check headset",
+      type: "action" as const,
+      required: true,
+      m1: true,
+      m2: false,
+      setupCategory: null,
+    };
+    const synced = syncDraftEditorFromVersion(
+      {
+        stale: false,
+        revision: 3,
+        status: "draft",
+        itemDrafts: {
+          "item-1": matching,
+          "item-2": dirty,
+        },
+        itemOrder: ["item-2", "item-1"],
+      },
+      {
+        revision: 4,
+        status: "draft",
+        items: [
+          {
+            id: "item-1",
+            label: "Check headset",
+            position: 1,
+            type: "action",
+            required: true,
+            m1: true,
+            m2: false,
+            setupCategory: null,
+          },
+          {
+            id: "item-2",
+            label: "Record torque",
+            position: 2,
+            type: "value",
+            required: false,
+            m1: true,
+            m2: true,
+            setupCategory: "saddle",
+          },
+        ],
+      },
+    );
+
+    expect(synced.revision).toBe(4);
+    expect(synced.itemDrafts["item-1"]).toEqual(matching);
+    expect(synced.itemDrafts["item-2"]).toEqual(dirty);
+    expect(synced.itemOrder).toEqual(["item-1", "item-2"]);
   });
 });

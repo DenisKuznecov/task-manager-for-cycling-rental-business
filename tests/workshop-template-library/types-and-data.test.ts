@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   CreateDraftChecklistVersionInputSchema,
+  DraftChecklistItemFieldsSchema,
+  LABEL_REQUIRED_MESSAGE,
+  M2_REQUIRES_M1_MESSAGE,
   normalizeWorkshopBikeCategory,
   normalizeWorkshopChecklistPhase,
   normalizeWorkshopChecklistStatus,
@@ -9,6 +12,22 @@ import {
 const { createClient } = vi.hoisted(() => ({ createClient: vi.fn() }));
 
 vi.mock("@/src/utils/supabase/server", () => ({ createClient }));
+
+function mockVersionQuery(result: { data: unknown; error: unknown }) {
+  const query = {
+    eq: vi.fn(),
+    order: vi.fn(),
+    maybeSingle: vi.fn().mockResolvedValue(result),
+  };
+  query.eq.mockReturnValue(query);
+  query.order.mockReturnValue(query);
+  createClient.mockResolvedValue({
+    from: vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue(query),
+    }),
+  });
+  return query;
+}
 
 describe("workshop template URL filters", () => {
   it("keeps every supported URL filter value", () => {
@@ -21,6 +40,52 @@ describe("workshop template URL filters", () => {
     expect(normalizeWorkshopChecklistPhase("dispatch")).toBe("all");
     expect(normalizeWorkshopBikeCategory(undefined)).toBe("all");
     expect(normalizeWorkshopChecklistStatus("published")).toBe("all");
+  });
+
+  it("rejects an empty or whitespace-only label at the shared item schema", () => {
+    expect(
+      DraftChecklistItemFieldsSchema.safeParse({
+        label: "",
+        type: "action",
+        required: false,
+        m1: false,
+        m2: false,
+        setupCategory: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      DraftChecklistItemFieldsSchema.safeParse({
+        label: "   ",
+        type: "action",
+        required: false,
+        m1: false,
+        m2: false,
+        setupCategory: null,
+      }).error?.issues[0]?.message,
+    ).toBe(LABEL_REQUIRED_MESSAGE);
+  });
+
+  it("rejects M2 without M1 at the shared item schema", () => {
+    expect(
+      DraftChecklistItemFieldsSchema.safeParse({
+        label: "Check headset",
+        type: "action",
+        required: false,
+        m1: false,
+        m2: true,
+        setupCategory: null,
+      }).success,
+    ).toBe(false);
+    expect(
+      DraftChecklistItemFieldsSchema.safeParse({
+        label: "Check headset",
+        type: "action",
+        required: false,
+        m1: false,
+        m2: true,
+        setupCategory: null,
+      }).error?.issues[0]?.message,
+    ).toBe(M2_REQUIRES_M1_MESSAGE);
   });
 
   it("rejects an unspecified pairing instead of defaulting one", () => {
@@ -49,16 +114,7 @@ describe("loadWorkshopChecklistVersion", () => {
       "@/src/lib/workshop-tasks/data"
     );
     const error = { message: "database unavailable" };
-    const query = {
-      eq: vi.fn(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error }),
-    };
-    query.eq.mockReturnValue(query);
-    createClient.mockResolvedValue({
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue(query),
-      }),
-    });
+    mockVersionQuery({ data: null, error });
     const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
 
     await expect(
@@ -73,16 +129,7 @@ describe("loadWorkshopChecklistVersion", () => {
     const { loadWorkshopChecklistVersion } = await import(
       "@/src/lib/workshop-tasks/data"
     );
-    const query = {
-      eq: vi.fn(),
-      maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-    };
-    query.eq.mockReturnValue(query);
-    createClient.mockResolvedValue({
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue(query),
-      }),
-    });
+    mockVersionQuery({ data: null, error: null });
 
     await expect(
       loadWorkshopChecklistVersion("11111111-1111-1111-1111-111111111111"),
@@ -93,29 +140,21 @@ describe("loadWorkshopChecklistVersion", () => {
     const { loadWorkshopChecklistVersion } = await import(
       "@/src/lib/workshop-tasks/data"
     );
-    const query = {
-      eq: vi.fn(),
-      maybeSingle: vi.fn().mockResolvedValue({
-        data: {
-          id: "11111111-1111-1111-1111-111111111111",
-          version_number: 2,
-          status: "draft",
-          created_at: "2026-08-13T00:00:00.000Z",
-          created_by: "user-1",
-          revision: 1,
-          workshop_checklist_templates: {
-            phase: "prep",
-            bike_category: "road",
-          },
+    const query = mockVersionQuery({
+      data: {
+        id: "11111111-1111-1111-1111-111111111111",
+        version_number: 2,
+        status: "draft",
+        created_at: "2026-08-13T00:00:00.000Z",
+        created_by: "user-1",
+        revision: 1,
+        workshop_checklist_templates: {
+          phase: "prep",
+          bike_category: "road",
         },
-        error: null,
-      }),
-    };
-    query.eq.mockReturnValue(query);
-    createClient.mockResolvedValue({
-      from: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnValue(query),
-      }),
+        workshop_checklist_items: [],
+      },
+      error: null,
     });
 
     await expect(
@@ -134,6 +173,128 @@ describe("loadWorkshopChecklistVersion", () => {
       },
       error: null,
     });
+    expect(query.order).toHaveBeenCalledWith("position", {
+      referencedTable: "workshop_checklist_items",
+      ascending: true,
+    });
+  });
+
+  it("maps nested items in the order returned by PostgreSQL", async () => {
+    const { loadWorkshopChecklistVersion } = await import(
+      "@/src/lib/workshop-tasks/data"
+    );
+    mockVersionQuery({
+      data: {
+        id: "11111111-1111-1111-1111-111111111111",
+        version_number: 2,
+        status: "draft",
+        created_at: "2026-08-13T00:00:00.000Z",
+        created_by: "user-1",
+        revision: 3,
+        workshop_checklist_templates: {
+          phase: "prep",
+          bike_category: "road",
+        },
+        workshop_checklist_items: [
+          {
+            id: "item-1",
+            label: "First",
+            position: 1,
+            item_type: "action",
+            required: true,
+            m1: true,
+            m2: false,
+            setup_category: null,
+          },
+          {
+            id: "item-2",
+            label: "Second",
+            position: 2,
+            item_type: "value",
+            required: false,
+            m1: true,
+            m2: true,
+            setup_category: "saddle",
+          },
+        ],
+      },
+      error: null,
+    });
+
+    const result = await loadWorkshopChecklistVersion(
+      "11111111-1111-1111-1111-111111111111",
+    );
+    expect(result.error).toBeNull();
+    expect(result.version?.items).toEqual([
+      {
+        id: "item-1",
+        label: "First",
+        position: 1,
+        type: "action",
+        required: true,
+        m1: true,
+        m2: false,
+        setupCategory: null,
+      },
+      {
+        id: "item-2",
+        label: "Second",
+        position: 2,
+        type: "value",
+        required: false,
+        m1: true,
+        m2: true,
+        setupCategory: "saddle",
+      },
+    ]);
+  });
+
+  it("maps a single nested item object onto a one-item list", async () => {
+    const { loadWorkshopChecklistVersion } = await import(
+      "@/src/lib/workshop-tasks/data"
+    );
+    mockVersionQuery({
+      data: {
+        id: "11111111-1111-1111-1111-111111111111",
+        version_number: 2,
+        status: "draft",
+        created_at: "2026-08-13T00:00:00.000Z",
+        created_by: "user-1",
+        revision: 2,
+        workshop_checklist_templates: {
+          phase: "prep",
+          bike_category: "road",
+        },
+        workshop_checklist_items: {
+          id: "item-1",
+          label: "Only item",
+          position: 1,
+          item_type: "action",
+          required: true,
+          m1: false,
+          m2: false,
+          setup_category: null,
+        },
+      },
+      error: null,
+    });
+
+    const result = await loadWorkshopChecklistVersion(
+      "11111111-1111-1111-1111-111111111111",
+    );
+    expect(result.error).toBeNull();
+    expect(result.version?.items).toEqual([
+      {
+        id: "item-1",
+        label: "Only item",
+        position: 1,
+        type: "action",
+        required: true,
+        m1: false,
+        m2: false,
+        setupCategory: null,
+      },
+    ]);
   });
 
   it("treats a malformed id as not-found without querying", async () => {

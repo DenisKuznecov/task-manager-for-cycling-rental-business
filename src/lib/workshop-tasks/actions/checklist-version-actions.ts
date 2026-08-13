@@ -1,7 +1,6 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import type { ZodError } from "zod";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/src/utils/supabase/server";
 import { withAuth } from "@/src/utils/auth/with-auth";
@@ -9,11 +8,10 @@ import {
   CreateDraftChecklistVersionInputSchema,
   type CreateDraftChecklistVersionInput,
 } from "@/src/lib/workshop-tasks/types";
-import { workshopUserFacingError } from "@/src/lib/workshop-tasks/error-messages";
-
-function firstZodErrorMessage(error: ZodError): string {
-  return error.issues[0]?.message ?? "Invalid checklist pairing.";
-}
+import {
+  firstZodErrorMessage,
+  workshopUserFacingError,
+} from "@/src/lib/workshop-tasks/error-messages";
 
 export type CreateDraftChecklistVersionResult =
   | { ok: true; id: string }

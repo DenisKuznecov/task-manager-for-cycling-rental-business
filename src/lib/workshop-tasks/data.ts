@@ -1,5 +1,6 @@
 import { createClient } from "@/src/utils/supabase/server";
 import type {
+  WorkshopChecklistItem,
   WorkshopChecklistTemplate,
   WorkshopChecklistTemplateFilters,
   WorkshopChecklistVersion,
@@ -19,6 +20,17 @@ type WorkshopChecklistTemplateRelation = {
   bike_category: string;
 };
 
+type WorkshopChecklistItemRow = {
+  id: string;
+  label: string;
+  position: number;
+  item_type: string;
+  required: boolean;
+  m1: boolean;
+  m2: boolean;
+  setup_category: string | null;
+};
+
 type WorkshopChecklistVersionRow = {
   id: string;
   version_number: number;
@@ -27,6 +39,7 @@ type WorkshopChecklistVersionRow = {
   created_by: string | null;
   revision: number;
   workshop_checklist_templates: WorkshopChecklistTemplateRelation | WorkshopChecklistTemplateRelation[] | null;
+  workshop_checklist_items: WorkshopChecklistItemRow[] | WorkshopChecklistItemRow | null;
 };
 
 const VERSION_ID_PATTERN =
@@ -81,6 +94,30 @@ export async function loadWorkshopChecklistTemplates(
   };
 }
 
+function mapItemRow(row: WorkshopChecklistItemRow): WorkshopChecklistItem {
+  return {
+    id: row.id,
+    label: row.label,
+    position: row.position,
+    type: row.item_type as WorkshopChecklistItem["type"],
+    required: row.required,
+    m1: row.m1,
+    m2: row.m2,
+    setupCategory: row.setup_category as WorkshopChecklistItem["setupCategory"],
+  };
+}
+
+/**
+ * Nested item relations arrive as an array, a single object, or null. Only a
+ * missing/empty relation is an empty definition — a lone object is one item.
+ */
+function nestedChecklistItemRows(
+  value: WorkshopChecklistItemRow[] | WorkshopChecklistItemRow | null | undefined,
+): WorkshopChecklistItemRow[] {
+  if (value == null) return [];
+  return Array.isArray(value) ? value : [value];
+}
+
 /**
  * Distinguishes a missing version (`version: null`, no error → `notFound()`)
  * from a failed query (`error` set → retryable banner). Malformed ids are
@@ -107,10 +144,24 @@ export async function loadWorkshopChecklistVersion(
       workshop_checklist_templates (
         phase,
         bike_category
+      ),
+      workshop_checklist_items (
+        id,
+        label,
+        position,
+        item_type,
+        required,
+        m1,
+        m2,
+        setup_category
       )
     `,
     )
     .eq("id", id)
+    .order("position", {
+      referencedTable: "workshop_checklist_items",
+      ascending: true,
+    })
     .maybeSingle();
 
   if (error) {
@@ -129,6 +180,10 @@ export async function loadWorkshopChecklistVersion(
     return { version: null, error: relationError };
   }
 
+  const items = nestedChecklistItemRows(row.workshop_checklist_items).map(
+    mapItemRow,
+  );
+
   return {
     version: {
       id: row.id,
@@ -140,7 +195,7 @@ export async function loadWorkshopChecklistVersion(
       createdAt: row.created_at,
       createdBy: row.created_by,
       revision: row.revision,
-      items: [],
+      items,
     },
     error: null,
   };
