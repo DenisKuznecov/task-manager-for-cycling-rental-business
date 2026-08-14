@@ -21,5 +21,5 @@ jobs:
       - name: Run contracts drift check
         run: npm run contracts:check
 
-      - name: Run envelope invariant tests
-        run: npx vitest run tests/booqable-contracts/envelope-invariants.test.ts
+      - name: Run contract invariant tests
+        run: npx vitest run tests/booqable-contracts/envelope-invariants.test.ts tests/booqable-contracts/classification-config-invariants.test.ts
