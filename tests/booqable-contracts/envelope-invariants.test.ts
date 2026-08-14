@@ -23,6 +23,47 @@ import {
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
 
+const EXPECTED_V1_VOCABULARY: EnvelopeVocabulary = {
+  schemaVersion: 1,
+  kinds: ["order_graph", "resource_batch"],
+  scopes: ["complete", "partial"],
+  presences: ["known", "unknown", "removed"],
+  results: [
+    "applied",
+    "no_op",
+    "derivation_disabled",
+    "quarantined",
+    "rejected_retryable",
+    "rejected_terminal",
+  ],
+  requiredEnvelopeFields: [
+    "kind",
+    "producer_version",
+    "profile_version",
+    "schema_version",
+    "root",
+    "scopes",
+    "resources",
+    "source_versions",
+    "derived_context_revisions",
+  ],
+  optionalEnvelopeFields: [],
+  requiredIdentityFields: ["resource_type", "external_id"],
+  requiredResourceSlotFields: [
+    "resource_type",
+    "external_id",
+    "presence",
+    "source_version",
+    "fingerprint_inputs",
+  ],
+  pgEnumTypes: [
+    "source_envelope_kind",
+    "source_relationship_scope",
+    "source_resource_presence",
+    "source_apply_result",
+  ],
+};
+
 function validEnvelope(kind: SourceEnvelope["kind"]): SourceEnvelope {
   return {
     kind,
@@ -161,6 +202,53 @@ describe("source envelope I/O matrix", () => {
       expect(scope.error.issues.length).toBeGreaterThan(0);
     }
   });
+
+  it("rejects undeclared envelope fields at every object boundary", () => {
+    const parsed = SourceEnvelopeSchema.safeParse({
+      ...validEnvelope("order_graph"),
+      unexpected_top_level: true,
+      root: {
+        resource_type: "order",
+        external_id: "ord_1",
+        unexpected_identity_field: true,
+      },
+      scopes: [
+        {
+          relationship: "included",
+          scope: "complete",
+          unexpected_scope_field: true,
+        },
+      ],
+    });
+
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(
+        parsed.error.issues.some((issue) => issue.code === "unrecognized_keys"),
+      ).toBe(true);
+    }
+  });
+
+  it("rejects duplicate derived-context revisions", () => {
+    const parsed = SourceEnvelopeSchema.safeParse({
+      ...validEnvelope("order_graph"),
+      derived_context_revisions: [
+        { context: "partner_map", revision: 0 },
+        { context: "partner_map", revision: 1 },
+      ],
+    });
+
+    expect(parsed.success).toBe(false);
+    if (!parsed.success) {
+      expect(
+        parsed.error.issues.some(
+          (issue) =>
+            issue.path.join(".") === "derived_context_revisions.1.context" &&
+            issue.message === "duplicate derived-context revision",
+        ),
+      ).toBe(true);
+    }
+  });
 });
 
 describe("drift and compatibility", () => {
@@ -194,6 +282,11 @@ describe("drift and compatibility", () => {
     expect(sql).toMatch(
       /CREATE TYPE\s+public\.source_canonical_identity\s+AS\s*\(\s*resource_type\s+text\s*,\s*external_id\s+text\s*\)/i,
     );
+  });
+
+  it("freezes the published v1 vocabulary independently of the live source", () => {
+    expect(V1_VOCABULARY).toEqual(EXPECTED_V1_VOCABULARY);
+    expect(liveEnvelopeVocabulary()).toEqual(EXPECTED_V1_VOCABULARY);
   });
 
   it("fails when the PostgreSQL vocabulary was not regenerated", () => {

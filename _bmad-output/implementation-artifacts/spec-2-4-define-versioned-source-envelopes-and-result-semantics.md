@@ -76,6 +76,13 @@ deferred: []
 - Given Booqable data will enter through later adapter stories, when the repository contract package is added, then it defines versioned `order_graph` and `resource_batch` envelopes with producer/profile/schema versions, complete/partial scopes, known/unknown/removed values, canonical identity, source vectors, fingerprints, and the six-value result vocabulary, and TypeScript validation plus PostgreSQL representations are generated or fixture-checked from one editable source.
 - Given the contract source or a mirrored output changes, when CI runs the drift and compatibility checks, then missing regeneration, incompatible vocabulary, or an unversioned breaking change fails the check, and additive/deprecation rules remain explicit.
 
+### Review Findings
+- [x] [Review][Patch] Reject undeclared envelope fields [src/lib/booqable/contracts/source-envelope.ts:72]
+- [ ] [Review][Patch] Require a coherent root and source-version vector [src/lib/booqable/contracts/source-envelope.ts:120]
+- [x] [Review][Patch] Reject duplicate derived-context revisions [src/lib/booqable/contracts/source-envelope.ts:111]
+- [ ] [Review][Patch] Verify an existing canonical-identity type matches the contract [supabase/migrations/20260814140000_source_envelope_vocabulary.sql:95]
+- [x] [Review][Patch] Freeze the complete published v1 vocabulary independently of the live source [tests/booqable-contracts/envelope-invariants.test.ts:171]
+
 ## Spec Change Log
 
 ## Review Triage Log
