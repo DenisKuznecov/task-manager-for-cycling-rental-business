@@ -18,7 +18,9 @@ _This file contains critical rules and patterns that AI agents must follow when 
 ## Technology Stack & Versions
 
 - **Next.js 16.3.1** (App Router, Turbopack default) + **React 19.2.8** + **TypeScript 5.9.3** (`strict: true`)
-- **Supabase** — `@supabase/supabase-js@2.102.1`, `@supabase/ssr@0.10.0` (Postgres, Auth, RLS)
+- **Node.js 24.x** — `engines.node` is `^24.0.0` only (no 20/22). `@types/node@24.13.3`. Both deploy workflows set up Node 24.
+- **Supabase** — `@supabase/supabase-js@2.102.1`, `@supabase/ssr@0.10.0` (Postgres, Auth, RLS). CLI is an exact repo pin: **`supabase@2.114.0`** in `package.json` / lockfile and both deploy workflows (`supabase/setup-cli` `version: 2.114.0`, never `latest`). Use `npx supabase`; the Homebrew global CLI is not the pin. `npm run db:types` runs `supabase gen types typescript --local` (stdout only unless a later story owns an app consumer).
+- Local PostgreSQL stays **major 17** (`supabase/config.toml`). Required extensions are owned by `supabase/migrations/20260814120000_required_extension_manifest.sql`: `plpgsql` in `pg_catalog` (assert presence, do not CREATE), `pgcrypto` / `uuid-ossp` / `pg_stat_statements` in `extensions`, `supabase_vault` in `vault`. Staging/production extension parity is an environment-proof gate — do not query-fix remotes.
 - **Subframe** — `@subframe/core@1.154.0`, generated components live in `src/ui` (import alias `@/ui/*`), synced via the Subframe CLI (`.subframe/sync.json`)
 - **Tailwind CSS 3** + `@tailwindcss/typography` for prose content (wiki)
 - **Zod 4.4.3** — request/payload validation. ⚠️ v4, not v3: e.g. `error.issues` (not `.errors`); don't assume v3-era APIs from training data.
@@ -30,7 +32,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - **Booqable** — external rental management platform; source of truth for orders/inventory, integrated via webhook (`src/app/api/webhooks/booqable`) and sync logic (`src/lib/booqable/sync.ts`)
 - **ESLint 9.39.5** with `eslint-config-next@16.3.1` and the ESLint CLI (`eslint .`). Flat `eslint.config.mjs` extends `next/core-web-vitals`. React Compiler is off; compiler companion hooks rules are off so brownfield UI is not rewritten. Do not reintroduce `next lint` (removed in Next 16).
 - Hosted on **Vercel** (Hobby/free tier — see Critical Rules for the 10s function timeout constraint)
-- **Vitest 4.1.10** — `npm run test:unit` (`vitest run`). Coverage lives in `tests/booqable-containment/` and `tests/runtime-upgrade/`. Do not add a second test runner.
+- **Vitest 4.1.10** — `npm run test:unit` (`vitest run`). Coverage lives in `tests/booqable-containment/`, `tests/runtime-upgrade/`, and `tests/toolchain/`. Do not add a second test runner.
 
 ## Critical Implementation Rules
 
@@ -55,7 +57,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 ### Testing Rules
 
-- Unit tests use **Vitest** (`npm run test:unit`). Existing coverage is in `tests/booqable-containment/` and `tests/runtime-upgrade/`. Don't add Jest/Playwright or a second runner unprompted.
+- Unit tests use **Vitest** (`npm run test:unit`). Existing coverage is in `tests/booqable-containment/`, `tests/runtime-upgrade/`, and `tests/toolchain/`. Database proof is pgTAP under nested `supabase/tests/database/` (`workshop-tasks/`, `toolchain/`); the pinned CLI must still discover those trees via `supabase test db`. Don't add Jest/Playwright or a second runner unprompted.
 
 ### Code Quality & Style Rules
 
@@ -67,7 +69,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 - **Branch naming:** `feature/<kebab-case-description>`, `fix/`, `bugfix/`, `chore/`, `perf/` — descriptive slugs, no ticket-number prefixes.
 - **Commit messages:** plain descriptive sentences (imperative or past tense) — not Conventional Commits style (no `feat:`/`fix:` prefixes).
-- **Deploy pipeline:** pushing to `staging` runs `.github/workflows/deploy-staging.yml` (`supabase db push` to the staging project); pushing to `main` runs `.github/workflows/deploy-production.yml` (same, against production). This is the concrete mechanism behind the "migrations are applied by CI only" rule in `.cursor/rules/supabase-migrations.mdc`.
+- **Deploy pipeline:** pushing to `staging` runs `.github/workflows/deploy-staging.yml` (`supabase db push` to the staging project); pushing to `main` runs `.github/workflows/deploy-production.yml` (same, against production). Both set up Node 24 and pin Supabase CLI **2.114.0**. This is the concrete mechanism behind the "migrations are applied by CI only" rule in `.cursor/rules/supabase-migrations.mdc`.
 
 ### Critical Don't-Miss Rules
 

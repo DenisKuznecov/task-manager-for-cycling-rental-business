@@ -16,11 +16,16 @@ jobs:
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
-        
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
       - name: Setup Supabase CLI
         uses: supabase/setup-cli@v2
         with:
-          version: latest
+          version: 2.114.0
 
       - name: Link Staging Project
         run: supabase link --project-ref $SUPABASE_PROJECT_ID

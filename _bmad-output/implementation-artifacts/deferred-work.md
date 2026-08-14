@@ -3,8 +3,9 @@
 - Add an interaction-level draft editor mutation test: static markup and direct action tests do not verify that a rendered Draft editor control invokes its intended server-action bridge with current values.
 
 - source_spec: spec-2-2-upgrade-to-a-supported-application-runtime.md
-  summary: package.json engines.node still allows Node 20.0–20.8, which Next 16 does not support.
-  evidence: engines.node is `^20.0.0 || ^22.0.0 || >=24.0.0` and was unchanged by this story; Story 2.3 is the pin for the Node toolchain.
+  status: resolved by Story 2.3
+  summary: package.json engines.node still allowed Node 20.0–20.8, which Next 16 does not support.
+  evidence: engines.node was `^20.0.0 || ^22.0.0 || >=24.0.0` and was unchanged by Story 2.2; Story 2.3 pinned it to `^24.0.0` only.
 
 - source_spec: spec-2-2-upgrade-to-a-supported-application-runtime.md
   summary: Story 2.1's code map still names src/middleware.ts as the Next convention file.
