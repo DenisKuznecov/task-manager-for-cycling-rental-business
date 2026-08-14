@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import {
+  authorizeSandboxBearer,
+  isBooqableIngestionAllowed,
+} from "@/src/lib/booqable/ingestion-guard";
 import { syncBooqableOrder } from "@/src/lib/booqable/sync";
 
 export const dynamic = "force-dynamic";
@@ -8,14 +12,37 @@ export const dynamic = "force-dynamic";
  * One-off backfill: pages through every Booqable order and runs the same
  * syncBooqableOrder used by the webhook, so existing orders get their
  * order_items and the newer order-level fields populated.
+ *
+ * Authenticates itself with Authorization: Bearer matching
+ * BOOQABLE_SYNC_SECRET. Path naming is not access control.
  */
-export async function GET(_request: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-
+export async function GET(request: Request) {
   try {
+    if (!isBooqableIngestionAllowed()) {
+      console.warn("[sync-orders] Refusing ingestion on Vercel preview");
+      return NextResponse.json({ error: "Unavailable" }, { status: 403 });
+    }
+
+    if (!process.env.BOOQABLE_SYNC_SECRET) {
+      console.error(
+        "[sync-orders] CRITICAL: BOOQABLE_SYNC_SECRET is missing in environment variables.",
+      );
+      return NextResponse.json(
+        { error: "Server Configuration Error" },
+        { status: 500 },
+      );
+    }
+
+    if (!authorizeSandboxBearer(request)) {
+      console.warn("[sync-orders] Unauthorized sync-orders attempt");
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
+
     const slug = process.env.BOOQABLE_COMPANY_SLUG;
     const apiKey = process.env.BOOQABLE_API_KEY;
     if (!slug || !apiKey) {

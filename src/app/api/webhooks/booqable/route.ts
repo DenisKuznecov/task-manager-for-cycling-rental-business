@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { isBooqableIngestionAllowed } from "@/src/lib/booqable/ingestion-guard";
 import { syncBooqableOrder } from "@/src/lib/booqable/sync";
 
 export const dynamic = "force-dynamic";
@@ -11,12 +12,14 @@ export const dynamic = "force-dynamic";
  * duplicate webhook deliveries always converge on the current state.
  */
 export async function POST(request: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-
   try {
+    if (!isBooqableIngestionAllowed()) {
+      console.warn(
+        "[webhooks/booqable] Refusing ingestion on Vercel preview",
+      );
+      return NextResponse.json({ error: "Unavailable" }, { status: 403 });
+    }
+
     // --- 1. SECURITY CHECK: VERIFY THE WEBHOOK SECRET ---
     const { searchParams } = new URL(request.url);
     const providedSecret = searchParams.get("secret");
@@ -32,9 +35,7 @@ export async function POST(request: Request) {
     }
 
     if (providedSecret !== process.env.BOOQABLE_WEBHOOK_SECRET) {
-      console.warn(
-        `[webhooks/booqable] Unauthorized webhook attempt. Provided secret: ${providedSecret}`,
-      );
+      console.warn("[webhooks/booqable] Unauthorized webhook attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
     // ----------------------------------------------------
@@ -64,6 +65,11 @@ export async function POST(request: Request) {
       console.warn("[webhooks/booqable] Missing data[id] - skipping sync");
       return NextResponse.json({ received: true }, { status: 200 });
     }
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    );
 
     await syncBooqableOrder(supabase, booqableOrderId);
 
