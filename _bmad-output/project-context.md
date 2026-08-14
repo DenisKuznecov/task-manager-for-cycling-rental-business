@@ -17,7 +17,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 ## Technology Stack & Versions
 
-- **Next.js 14.2.3** (App Router) + **React 18** + **TypeScript 5.9.3** (`strict: true`)
+- **Next.js 16.3.1** (App Router, Turbopack default) + **React 19.2.8** + **TypeScript 5.9.3** (`strict: true`)
 - **Supabase** — `@supabase/supabase-js@2.102.1`, `@supabase/ssr@0.10.0` (Postgres, Auth, RLS)
 - **Subframe** — `@subframe/core@1.154.0`, generated components live in `src/ui` (import alias `@/ui/*`), synced via the Subframe CLI (`.subframe/sync.json`)
 - **Tailwind CSS 3** + `@tailwindcss/typography` for prose content (wiki)
@@ -28,9 +28,9 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - **React Email 6.1.5** (`@react-email/components`, `@react-email/tailwind`) + **Resend 6.12.4** — transactional email (see `emails/`)
 - **`@hello-pangea/dnd@18.0.1`** — drag-and-drop (workshop mechanic kanban)
 - **Booqable** — external rental management platform; source of truth for orders/inventory, integrated via webhook (`src/app/api/webhooks/booqable`) and sync logic (`src/lib/booqable/sync.ts`)
-- **ESLint 8** with `eslint-config-next@13.5.4` — pinned older than `next@^14.2.3`; this mismatch is intentional/known, don't "fix" it as a side effect of an unrelated change
+- **ESLint 9.39.5** with `eslint-config-next@16.3.1` and the ESLint CLI (`eslint .`). Flat `eslint.config.mjs` extends `next/core-web-vitals`. React Compiler is off; compiler companion hooks rules are off so brownfield UI is not rewritten. Do not reintroduce `next lint` (removed in Next 16).
 - Hosted on **Vercel** (Hobby/free tier — see Critical Rules for the 10s function timeout constraint)
-- No test runner is configured (no Jest/Vitest/Playwright) — there is currently no automated test suite in this repo
+- **Vitest 4.1.10** — `npm run test:unit` (`vitest run`). Coverage lives in `tests/booqable-containment/` and `tests/runtime-upgrade/`. Do not add a second test runner.
 
 ## Critical Implementation Rules
 
@@ -47,7 +47,7 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Route-local components live in a `_components/` folder inside each route segment (underscore prefix keeps Next.js from treating them as routes). Every route also has a `loading.tsx` for its Suspense fallback.
 - Pages are async Server Components that call a loader directly (e.g. `src/app/orders/page.tsx` awaits `loadOrdersPage`); interactive pieces are separate `"use client"` components that receive data as props.
 - **Feature module organization** — business logic lives in `src/lib/<feature>/`, split into subfolders by concern: `data/` (loaders), `actions/` (server actions), `types/` (Zod schemas + TS types), plus feature-specific ones (`fields/`, `payload/`, `storage/`, `report/`). Each subfolder and the feature root re-export through an `index.ts` barrel. Reference implementations: `src/lib/bike-fit/`, `src/lib/wiki/`.
-- **Supabase client selection** — three different clients for three contexts: `src/utils/supabase/server.ts` (Server Components & Server Actions, cookie-based), `src/utils/supabase/client.ts` (Client Components), `src/utils/supabase/middleware.ts` (session refresh only, wired into `src/middleware.ts`).
+- **Supabase client selection** — three different clients for three contexts: `src/utils/supabase/server.ts` (Server Components & Server Actions, cookie-based), `src/utils/supabase/client.ts` (Client Components), `src/utils/supabase/middleware.ts` (session refresh only, wired into `src/proxy.ts`). The Next convention file is `src/proxy.ts` (`export async function proxy`); keep the `src/utils/supabase/middleware.ts` filename.
 - **Existing Views** (concrete inventory — check before writing a new cross-table query): `bookings_view`, `wiki_documents_view`, `mechanic_performance_stats`.
 - **Role model:** `admin | manager | partner | mechanic` (`UserContext.tsx`, `useUser()` / `useHasRole()`). This is UI-layer gating only — RLS + `withAuth` are the real security boundary; never trust the client-side role check alone for anything sensitive.
 - **"One-click creation" pattern:** create actions insert a blank/default row and return its id; the caller redirects straight to `/edit/[id]` — no separate `/new` route or form (see `createWikiDocument`).
@@ -55,11 +55,11 @@ _This file contains critical rules and patterns that AI agents must follow when 
 
 ### Testing Rules
 
-- No test runner is configured (no Jest/Vitest/Playwright) and there are no `*.test.*`/`*.spec.*` files in the repo. Don't invent a testing setup unprompted; if a task needs test coverage, ask the user which framework they want introduced first.
+- Unit tests use **Vitest** (`npm run test:unit`). Existing coverage is in `tests/booqable-containment/` and `tests/runtime-upgrade/`. Don't add Jest/Playwright or a second runner unprompted.
 
 ### Code Quality & Style Rules
 
-- `.eslintrc.json` only extends `next/core-web-vitals` — no custom rule overrides. There's no Prettier config in the repo, so there's no enforced auto-format contract beyond ESLint's own rules.
+- `eslint.config.mjs` extends `next/core-web-vitals`. Custom overrides are limited to pinning the React version for ESLint and turning off React Compiler companion rules. There's no Prettier config in the repo, so there's no enforced auto-format contract beyond ESLint's own rules.
 - **Naming conventions:** Components `PascalCase.tsx`; generic reusable hooks in `src/hooks/` are kebab-case (`use-debounced-value.ts`); one-off hooks colocated with the feature that owns them are camelCase matching their sibling file (`useOpenOrderDetails.ts` next to `OrderDetailsDrawer.tsx`); lib/data/action files are kebab-case (`marketing-links-actions.ts`, `customers-types.ts`).
 - Exported functions in `src/lib/` and `src/utils/` consistently carry a short JSDoc block explaining *why* — the tradeoff, the non-obvious invariant, the edge case — never a restatement of *what* the code does. Keep new code to the same standard.
 
@@ -97,4 +97,4 @@ _This file contains critical rules and patterns that AI agents must follow when 
 - Update when the technology stack changes or a new feature module ships (e.g. the Workshop bike-task system once it's actually built).
 - Review periodically and remove rules that become obvious over time.
 
-Last Updated: 2026-08-05
+Last Updated: 2026-08-14

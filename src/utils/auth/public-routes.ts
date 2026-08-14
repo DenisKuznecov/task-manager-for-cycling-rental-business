@@ -1,12 +1,12 @@
 /**
  * Route prefixes reachable WITHOUT a session. Everything else is
- * auth-protected by default: middleware redirects unauthenticated requests
- * to /login (preserving the target page in `?next=`).
+ * auth-protected by default: the Next.js proxy redirects unauthenticated
+ * requests to /login (preserving the target page in `?next=`).
  *
- * Shared between the Next.js middleware (server) and UserContext (client)
+ * Shared between the Next.js proxy (server) and UserContext (client)
  * so both layers agree on what "public" means.
  *
- * Note: /api routes are not listed here — they are skipped by the middleware
+ * Note: /api routes are not listed here — they are skipped by the proxy
  * redirect entirely because they authenticate themselves (webhook secrets,
  * service role, RLS) and external callers must never receive a login redirect.
  */
