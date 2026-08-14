@@ -46,9 +46,9 @@ First `next build` after the 16 upgrade failed during "Collecting page data" (`P
 - PDF: `@react-pdf/renderer` stays external; bike-fit public assets still traced; Turbopack build includes `/bike-fits/[id]`.
 - BlockNote / React Email / Subframe: no source changes; production build compiled their routes.
 
-## Manual checks (not run in this session)
+## Manual checks
 
-- `/login?next=/orders` after sign-in
-- Wiki BlockNote editor open/save
-- Bike-fit PDF generate/email produces a document
-- One partner route and `/workshop/templates` in a browser
+- `/login?next=/orders` after sign-in — passed (user-confirmed)
+- Wiki BlockNote editor open/save — passed (user-confirmed)
+- Bike-fit PDF generate/email produces a document — passed (user-confirmed)
+- One partner route and `/workshop/templates` in a browser — passed (user-confirmed)

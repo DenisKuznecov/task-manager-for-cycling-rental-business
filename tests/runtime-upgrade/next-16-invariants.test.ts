@@ -108,6 +108,16 @@ describe("Story 2.2 runtime upgrade invariants", () => {
     expect(requireAnonymous).toHaveBeenCalledWith(null);
   });
 
+  it("rejects repeated login next parameters in favor of the role landing", async () => {
+    const { default: LoginPage } = await import("@/src/app/login/page");
+
+    await LoginPage({
+      searchParams: Promise.resolve({ next: ["/orders", "/workshop"] }),
+    });
+
+    expect(requireAnonymous).toHaveBeenCalledWith(null);
+  });
+
   it("keeps PDF yoga/wasm external and bike-fit public assets traced", () => {
     const nextConfig = require(join(repoRoot, "next.config.js")) as {
       experimental?: { serverExternalPackages?: string[] };

@@ -138,3 +138,10 @@ As of 2026-08-14, 16.x is Active LTS (16.3.x) and 15.x is Maintenance LTS (EOL ~
 
 - Invariants cover lockfile majors, live `proxy`, and PDF data URLs
   [`next-16-invariants.test.ts:54`](../../tests/runtime-upgrade/next-16-invariants.test.ts#L54)
+
+### Review Findings
+
+- [x] [Review][Decision] Complete the required manual smoke checks — AC3 checks passed and are recorded as user-confirmed in the runtime-upgrade proof.
+- [x] [Review][Patch] Normalize repeated login `next` parameters [`src/app/login/page.tsx:8`](../../src/app/login/page.tsx#L8)
+- [x] [Review][Patch] Cover every traced bike-fit report asset [`tests/runtime-upgrade/next-16-invariants.test.ts:120`](../../tests/runtime-upgrade/next-16-invariants.test.ts#L120) — won't do: a fixed asset list would be redundant and become maintenance overhead as assets grow.
+- [x] [Review][Defer] Add automated application build verification [`.github/workflows/deploy-staging.yml:8`](../../.github/workflows/deploy-staging.yml#L8) — deferred, pre-existing

@@ -17,3 +17,7 @@
 - source_spec: spec-2-2-upgrade-to-a-supported-application-runtime.md
   summary: Login searchParams.next is typed as string, so a repeated ?next= that yields string[] can throw in requireAnonymous.trim().
   evidence: this typing existed before the Promise wrap; Next 15+ searchParams values can be string | string[] | undefined.
+
+## Deferred from: code review of spec-2-2-upgrade-to-a-supported-application-runtime (2026-08-14)
+
+- Add automated application build verification. The existing staging and production GitHub workflows only run `supabase db push`, so `next build` is not checked in an automated validation path. This pre-dates Story 2.2; its proof records a local build result.
