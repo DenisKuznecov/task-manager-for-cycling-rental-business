@@ -1,0 +1,25 @@
+name: Contracts Drift
+
+on:
+  pull_request:
+
+jobs:
+  contracts-check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run contracts drift check
+        run: npm run contracts:check
+
+      - name: Run envelope invariant tests
+        run: npx vitest run tests/booqable-contracts/envelope-invariants.test.ts

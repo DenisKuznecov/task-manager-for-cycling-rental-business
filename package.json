@@ -12,6 +12,7 @@
     "email": "email dev",
     "lint": "eslint .",
     "test:unit": "vitest run",
+    "contracts:check": "vitest run tests/booqable-contracts/envelope-invariants.test.ts",
     "db:types": "supabase gen types typescript --local"
   },
   "dependencies": {
