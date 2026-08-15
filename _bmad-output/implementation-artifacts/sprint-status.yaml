@@ -51,7 +51,7 @@ development_status:
   2-4-define-versioned-source-envelopes-and-result-semantics: done
   2-5-expand-the-canonical-booqable-projection: done
   2-6-preserve-brownfield-projection-consumers: done
-  2-7-persist-and-recover-authoritative-refresh-work: backlog
+  2-7-persist-and-recover-authoritative-refresh-work: done
   2-8-run-bounded-workers-and-reconciliation-sweeps: backlog
   2-9-apply-canonical-source-state-atomically: backlog
   2-10-seed-and-validate-workshop-source-data: backlog

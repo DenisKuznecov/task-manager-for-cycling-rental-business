@@ -156,18 +156,52 @@ export const RefreshCatalogueEntrySchema = z
     records_incident: z.boolean(),
     allows_operator_successor: z.boolean(),
     fail_closed: z.boolean(),
+    max_attempts: z.number().int().positive(),
+    retry_backoff_seconds: z.array(z.number().int().nonnegative()).readonly(),
+    retry_exhausted_state: RefreshIntentStateSchema.nullable(),
+    successor_state: RefreshIntentStateSchema.nullable(),
+    successor_max_attempts: z.number().int().positive().nullable(),
   })
   .strict();
 
 export type RefreshReceiptInput = z.infer<typeof RefreshReceiptInputSchema>;
 export type RefreshCatalogueEntry = z.infer<typeof RefreshCatalogueEntrySchema>;
 
-type CatalogueSeed = Omit<RefreshCatalogueEntry, "contract_version">;
+type CataloguePolicyFields = Pick<
+  RefreshCatalogueEntry,
+  | "max_attempts"
+  | "retry_backoff_seconds"
+  | "retry_exhausted_state"
+  | "successor_state"
+  | "successor_max_attempts"
+>;
+type CatalogueSeed = Omit<
+  RefreshCatalogueEntry,
+  "contract_version" | keyof CataloguePolicyFields
+> &
+  Partial<CataloguePolicyFields>;
 
 function catalogueEntry(seed: CatalogueSeed): RefreshCatalogueEntry {
   return {
     ...seed,
     contract_version: REFRESH_WORK_CONTRACT_VERSION,
+    max_attempts: seed.max_attempts ?? REFRESH_RETRY_POLICY.maxAttempts,
+    retry_backoff_seconds:
+      seed.retry_backoff_seconds ??
+      (seed.uses_retry_backoff
+        ? [...REFRESH_RETRY_POLICY.backoffSeconds]
+        : []),
+    retry_exhausted_state:
+      seed.retry_exhausted_state ??
+      (seed.uses_retry_backoff ? "exhausted" : null),
+    successor_state:
+      seed.successor_state ??
+      (seed.allows_operator_successor ? "claimable" : null),
+    successor_max_attempts:
+      seed.successor_max_attempts ??
+      (seed.allows_operator_successor
+        ? REFRESH_RETRY_POLICY.maxAttempts
+        : null),
   };
 }
 
@@ -362,7 +396,7 @@ export const REFRESH_TRANSITION_CATALOGUE: readonly RefreshCatalogueEntry[] = [
     resolution: "retry",
     acknowledgement: "none",
     consumes_attempt: false,
-    next_state: null,
+    next_state: "claimable",
     uses_retry_backoff: false,
     records_incident: false,
     allows_operator_successor: false,
@@ -405,7 +439,6 @@ export type ApplyRefreshTransitionResult =
 export function applyRefreshTransition(
   code: string,
   attemptCount: number,
-  maxAttempts: number = REFRESH_RETRY_POLICY.maxAttempts,
 ): ApplyRefreshTransitionResult {
   const parsed = RefreshTransitionCodeSchema.safeParse(code);
   if (!parsed.success) {
@@ -436,7 +469,7 @@ export function applyRefreshTransition(
   }
 
   if (entry.uses_retry_backoff) {
-    if (nextAttemptCount >= maxAttempts) {
+    if (nextAttemptCount >= entry.max_attempts) {
       return {
         ok: true,
         code: entry.code,
@@ -450,8 +483,8 @@ export function applyRefreshTransition(
 
     const delayIndex = nextAttemptCount - 1;
     const delay =
-      REFRESH_RETRY_POLICY.backoffSeconds[
-        Math.min(delayIndex, REFRESH_RETRY_POLICY.backoffSeconds.length - 1)
+      entry.retry_backoff_seconds[
+        Math.min(delayIndex, entry.retry_backoff_seconds.length - 1)
       ] ?? null;
 
     return {
@@ -508,7 +541,15 @@ export function resolveRefreshDeliveryIdentity(input: {
 
 export function refreshCatalogueSqlTuple(entry: RefreshCatalogueEntry): string {
   const nextState = entry.next_state === null ? "NULL" : `'${entry.next_state}'`;
-  return `('${entry.code}', ${entry.contract_version}, '${entry.producer}', '${entry.severity}', '${entry.dedupe_scope}', ${entry.retryable}, '${entry.activation_effect}', '${entry.resolution}', '${entry.acknowledgement}', ${entry.consumes_attempt}, ${nextState}, ${entry.uses_retry_backoff}, ${entry.records_incident}, ${entry.allows_operator_successor}, ${entry.fail_closed})`;
+  const retryBackoff = `ARRAY[${entry.retry_backoff_seconds.join(", ")}]::integer[]`;
+  const retryExhaustedState =
+    entry.retry_exhausted_state === null
+      ? "NULL"
+      : `'${entry.retry_exhausted_state}'`;
+  const successorState =
+    entry.successor_state === null ? "NULL" : `'${entry.successor_state}'`;
+  const successorMaxAttempts = entry.successor_max_attempts ?? "NULL";
+  return `('${entry.code}', ${entry.contract_version}, '${entry.producer}', '${entry.severity}', '${entry.dedupe_scope}', ${entry.retryable}, '${entry.activation_effect}', '${entry.resolution}', '${entry.acknowledgement}', ${entry.consumes_attempt}, ${nextState}, ${entry.uses_retry_backoff}, ${entry.records_incident}, ${entry.allows_operator_successor}, ${entry.fail_closed}, ${entry.max_attempts}, ${retryBackoff}, ${retryExhaustedState}, ${successorState}, ${successorMaxAttempts})`;
 }
 
 export function assertRefreshCatalogueCompleteness(

@@ -3,9 +3,9 @@ title: 'Persist and Recover Authoritative Refresh Work'
 type: 'feature'
 created: '2026-08-15'
 status: 'done'
-review_loop_iteration: 0
+review_loop_iteration: 1
 baseline_revision: 'fd46aca8c24dac19128e3dcef97ebe3b3d0f8c3b'
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/project-context.md'
   - '{project-root}/_bmad-output/implementation-artifacts/epic-2-context.md'
@@ -63,6 +63,13 @@ context:
 - Given any registered or unknown completion outcome, when transition is requested, then the catalogue alone controls state, budget, backoff, incident, and successor behavior; unknown codes fail closed.
 - Given direct operational-table access, when any application role attempts it, then it fails; only minimum service-role RPC capabilities succeed.
 
+### Review Findings
+
+- [x] [Review][Patch] [High] Fence completion by the receipt generation captured at claim time [supabase/migrations/20260815140000_persist_authoritative_refresh_work.sql:732]
+- [x] [Review][Patch] [High] Make retry budget, delays, incident dedupe, and successor behavior catalogue-owned [supabase/migrations/20260815140000_persist_authoritative_refresh_work.sql:870]
+- [x] [Review][Patch] [High] Consume retry budget and backoff when an expired lease is reclaimed [supabase/migrations/20260815140000_persist_authoritative_refresh_work.sql:993]
+- [x] [Review][Patch] [High] Prevent arbitrary caller error text from persisting non-email PII [supabase/migrations/20260815140000_persist_authoritative_refresh_work.sql:375]
+
 ## Spec Change Log
 
 ## Review Triage Log
@@ -82,11 +89,20 @@ context:
   - `[low]` `[patch]` pgTAP now records a new delivery after `succeeded` and asserts a distinct claimable intent.
   - `[low]` `[patch]` Stale-complete pgTAP now asserts email redaction in stored attempt/intent error text.
 
+### 2026-08-15 — Follow-up review pass
+- patch: 4 (high 4)
+- dismiss: 8 medium findings and 1 pre-existing CI item by human direction
+- addressed_findings:
+  - `[high]` Completion now fences the exact receipt generation returned by claim and requeues newer coalesced work without consuming retry budget.
+  - `[high]` Catalogue rows now own attempt budget, retry delays, exhausted state, incident dedupe scope, and operator-successor state/budget.
+  - `[high]` Expired-lease reclaim now records `upstream_timeout`, consumes attempts, applies 30s/120s backoff, and becomes visibly exhausted on the third failure.
+  - `[high]` Free-form error details are discarded before append-only attempt, intent, or incident persistence.
+
 ## Auto Run Result
 
 Status: done
 
-Summary: Accepted Booqable webhooks persist a PII-free receipt and coalesce it onto one claimable/leased intent before the unchanged legacy fetch. Service-role-only CAS RPCs, a 13-code catalogue, a 3-attempt 30s/120s retry budget, and visible terminal states are in place. Review patches tightened event-id extraction, successor/mismatch races, and pgTAP coverage.
+Summary: Accepted Booqable webhooks persist a PII-free receipt and coalesce it onto one claimable/leased intent before the unchanged legacy fetch. Service-role-only CAS RPCs fence receipt and lease generations, catalogue rows own retry/successor policy, expired leases consume the bounded retry budget, and append-only errors cannot retain caller text.
 
 Files changed:
 - `../../src/lib/booqable/contracts/refresh-work.ts` — versioned states, catalogue, retry policy, schemas, and migration pointer
@@ -105,14 +121,14 @@ Review findings breakdown:
 - items deferred: 0
 - items rejected: 21
 
-Follow-up review recommendation: true (patched high 0, medium 5, low 2; score `3 × 5 + 1 × 2 = 17`)
+Follow-up review recommendation: false
 
 Verification performed:
 - `npx tsc --noEmit` — pass
 - `npm run lint` — pass (19 existing `<img>` warnings only; none new)
 - `npm run contracts:check` — 5 files, 62 tests pass
 - `npm run test:unit` — 15 files, 195 tests pass
-- `npx supabase test db` — 11 files, 303 tests pass (local DB already reset onto the patched migration)
+- `npx supabase test db` — 11 files, 309 tests pass after a fresh local DB reset
 - `npm run db:types` — succeeded (stdout only; no app consumer)
 
 Residual risks:

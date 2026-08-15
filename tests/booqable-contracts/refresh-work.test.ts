@@ -122,7 +122,7 @@ describe("refresh-work I/O matrix", () => {
     });
     expect(applyRefreshTransition("lease_superseded", 1)).toMatchObject({
       ok: true,
-      nextState: null,
+      nextState: "claimable",
       attemptCount: 1,
     });
     expect(applyRefreshTransition("source_conflict_quarantined", 0)).toMatchObject({
@@ -155,10 +155,13 @@ describe("refresh-work drift", () => {
       expect(sql).toContain(refreshCatalogueSqlTuple(entry));
     }
 
-    expect(sql).toContain("max_attempts integer NOT NULL DEFAULT 3");
-    expect(sql).toContain("CHECK (max_attempts = 3)");
-    expect(sql).toContain("interval '30 seconds'");
-    expect(sql).toContain("interval '120 seconds'");
+    expect(sql).toContain("max_attempts integer NOT NULL");
+    expect(sql).toContain("CHECK (max_attempts > 0)");
+    expect(sql).toContain("ARRAY[30, 120]::integer[]");
+    expect(sql).toContain("retry_backoff_seconds[v_attempt_count]");
+    expect(sql).toContain(
+      "complete_booqable_refresh_intent(uuid, bigint, bigint, text, text)",
+    );
     expect(sql).toContain("SECURITY DEFINER");
     expect(sql).not.toMatch(/ON DELETE CASCADE/i);
     expect(sql).toContain("FROM PUBLIC, anon, authenticated, service_role");

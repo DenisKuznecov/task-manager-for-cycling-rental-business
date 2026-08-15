@@ -68,7 +68,32 @@ CREATE TABLE IF NOT EXISTS public.booqable_refresh_transition_catalogue (
   uses_retry_backoff boolean NOT NULL,
   records_incident boolean NOT NULL,
   allows_operator_successor boolean NOT NULL,
-  fail_closed boolean NOT NULL
+  fail_closed boolean NOT NULL,
+  max_attempts integer NOT NULL,
+  retry_backoff_seconds integer[] NOT NULL,
+  retry_exhausted_state public.refresh_intent_state,
+  successor_state public.refresh_intent_state,
+  successor_max_attempts integer,
+  CONSTRAINT booqable_refresh_transition_catalogue_max_attempts_check
+    CHECK (max_attempts > 0),
+  CONSTRAINT booqable_refresh_transition_catalogue_backoff_check
+    CHECK (
+      NOT uses_retry_backoff
+      OR (
+        cardinality(retry_backoff_seconds) >= max_attempts - 1
+        AND retry_exhausted_state IS NOT NULL
+      )
+    ),
+  CONSTRAINT booqable_refresh_transition_catalogue_successor_check
+    CHECK (
+      (allows_operator_successor
+        AND successor_state IS NOT NULL
+        AND successor_max_attempts > 0)
+      OR
+      (NOT allows_operator_successor
+        AND successor_state IS NULL
+        AND successor_max_attempts IS NULL)
+    )
 );
 
 CREATE TABLE IF NOT EXISTS public.booqable_refresh_receipts (
@@ -107,7 +132,7 @@ CREATE TABLE IF NOT EXISTS public.booqable_refresh_intents (
   lease_expires_at timestamptz,
   lease_owner text,
   attempt_count integer NOT NULL DEFAULT 0,
-  max_attempts integer NOT NULL DEFAULT 3,
+  max_attempts integer NOT NULL,
   claimable_after timestamptz,
   predecessor_intent_id uuid,
   last_transition_code text,
@@ -128,7 +153,7 @@ CREATE TABLE IF NOT EXISTS public.booqable_refresh_intents (
   CONSTRAINT booqable_refresh_intents_attempt_count_check
     CHECK (attempt_count >= 0),
   CONSTRAINT booqable_refresh_intents_max_attempts_check
-    CHECK (max_attempts = 3)
+    CHECK (max_attempts > 0)
 );
 
 ALTER TABLE public.booqable_refresh_intents
@@ -259,21 +284,26 @@ INSERT INTO public.booqable_refresh_transition_catalogue (
   uses_retry_backoff,
   records_incident,
   allows_operator_successor,
-  fail_closed
+  fail_closed,
+  max_attempts,
+  retry_backoff_seconds,
+  retry_exhausted_state,
+  successor_state,
+  successor_max_attempts
 ) VALUES
-  ('applied', 1, 'coordinator', 'info', 'none', false, 'none', 'none', 'none', false, 'succeeded', false, false, false, false),
-  ('no_op', 1, 'coordinator', 'info', 'none', false, 'none', 'none', 'none', false, 'succeeded', false, false, false, false),
-  ('derivation_disabled', 1, 'coordinator', 'info', 'none', false, 'none', 'none', 'none', false, 'succeeded', false, false, false, false),
-  ('quarantined', 1, 'coordinator', 'error', 'source_root_code', false, 'block_activation', 'operator_successor', 'required', true, 'quarantined', false, true, true, false),
-  ('rejected_retryable', 1, 'coordinator', 'warning', 'none', true, 'none', 'retry', 'none', true, 'claimable', true, false, true, false),
-  ('rejected_terminal', 1, 'coordinator', 'error', 'source_root_code', false, 'block_activation', 'operator_successor', 'required', true, 'rejected_terminal', false, true, true, false),
-  ('upstream_rate_limited', 1, 'booqable_adapter', 'warning', 'none', true, 'none', 'retry', 'none', true, 'claimable', true, false, true, false),
-  ('upstream_server_error', 1, 'booqable_adapter', 'warning', 'none', true, 'none', 'retry', 'none', true, 'claimable', true, false, true, false),
-  ('upstream_timeout', 1, 'booqable_adapter', 'warning', 'none', true, 'none', 'retry', 'none', true, 'claimable', true, false, true, false),
-  ('terminal_validation_failed', 1, 'booqable_adapter', 'error', 'source_root_code', false, 'block_activation', 'operator_successor', 'required', true, 'rejected_terminal', false, true, true, false),
-  ('source_conflict_quarantined', 1, 'coordinator', 'error', 'source_root_code', false, 'block_activation', 'operator_successor', 'required', true, 'quarantined', false, true, true, false),
-  ('lease_superseded', 1, 'refresh_inbox', 'warning', 'none', true, 'none', 'retry', 'none', false, NULL, false, false, false, false),
-  ('unknown_transition_code', 1, 'refresh_inbox', 'error', 'source_root_code', false, 'block_activation', 'manual', 'required', false, NULL, false, true, false, true)
+  ('applied', 1, 'coordinator', 'info', 'none', false, 'none', 'none', 'none', false, 'succeeded', false, false, false, false, 3, ARRAY[]::integer[], NULL, NULL, NULL),
+  ('no_op', 1, 'coordinator', 'info', 'none', false, 'none', 'none', 'none', false, 'succeeded', false, false, false, false, 3, ARRAY[]::integer[], NULL, NULL, NULL),
+  ('derivation_disabled', 1, 'coordinator', 'info', 'none', false, 'none', 'none', 'none', false, 'succeeded', false, false, false, false, 3, ARRAY[]::integer[], NULL, NULL, NULL),
+  ('quarantined', 1, 'coordinator', 'error', 'source_root_code', false, 'block_activation', 'operator_successor', 'required', true, 'quarantined', false, true, true, false, 3, ARRAY[]::integer[], NULL, 'claimable', 3),
+  ('rejected_retryable', 1, 'coordinator', 'warning', 'none', true, 'none', 'retry', 'none', true, 'claimable', true, false, true, false, 3, ARRAY[30, 120]::integer[], 'exhausted', 'claimable', 3),
+  ('rejected_terminal', 1, 'coordinator', 'error', 'source_root_code', false, 'block_activation', 'operator_successor', 'required', true, 'rejected_terminal', false, true, true, false, 3, ARRAY[]::integer[], NULL, 'claimable', 3),
+  ('upstream_rate_limited', 1, 'booqable_adapter', 'warning', 'none', true, 'none', 'retry', 'none', true, 'claimable', true, false, true, false, 3, ARRAY[30, 120]::integer[], 'exhausted', 'claimable', 3),
+  ('upstream_server_error', 1, 'booqable_adapter', 'warning', 'none', true, 'none', 'retry', 'none', true, 'claimable', true, false, true, false, 3, ARRAY[30, 120]::integer[], 'exhausted', 'claimable', 3),
+  ('upstream_timeout', 1, 'booqable_adapter', 'warning', 'none', true, 'none', 'retry', 'none', true, 'claimable', true, false, true, false, 3, ARRAY[30, 120]::integer[], 'exhausted', 'claimable', 3),
+  ('terminal_validation_failed', 1, 'booqable_adapter', 'error', 'source_root_code', false, 'block_activation', 'operator_successor', 'required', true, 'rejected_terminal', false, true, true, false, 3, ARRAY[]::integer[], NULL, 'claimable', 3),
+  ('source_conflict_quarantined', 1, 'coordinator', 'error', 'source_root_code', false, 'block_activation', 'operator_successor', 'required', true, 'quarantined', false, true, true, false, 3, ARRAY[]::integer[], NULL, 'claimable', 3),
+  ('lease_superseded', 1, 'refresh_inbox', 'warning', 'none', true, 'none', 'retry', 'none', false, 'claimable', false, false, false, false, 3, ARRAY[]::integer[], NULL, NULL, NULL),
+  ('unknown_transition_code', 1, 'refresh_inbox', 'error', 'source_root_code', false, 'block_activation', 'manual', 'required', false, NULL, false, true, false, true, 3, ARRAY[]::integer[], NULL, NULL, NULL)
 ON CONFLICT (code) DO UPDATE SET
   contract_version = EXCLUDED.contract_version,
   producer = EXCLUDED.producer,
@@ -288,7 +318,12 @@ ON CONFLICT (code) DO UPDATE SET
   uses_retry_backoff = EXCLUDED.uses_retry_backoff,
   records_incident = EXCLUDED.records_incident,
   allows_operator_successor = EXCLUDED.allows_operator_successor,
-  fail_closed = EXCLUDED.fail_closed;
+  fail_closed = EXCLUDED.fail_closed,
+  max_attempts = EXCLUDED.max_attempts,
+  retry_backoff_seconds = EXCLUDED.retry_backoff_seconds,
+  retry_exhausted_state = EXCLUDED.retry_exhausted_state,
+  successor_state = EXCLUDED.successor_state,
+  successor_max_attempts = EXCLUDED.successor_max_attempts;
 
 CREATE OR REPLACE FUNCTION public.reject_booqable_refresh_mutation()
 RETURNS trigger
@@ -335,15 +370,10 @@ LANGUAGE sql
 IMMUTABLE
 SET search_path = ''
 AS $$
-  SELECT NULLIF(
-    regexp_replace(
-      left(btrim(COALESCE(p_error, '')), 500),
-      '[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}',
-      '[redacted]',
-      'g'
-    ),
-    ''
-  );
+  SELECT CASE
+    WHEN btrim(COALESCE(p_error, '')) = '' THEN NULL
+    ELSE '[redacted]'
+  END;
 $$;
 
 CREATE OR REPLACE FUNCTION public.record_booqable_refresh_incident(
@@ -412,6 +442,7 @@ DECLARE
   v_kind public.refresh_delivery_identity_kind;
   v_existing_source_kind text;
   v_existing_source_external_id text;
+  v_max_attempts integer;
 BEGIN
   IF btrim(COALESCE(p_provider, '')) = ''
      OR btrim(COALESCE(p_source_kind, '')) = ''
@@ -424,6 +455,16 @@ BEGIN
 
   IF p_contract_version IS DISTINCT FROM 1 THEN
     RAISE EXCEPTION 'unsupported refresh-work contract version'
+      USING ERRCODE = '22023';
+  END IF;
+
+  SELECT MIN(max_attempts) INTO v_max_attempts
+  FROM public.booqable_refresh_transition_catalogue
+  WHERE contract_version = p_contract_version
+  HAVING MIN(max_attempts) = MAX(max_attempts);
+
+  IF v_max_attempts IS NULL THEN
+    RAISE EXCEPTION 'refresh-work catalogue has no single attempt budget'
       USING ERRCODE = '22023';
   END IF;
 
@@ -529,6 +570,7 @@ BEGIN
           source_external_id,
           state,
           receipt_generation,
+          max_attempts,
           contract_version
         ) VALUES (
           btrim(p_provider),
@@ -536,6 +578,7 @@ BEGIN
           btrim(p_source_external_id),
           'claimable'::public.refresh_intent_state,
           0,
+          v_max_attempts,
           p_contract_version
         )
         RETURNING id INTO v_intent_id;
@@ -689,6 +732,7 @@ $$;
 CREATE OR REPLACE FUNCTION public.complete_booqable_refresh_intent(
   p_intent_id uuid,
   p_lease_generation bigint,
+  p_covered_receipt_generation bigint,
   p_transition_code text,
   p_error_redacted text
 )
@@ -727,20 +771,32 @@ BEGIN
   END IF;
 
   IF v_rule.code IS NULL OR v_rule.fail_closed THEN
-    v_dedupe_key := concat_ws(
-      '|',
-      'unknown_transition_code',
-      COALESCE(p_transition_code, ''),
-      v_intent.source_kind,
-      v_intent.source_external_id
-    );
+    SELECT * INTO v_rule
+    FROM public.booqable_refresh_transition_catalogue
+    WHERE code = 'unknown_transition_code'
+      AND contract_version = v_intent.contract_version;
+
+    v_dedupe_key := CASE v_rule.dedupe_scope
+      WHEN 'source_root' THEN concat_ws(
+        '|',
+        v_intent.source_kind,
+        v_intent.source_external_id
+      )
+      WHEN 'source_root_code' THEN concat_ws(
+        '|',
+        v_rule.code,
+        v_intent.source_kind,
+        v_intent.source_external_id
+      )
+      ELSE gen_random_uuid()::text
+    END;
     PERFORM public.record_booqable_refresh_incident(
-      'unknown_transition_code',
+      v_rule.code,
       v_dedupe_key,
       v_intent.source_kind,
       v_intent.source_external_id,
       v_intent.id,
-      concat('unregistered transition code: ', COALESCE(p_transition_code, ''))
+      'unregistered transition code'
     );
     RETURN jsonb_build_object(
       'ok', false,
@@ -774,7 +830,7 @@ BEGIN
       v_attempt_number,
       'rejected_retryable',
       COALESCE(v_error, 'lease expired or superseded'),
-      v_intent.receipt_generation
+      p_covered_receipt_generation
     );
 
     RETURN jsonb_build_object(
@@ -782,6 +838,25 @@ BEGIN
       'error', 'lease expired or superseded',
       'code', 'lease_superseded'
     );
+  END IF;
+
+  IF p_covered_receipt_generation IS NULL
+     OR p_covered_receipt_generation < 0
+     OR p_covered_receipt_generation > v_intent.receipt_generation
+  THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'error', 'covered receipt generation is invalid',
+      'code', 'rejected_retryable'
+    );
+  END IF;
+
+  IF p_covered_receipt_generation < v_intent.receipt_generation THEN
+    SELECT * INTO v_rule
+    FROM public.booqable_refresh_transition_catalogue
+    WHERE code = 'lease_superseded'
+      AND contract_version = v_intent.contract_version;
+    v_error := NULL;
   END IF;
 
   v_attempt_count := v_intent.attempt_count;
@@ -793,15 +868,13 @@ BEGIN
   v_claimable_after := NULL;
 
   IF v_rule.uses_retry_backoff THEN
-    IF v_attempt_count >= v_intent.max_attempts THEN
-      v_next_state := 'exhausted'::public.refresh_intent_state;
+    IF v_attempt_count >= v_rule.max_attempts THEN
+      v_next_state := v_rule.retry_exhausted_state;
     ELSE
-      v_next_state := 'claimable'::public.refresh_intent_state;
-      IF v_attempt_count = 1 THEN
-        v_claimable_after := now() + interval '30 seconds';
-      ELSE
-        v_claimable_after := now() + interval '120 seconds';
-      END IF;
+      v_next_state := v_rule.next_state;
+      v_claimable_after := now() + make_interval(
+        secs => v_rule.retry_backoff_seconds[v_attempt_count]
+      );
     END IF;
   END IF;
 
@@ -845,7 +918,7 @@ BEGIN
         v_attempt_number,
         'rejected_retryable',
         COALESCE(v_error, 'lease expired or superseded'),
-        v_intent.receipt_generation
+        p_covered_receipt_generation
       );
 
       RETURN jsonb_build_object(
@@ -874,17 +947,25 @@ BEGIN
     v_attempt_number,
     v_rule.code,
     v_error,
-    v_intent.receipt_generation
+    p_covered_receipt_generation
   );
 
   IF v_rule.records_incident THEN
     v_incident_code := v_rule.code;
-    v_dedupe_key := concat_ws(
-      '|',
-      v_incident_code,
-      v_intent.source_kind,
-      v_intent.source_external_id
-    );
+    v_dedupe_key := CASE v_rule.dedupe_scope
+      WHEN 'source_root' THEN concat_ws(
+        '|',
+        v_intent.source_kind,
+        v_intent.source_external_id
+      )
+      WHEN 'source_root_code' THEN concat_ws(
+        '|',
+        v_incident_code,
+        v_intent.source_kind,
+        v_intent.source_external_id
+      )
+      ELSE gen_random_uuid()::text
+    END;
     PERFORM public.record_booqable_refresh_incident(
       v_incident_code,
       v_dedupe_key,
@@ -920,20 +1001,20 @@ SET search_path = ''
 AS $$
 DECLARE
   v_intent public.booqable_refresh_intents%ROWTYPE;
+  v_rule public.booqable_refresh_transition_catalogue%ROWTYPE;
+  v_attempt_count integer;
+  v_attempt_number integer;
+  v_next_state public.refresh_intent_state;
+  v_claimable_after timestamptz;
 BEGIN
-  UPDATE public.booqable_refresh_intents
-  SET
-    state = 'claimable'::public.refresh_intent_state,
-    lease_generation = lease_generation + 1,
-    lease_expires_at = NULL,
-    lease_owner = NULL,
-    updated_at = now()
+  SELECT * INTO v_intent
+  FROM public.booqable_refresh_intents
   WHERE id = p_intent_id
     AND state = 'leased'::public.refresh_intent_state
     AND lease_generation = p_expected_lease_generation
     AND lease_expires_at IS NOT NULL
     AND lease_expires_at <= now()
-  RETURNING * INTO v_intent;
+  FOR UPDATE;
 
   IF v_intent.id IS NULL THEN
     RETURN jsonb_build_object(
@@ -943,11 +1024,74 @@ BEGIN
     );
   END IF;
 
+  SELECT * INTO v_rule
+  FROM public.booqable_refresh_transition_catalogue
+  WHERE code = 'upstream_timeout'
+    AND contract_version = v_intent.contract_version;
+
+  IF v_rule.code IS NULL
+     OR NOT v_rule.consumes_attempt
+     OR NOT v_rule.uses_retry_backoff
+     OR v_rule.retry_exhausted_state IS NULL
+  THEN
+    RAISE EXCEPTION 'catalogue does not define lease-expiry retry behavior'
+      USING ERRCODE = 'P0001';
+  END IF;
+
+  v_attempt_count := v_intent.attempt_count + 1;
+  IF v_attempt_count >= v_rule.max_attempts THEN
+    v_next_state := v_rule.retry_exhausted_state;
+    v_claimable_after := NULL;
+  ELSE
+    v_next_state := v_rule.next_state;
+    v_claimable_after := now() + make_interval(
+      secs => v_rule.retry_backoff_seconds[v_attempt_count]
+    );
+  END IF;
+
+  UPDATE public.booqable_refresh_intents
+  SET
+    state = v_next_state,
+    lease_generation = lease_generation + 1,
+    lease_expires_at = NULL,
+    lease_owner = NULL,
+    attempt_count = v_attempt_count,
+    claimable_after = v_claimable_after,
+    last_transition_code = v_rule.code,
+    last_error_redacted = NULL,
+    updated_at = now()
+  WHERE id = v_intent.id
+  RETURNING * INTO v_intent;
+
+  SELECT COALESCE(MAX(attempt_number), 0) + 1
+  INTO v_attempt_number
+  FROM public.booqable_refresh_attempts
+  WHERE intent_id = v_intent.id;
+
+  INSERT INTO public.booqable_refresh_attempts (
+    intent_id,
+    lease_generation,
+    attempt_number,
+    transition_code,
+    error_redacted,
+    covered_receipt_generation
+  ) VALUES (
+    v_intent.id,
+    p_expected_lease_generation,
+    v_attempt_number,
+    v_rule.code,
+    NULL,
+    NULL
+  );
+
   RETURN jsonb_build_object(
     'ok', true,
     'intent_id', v_intent.id,
     'lease_generation', v_intent.lease_generation,
-    'state', v_intent.state
+    'state', v_intent.state,
+    'attempt_count', v_intent.attempt_count,
+    'claimable_after', v_intent.claimable_after,
+    'code', v_rule.code
   );
 END;
 $$;
@@ -990,18 +1134,21 @@ BEGIN
     );
   END IF;
 
-  IF v_predecessor.last_transition_code IS NOT NULL THEN
-    SELECT * INTO v_rule
-    FROM public.booqable_refresh_transition_catalogue
-    WHERE code = v_predecessor.last_transition_code;
+  SELECT * INTO v_rule
+  FROM public.booqable_refresh_transition_catalogue
+  WHERE code = v_predecessor.last_transition_code
+    AND contract_version = v_predecessor.contract_version;
 
-    IF v_rule.code IS NULL OR NOT v_rule.allows_operator_successor THEN
-      RETURN jsonb_build_object(
-        'ok', false,
-        'error', 'catalogue does not authorize an operator successor',
-        'code', 'rejected_retryable'
-      );
-    END IF;
+  IF v_rule.code IS NULL
+     OR NOT v_rule.allows_operator_successor
+     OR v_rule.successor_state IS NULL
+     OR v_rule.successor_max_attempts IS NULL
+  THEN
+    RETURN jsonb_build_object(
+      'ok', false,
+      'error', 'catalogue does not authorize an operator successor',
+      'code', 'rejected_retryable'
+    );
   END IF;
 
   BEGIN
@@ -1019,10 +1166,10 @@ BEGIN
       v_predecessor.provider,
       v_predecessor.source_kind,
       v_predecessor.source_external_id,
-      'claimable'::public.refresh_intent_state,
+      v_rule.successor_state,
       0,
       0,
-      3,
+      v_rule.successor_max_attempts,
       v_predecessor.id,
       v_predecessor.contract_version
     )
@@ -1055,11 +1202,11 @@ COMMENT ON FUNCTION public.claim_booqable_refresh_intent(uuid, integer, text) IS
 COMMENT ON FUNCTION public.heartbeat_booqable_refresh_intent(uuid, bigint, integer) IS
   'Extend a live lease only when generation and expiry still match.';
 
-COMMENT ON FUNCTION public.complete_booqable_refresh_intent(uuid, bigint, text, text) IS
-  'Apply a catalogue-owned completion. Unknown codes fail closed. Stale leases record a redacted rejected_retryable attempt and do not mutate terminal state.';
+COMMENT ON FUNCTION public.complete_booqable_refresh_intent(uuid, bigint, bigint, text, text) IS
+  'Apply a catalogue-owned completion for exactly the receipt generation covered by the worker. Newer receipts return the intent to claimable without consuming budget.';
 
 COMMENT ON FUNCTION public.reclaim_booqable_refresh_intent(uuid, bigint) IS
-  'Return an expired lease to claimable and advance lease_generation so the old worker cannot complete.';
+  'Apply the catalogue-owned timeout transition to an expired lease, consuming budget/backoff and advancing lease_generation so the old worker cannot complete.';
 
 COMMENT ON FUNCTION public.create_booqable_refresh_operator_successor(uuid) IS
   'Create a fresh-budget claimable successor linked to an exhausted, quarantined, or rejected-terminal predecessor without mutating that lineage.';
@@ -1097,9 +1244,9 @@ REVOKE ALL ON FUNCTION public.heartbeat_booqable_refresh_intent(uuid, bigint, in
 GRANT EXECUTE ON FUNCTION public.heartbeat_booqable_refresh_intent(uuid, bigint, integer)
   TO service_role;
 
-REVOKE ALL ON FUNCTION public.complete_booqable_refresh_intent(uuid, bigint, text, text)
+REVOKE ALL ON FUNCTION public.complete_booqable_refresh_intent(uuid, bigint, bigint, text, text)
   FROM PUBLIC, anon, authenticated;
-GRANT EXECUTE ON FUNCTION public.complete_booqable_refresh_intent(uuid, bigint, text, text)
+GRANT EXECUTE ON FUNCTION public.complete_booqable_refresh_intent(uuid, bigint, bigint, text, text)
   TO service_role;
 
 REVOKE ALL ON FUNCTION public.reclaim_booqable_refresh_intent(uuid, bigint)

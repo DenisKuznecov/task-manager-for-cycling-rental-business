@@ -1,6 +1,6 @@
 begin;
 
-select plan(52);
+select plan(58);
 
 select has_table('public', 'booqable_refresh_receipts', 'receipts are persisted');
 select has_table('public', 'booqable_refresh_intents', 'intents are persisted');
@@ -92,6 +92,7 @@ create temp table refresh_claim_a as
 select
   (c->>'ok')::boolean as ok,
   (c->>'lease_generation')::bigint as lease_generation,
+  (c->>'receipt_generation')::bigint as receipt_generation,
   (c->>'lease_expires_at')::timestamptz as lease_expires_at
 from (
   select public.claim_booqable_refresh_intent(
@@ -160,8 +161,9 @@ select is(
   public.complete_booqable_refresh_intent(
     (select intent_id from refresh_case_a),
     99,
+    (select receipt_generation from refresh_claim_a),
     'applied',
-    'failed for rider@example.com'
+    'failed for rider@example.com, +34 600 123 456, token secret-123'
   )->>'code',
   'lease_superseded',
   'stale completion is rejected without applying the requested code'
@@ -203,8 +205,22 @@ select ok(
     where intent_id = (select intent_id from refresh_case_a)
     order by attempt_number
     limit 1
-  ) not like '%rider@example.com%',
-  'stale completion redacts PII from the stored attempt error'
+  ) not like '%rider@example.com%'
+  and (
+    select error_redacted
+    from public.booqable_refresh_attempts
+    where intent_id = (select intent_id from refresh_case_a)
+    order by attempt_number
+    limit 1
+  ) not like '%600 123 456%'
+  and (
+    select error_redacted
+    from public.booqable_refresh_attempts
+    where intent_id = (select intent_id from refresh_case_a)
+    order by attempt_number
+    limit 1
+  ) not like '%secret-123%',
+  'stale completion discards arbitrary PII from the stored attempt error'
 );
 
 select throws_ok(
@@ -223,6 +239,7 @@ select is(
   public.complete_booqable_refresh_intent(
     (select intent_id from refresh_case_a),
     (select lease_generation from refresh_claim_a),
+    (select receipt_generation from refresh_claim_a),
     'applied',
     null
   )->>'state',
@@ -257,6 +274,78 @@ select ok(
   'a new delivery after success opens a distinct claimable intent'
 );
 
+create temp table refresh_generation_case as
+select
+  (r->>'intent_id')::uuid as intent_id
+from (
+  select public.record_booqable_refresh_work(
+    'booqable',
+    'order',
+    'ord_generation',
+    'evt-generation-1',
+    'provider_event_id',
+    1
+  ) as r
+) s;
+
+create temp table refresh_generation_claim as
+select
+  (c->>'lease_generation')::bigint as lease_generation,
+  (c->>'receipt_generation')::bigint as receipt_generation
+from (
+  select public.claim_booqable_refresh_intent(
+    (select intent_id from refresh_generation_case),
+    60,
+    'worker-generation'
+  ) as c
+) s;
+
+select is(
+  (
+    public.record_booqable_refresh_work(
+      'booqable',
+      'order',
+      'ord_generation',
+      'evt-generation-2',
+      'provider_event_id',
+      1
+    )->>'receipt_generation'
+  )::bigint,
+  2::bigint,
+  'a receipt arriving during a lease advances the current generation'
+);
+
+select is(
+  public.complete_booqable_refresh_intent(
+    (select intent_id from refresh_generation_case),
+    (select lease_generation from refresh_generation_claim),
+    (select receipt_generation from refresh_generation_claim),
+    'applied',
+    null
+  )->>'code',
+  'lease_superseded',
+  'completion cannot claim coverage for a receipt that arrived after claim'
+);
+
+select ok(
+  (
+    select state = 'claimable'
+      and attempt_count = 0
+    from public.booqable_refresh_intents
+    where id = (select intent_id from refresh_generation_case)
+  )
+  and (
+    select transition_code = 'lease_superseded'
+      and covered_receipt_generation =
+        (select receipt_generation from refresh_generation_claim)
+    from public.booqable_refresh_attempts
+    where intent_id = (select intent_id from refresh_generation_case)
+    order by attempt_number desc
+    limit 1
+  ),
+  'superseded receipt coverage requeues without consuming retry budget'
+);
+
 create temp table refresh_case_b as
 select
   (r->>'intent_id')::uuid as intent_id
@@ -273,7 +362,8 @@ from (
 
 create temp table refresh_claim_b as
 select
-  (c->>'lease_generation')::bigint as lease_generation
+  (c->>'lease_generation')::bigint as lease_generation,
+  (c->>'receipt_generation')::bigint as receipt_generation
 from (
   select public.claim_booqable_refresh_intent(
     (select intent_id from refresh_case_b),
@@ -290,6 +380,7 @@ select is(
   public.complete_booqable_refresh_intent(
     (select intent_id from refresh_case_b),
     (select lease_generation from refresh_claim_b),
+    (select receipt_generation from refresh_claim_b),
     'applied',
     'late complete'
   )->>'code',
@@ -318,15 +409,106 @@ select is(
   'reclaim returns an expired lease to claimable'
 );
 
+select ok(
+  (
+    select attempt_count = 1
+      and claimable_after between
+        now() + interval '29 seconds'
+        and now() + interval '31 seconds'
+    from public.booqable_refresh_intents
+    where id = (select intent_id from refresh_case_b)
+  ),
+  'first expired lease consumes one attempt and applies 30-second backoff'
+);
+
 select is(
   public.complete_booqable_refresh_intent(
     (select intent_id from refresh_case_b),
     (select lease_generation from refresh_claim_b),
+    (select receipt_generation from refresh_claim_b),
     'applied',
     'old generation'
   )->>'code',
   'lease_superseded',
   'reclaim advances generation so the old worker cannot complete'
+);
+
+update public.booqable_refresh_intents
+set claimable_after = now()
+where id = (select intent_id from refresh_case_b);
+
+create temp table refresh_reclaim_b2 as
+select public.claim_booqable_refresh_intent(
+  (select intent_id from refresh_case_b),
+  60,
+  'worker-b2'
+) as claim;
+
+update public.booqable_refresh_intents
+set lease_expires_at = now() - interval '1 second'
+where id = (select intent_id from refresh_case_b);
+
+create temp table refresh_reclaim_result_b2 as
+select public.reclaim_booqable_refresh_intent(
+  (select intent_id from refresh_case_b),
+  (
+    select (claim->>'lease_generation')::bigint
+    from refresh_reclaim_b2
+  )
+) as result;
+
+select ok(
+  (
+    select (result->>'attempt_count')::integer
+    from refresh_reclaim_result_b2
+  )::integer = 2
+  and (
+    select state = 'claimable'
+      and claimable_after between
+        now() + interval '119 seconds'
+        and now() + interval '121 seconds'
+    from public.booqable_refresh_intents
+    where id = (select intent_id from refresh_case_b)
+  ),
+  'second expired lease consumes another attempt and applies 120-second backoff'
+);
+
+update public.booqable_refresh_intents
+set claimable_after = now()
+where id = (select intent_id from refresh_case_b);
+
+create temp table refresh_reclaim_b3 as
+select public.claim_booqable_refresh_intent(
+  (select intent_id from refresh_case_b),
+  60,
+  'worker-b3'
+) as claim;
+
+update public.booqable_refresh_intents
+set lease_expires_at = now() - interval '1 second'
+where id = (select intent_id from refresh_case_b);
+
+create temp table refresh_reclaim_result_b3 as
+select public.reclaim_booqable_refresh_intent(
+  (select intent_id from refresh_case_b),
+  (
+    select (claim->>'lease_generation')::bigint
+    from refresh_reclaim_b3
+  )
+) as result;
+
+select ok(
+  (
+    select result->>'state'
+    from refresh_reclaim_result_b3
+  ) = 'exhausted'
+  and (
+    select attempt_count = 3
+      and claimable_after is null
+    from public.booqable_refresh_intents
+    where id = (select intent_id from refresh_case_b)
+  ),
+  'third expired lease exhausts the catalogue-owned retry budget'
 );
 
 create temp table refresh_case_c as
@@ -353,6 +535,11 @@ select is(
           60,
           'worker-c1'
         )->>'lease_generation')::bigint
+      ),
+      (
+        select receipt_generation
+        from public.booqable_refresh_intents
+        where id = (select intent_id from refresh_case_c)
       ),
       'upstream_timeout',
       'timeout 1'
@@ -396,6 +583,11 @@ select is(
           'worker-c2'
         )->>'lease_generation')::bigint
       ),
+      (
+        select receipt_generation
+        from public.booqable_refresh_intents
+        where id = (select intent_id from refresh_case_c)
+      ),
       'upstream_rate_limited',
       '429'
     )->>'state'
@@ -427,6 +619,11 @@ select is(
           60,
           'worker-c3'
         )->>'lease_generation')::bigint
+      ),
+      (
+        select receipt_generation
+        from public.booqable_refresh_intents
+        where id = (select intent_id from refresh_case_c)
       ),
       'upstream_server_error',
       '5xx'
@@ -522,6 +719,7 @@ select is(
 create temp table refresh_case_d as
 select
   (r->>'intent_id')::uuid as intent_id,
+  (r->>'receipt_generation')::bigint as receipt_generation,
   (
     public.claim_booqable_refresh_intent(
       (r->>'intent_id')::uuid,
@@ -544,6 +742,7 @@ select is(
   public.complete_booqable_refresh_intent(
     (select intent_id from refresh_case_d),
     (select lease_generation from refresh_case_d),
+    (select receipt_generation from refresh_case_d),
     'newer_unknown_code',
     'nope'
   )->>'code',
@@ -576,6 +775,7 @@ select is(
   public.complete_booqable_refresh_intent(
     (select intent_id from refresh_case_d),
     (select lease_generation from refresh_case_d),
+    (select receipt_generation from refresh_case_d),
     'newer_unknown_code',
     'again'
   )->>'code',
@@ -650,7 +850,7 @@ select ok(
   )
   and has_function_privilege(
     'service_role',
-    'public.complete_booqable_refresh_intent(uuid, bigint, text, text)',
+    'public.complete_booqable_refresh_intent(uuid, bigint, bigint, text, text)',
     'EXECUTE'
   )
   and has_function_privilege(
@@ -674,7 +874,7 @@ select ok(
   )
   and not has_function_privilege(
     'anon',
-    'public.complete_booqable_refresh_intent(uuid, bigint, text, text)',
+    'public.complete_booqable_refresh_intent(uuid, bigint, bigint, text, text)',
     'EXECUTE'
   )
   and not has_function_privilege(
