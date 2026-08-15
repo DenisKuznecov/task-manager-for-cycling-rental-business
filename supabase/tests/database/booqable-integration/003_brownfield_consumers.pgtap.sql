@@ -99,11 +99,6 @@ select ok(
     from public.customers
     where email = 'legacy-local-2-6@example.com'
       and booqable_customer_id is null
-      and entity_origin is null
-      and source_lifecycle is null
-      and source_version is null
-      and source_updated_at is null
-      and ingested_at is null
   ),
   'legacy local insert stays distinct from Booqable identity'
 );

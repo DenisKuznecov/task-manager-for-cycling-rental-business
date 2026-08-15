@@ -28,3 +28,7 @@
 - source_spec: spec-2-6-preserve-brownfield-projection-consumers.md
   summary: On the first story that implements canonical Booqable fetch (not today's sync.ts), contract and fixture-prove the nested-order include `customer,coupon,lines.planning.stock_item_plannings.stock_item.barcode` before anyone lists StockItems or StockItemPlannings as a collection.
   evidence: Den cut this from 2.6 so the story stays a consumer-column freeze. Standalone inventory remains an unverified optimization and must not become the only path. Live sync stays `include=customer,coupon,lines` until that fetch story.
+
+## Deferred from: code review of spec-2-6-preserve-brownfield-projection-consumers (2026-08-15)
+
+- Run the pgTAP database consumer-contract suite in CI. The existing pull-request workflow runs `npm run contracts:check` only, so it cannot exercise migration-produced view/RPC contracts. This repository-wide CI coverage gap predates Story 2.6 and needs an intentional local-Supabase CI design.

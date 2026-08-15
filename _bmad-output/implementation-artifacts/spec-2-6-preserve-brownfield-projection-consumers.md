@@ -62,6 +62,12 @@ context:
 - Given existing consumer fixtures run after the 2.5 expansion, when they compare bookings, order detail, partner views, customer flows, stats/reporting, and local-customer creation, then existing column contracts remain unchanged.
 - Given new Workshop fields and `booqable_*` tables, when brownfield consumer source is checked, then those names do not appear there. Database grants are unchanged.
 
+### Review Findings
+
+- [x] [Review][Dismissed] Bind each protected select and local-customer insert to its production query [tests/booqable-contracts/brownfield-consumers.test.ts:36] — declined; current source-text soft lock is sufficient for this story.
+- [x] [Review][Patch] Assert the local-customer identity invariant without requiring all future source metadata to be NULL [supabase/tests/database/booqable-integration/003_brownfield_consumers.pgtap.sql:96] — fixed
+- [x] [Review][Defer] Run database contract tests in CI [supabase/tests/database/booqable-integration/003_brownfield_consumers.pgtap.sql:1] — deferred, pre-existing
+
 ## Spec Change Log
 
 - 2026-08-15: Nested-order fetch include removed from this story by Den. Parked in `_bmad-output/implementation-artifacts/deferred-work.md` for the first canonical-fetch story. Do not list `stock_items` first.
