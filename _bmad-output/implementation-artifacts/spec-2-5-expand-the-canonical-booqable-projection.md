@@ -99,6 +99,15 @@ Use `booqable_` source-table names and explicit opaque ID columns. Use `ON DELET
   - `[medium]` `[patch]` `assertManifestCompleteness` only required one field per origin; it now fails if any field from the contract's own per-origin lists is missing.
   - `[low]` `[patch]` UTC timestamp schema accepted overflow dates such as Feb 30; reject non-real calendar dates.
 
+### Review Findings
+- [x] [Review][Patch] Reject conflicting BundleItem product and ProductGroup references [src/lib/booqable/contracts/canonical-projection.ts:1409]
+- [x] [Review][Patch] Require real UTC timestamps and valid offsets [src/lib/booqable/contracts/canonical-projection.ts:214]
+- [x] [Review][Patch] Require an approved close signal before admitting closed source state [src/lib/booqable/contracts/canonical-projection.ts:245]
+- [x] [Review][Patch] Require exactly one membership per declared multi-quantity unit [src/lib/booqable/contracts/canonical-projection.ts:1307]
+- [x] [Review][Patch] Reject predecessor links that violate the persisted one-to-one constraints [src/lib/booqable/contracts/canonical-projection.ts:1324]
+- [x] [Review][Patch] Reject NUL-bearing external identities before constructing membership keys [src/lib/booqable/contracts/canonical-projection.ts:212]
+- [x] [Review][Dismiss] Exercise projection-contract validator failure paths with regression tests [tests/booqable-contracts/canonical-projection.test.ts:354] — optional hardening declined
+
 ## Auto Run Result
 
 Status: done

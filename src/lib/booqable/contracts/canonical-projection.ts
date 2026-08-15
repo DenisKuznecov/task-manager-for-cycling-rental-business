@@ -198,11 +198,17 @@ export const BackfillRuleSchema = z.enum(BACKFILL_RULES);
 export const FieldDispositionSchema = z.enum(FIELD_DISPOSITIONS);
 export const MembershipIdentityKindSchema = z.enum(MEMBERSHIP_IDENTITY_KINDS);
 
-const NonEmptyIdSchema = z.string().trim().min(1);
+const NonEmptyIdSchema = z
+  .string()
+  .trim()
+  .min(1)
+  .refine((value) => !value.includes("\0"), {
+    message: "must not contain a NUL character",
+  });
 
 function isRealUtcDateTime(value: string): boolean {
   const match = value.match(
-    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?(Z|[+-]\d{2}:\d{2})$/,
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(\.\d+)?Z$/,
   );
   if (!match) {
     return false;
@@ -237,8 +243,17 @@ export const SourceProvenanceSchema = z
     source_updated_at: UtcDateTimeSchema.nullable(),
     ingested_at: UtcDateTimeSchema,
     source_lifecycle: SourceLifecycleSchema,
+    close_approved: z.literal(true).optional(),
   })
-  .strict();
+  .strict()
+  .refine(
+    (value) =>
+      value.source_lifecycle !== "closed" || value.close_approved === true,
+    {
+      message: "closed source state requires an approved explicit close signal",
+      path: ["close_approved"],
+    },
+  );
 
 export const MembershipIdentitySchema = z
   .object({
@@ -265,6 +280,7 @@ const provenanceFields = {
   source_updated_at: UtcDateTimeSchema.nullable(),
   ingested_at: UtcDateTimeSchema,
   source_lifecycle: SourceLifecycleSchema,
+  close_approved: z.literal(true).optional(),
 };
 
 export const ProductGroupProjectionSchema = z
@@ -387,7 +403,32 @@ export const CanonicalGraphSchema = z
     memberships: z.array(MembershipProjectionSchema),
     predecessors: z.array(MembershipPredecessorSchema),
   })
-  .strict();
+  .strict()
+  .superRefine((graph, context) => {
+    const rows = [
+      ...graph.product_groups,
+      ...graph.products,
+      ...graph.bundles,
+      ...graph.bundle_items,
+      ...graph.stock_items,
+      ...graph.plannings,
+      ...graph.stock_item_plannings,
+      ...graph.memberships,
+    ];
+
+    for (const row of rows) {
+      if (
+        row.source_lifecycle === "closed" &&
+        row.close_approved !== true
+      ) {
+        context.addIssue({
+          code: "custom",
+          message:
+            "closed source state requires an approved explicit close signal",
+        });
+      }
+    }
+  });
 
 export type SourceProvenance = z.infer<typeof SourceProvenanceSchema>;
 export type MembershipIdentity = z.infer<typeof MembershipIdentitySchema>;
@@ -416,6 +457,11 @@ export type CanonicalAdmissionResult =
       status: "rejected";
       reason: "tag_admission";
       classification: WorkshopTagClassification;
+    }
+  | {
+      status: "rejected";
+      reason: "inconsistent_link";
+      issues: string[];
     };
 
 type ManifestSeed = [
@@ -1192,6 +1238,30 @@ export function admitCanonicalGraph(input: unknown): CanonicalAdmissionResult {
     }
   }
 
+  const inconsistentBundleItemIssues: string[] = [];
+  for (const bundleItem of graph.bundle_items) {
+    const product = bundleItem.product_external_id
+      ? productsById.get(bundleItem.product_external_id)
+      : undefined;
+    if (
+      product?.product_group_external_id &&
+      productGroupsById.has(product.product_group_external_id) &&
+      bundleItem.product_group_external_id &&
+      product.product_group_external_id !== bundleItem.product_group_external_id
+    ) {
+      inconsistentBundleItemIssues.push(
+        `inconsistent link bundle_item ${bundleItem.external_id} references ProductGroup ${bundleItem.product_group_external_id} but Product ${product.external_id} belongs to ${product.product_group_external_id}`,
+      );
+    }
+  }
+  if (inconsistentBundleItemIssues.length > 0) {
+    return {
+      status: "rejected",
+      reason: "inconsistent_link",
+      issues: inconsistentBundleItemIssues,
+    };
+  }
+
   for (const bundle of graph.bundles) {
     const classification = admitTaggedResource(
       bundle,
@@ -1299,7 +1369,15 @@ export function admitCanonicalGraph(input: unknown): CanonicalAdmissionResult {
       issues.push(`inconsistent line_quantity on ${lineKey.replaceAll("\0", "/")}`);
     }
     if (quantity > 1) {
-      const discriminators = memberships.map(
+      const openMemberships = memberships.filter(
+        (row) => row.source_lifecycle === "open",
+      );
+      if (openMemberships.length !== quantity) {
+        issues.push(
+          `multi-quantity line ${lineKey.replaceAll("\0", "/")} requires exactly ${quantity} open memberships`,
+        );
+      }
+      const discriminators = openMemberships.map(
         (row) => row.source_unit_discriminator,
       );
       if (new Set(discriminators).size !== discriminators.length) {
@@ -1310,6 +1388,8 @@ export function admitCanonicalGraph(input: unknown): CanonicalAdmissionResult {
     }
   }
 
+  const predecessorSuccessors = new Set<string>();
+  const predecessorIds = new Set<string>();
   for (const predecessor of graph.predecessors) {
     if (!membershipsById.has(predecessor.successor_id)) {
       issues.push(
@@ -1321,6 +1401,18 @@ export function admitCanonicalGraph(input: unknown): CanonicalAdmissionResult {
         `orphan predecessor ${predecessor.predecessor_id} is not in the graph`,
       );
     }
+    if (predecessorSuccessors.has(predecessor.successor_id)) {
+      issues.push(
+        `duplicate predecessor successor ${predecessor.successor_id}`,
+      );
+    }
+    predecessorSuccessors.add(predecessor.successor_id);
+    if (predecessorIds.has(predecessor.predecessor_id)) {
+      issues.push(
+        `duplicate predecessor membership ${predecessor.predecessor_id}`,
+      );
+    }
+    predecessorIds.add(predecessor.predecessor_id);
   }
 
   const orphanIssues = issues.filter((issue) => issue.includes("orphan"));

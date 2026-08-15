@@ -253,6 +253,35 @@ describe("canonical projection I/O matrix", () => {
     });
   });
 
+  it("requires UTC provenance and an approved close signal before admitting closed source state", () => {
+    const invalidTimestamp = validGraph();
+    invalidTimestamp.products[0].source_updated_at =
+      "2026-08-15T09:00:00+99:99";
+    expect(admitCanonicalGraph(invalidTimestamp)).toMatchObject({
+      status: "rejected",
+      reason: "schema",
+    });
+
+    const unapprovedClose = validGraph();
+    unapprovedClose.products[0].source_lifecycle = "closed";
+    expect(admitCanonicalGraph(unapprovedClose)).toMatchObject({
+      status: "rejected",
+      reason: "schema",
+    });
+
+    unapprovedClose.products[0].close_approved = true;
+    expect(admitCanonicalGraph(unapprovedClose).status).toBe("accepted");
+  });
+
+  it("rejects NUL-bearing external identities", () => {
+    const graph = validGraph();
+    graph.products[0].external_id = "prod\0road";
+    expect(admitCanonicalGraph(graph)).toMatchObject({
+      status: "rejected",
+      reason: "schema",
+    });
+  });
+
   it("rejects Planning ids, StockItemPlanning ids, and array positions as membership identity", () => {
     expect(FORBIDDEN_MEMBERSHIP_IDENTITY_KINDS).toEqual([
       "planning_id",
@@ -314,6 +343,22 @@ describe("canonical projection I/O matrix", () => {
     });
   });
 
+  it("rejects a BundleItem whose explicit ProductGroup conflicts with its Product", () => {
+    const graph = validGraph();
+    graph.product_groups.push({
+      resource_type: "product_group",
+      external_id: "pg_road_other",
+      tag_list: [WORKSHOP_PRODUCT_GROUP_TAGS.road],
+      ...PROVENANCE,
+    });
+    graph.bundle_items[0].product_group_external_id = "pg_road_other";
+
+    expect(admitCanonicalGraph(graph)).toMatchObject({
+      status: "rejected",
+      reason: "inconsistent_link",
+    });
+  });
+
   it("requires distinct StockItem ids on multi-quantity lines", () => {
     const graph = validGraph();
     graph.stock_items.push({
@@ -342,11 +387,48 @@ describe("canonical projection I/O matrix", () => {
     ];
     expect(admitCanonicalGraph(graph).status).toBe("accepted");
 
+    const incomplete = structuredClone(graph);
+    incomplete.memberships.pop();
+    expect(admitCanonicalGraph(incomplete)).toMatchObject({
+      status: "rejected",
+      reason: "membership_identity",
+    });
+
     graph.memberships[1].source_unit_discriminator = "si_1";
     graph.memberships[1].stock_item_external_id = "si_1";
     expect(admitCanonicalGraph(graph)).toMatchObject({
       status: "rejected",
       reason: "membership_identity",
+    });
+  });
+
+  it("rejects predecessor links that violate the persisted one-to-one relationship", () => {
+    const graph = validGraph();
+    graph.memberships.push({
+      ...graph.memberships[0],
+      id: "22222222-2222-4222-8222-222222222222",
+      replacement_chain_incarnation: 2,
+      source_lifecycle: "closed",
+      close_approved: true,
+    });
+    graph.predecessors = [
+      {
+        successor_id: graph.memberships[0].id,
+        predecessor_id: graph.memberships[1].id,
+      },
+      {
+        successor_id: graph.memberships[0].id,
+        predecessor_id: graph.memberships[1].id,
+      },
+    ];
+
+    expect(admitCanonicalGraph(graph)).toMatchObject({
+      status: "rejected",
+      reason: "membership_identity",
+      issues: expect.arrayContaining([
+        `duplicate predecessor successor ${graph.memberships[0].id}`,
+        `duplicate predecessor membership ${graph.memberships[1].id}`,
+      ]),
     });
   });
 });

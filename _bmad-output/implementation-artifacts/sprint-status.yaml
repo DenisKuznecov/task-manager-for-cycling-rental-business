@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 08-12-2026 15:55
-last_updated: 08-14-2026 16:37
+last_updated: 08-15-2026 12:16
 project: echelon-cycling-hub-admin
 project_key: NOKEY
 tracking_system: file-system
@@ -49,7 +49,7 @@ development_status:
   2-2-upgrade-to-a-supported-application-runtime: done
   2-3-pin-the-node-and-database-toolchain: done
   2-4-define-versioned-source-envelopes-and-result-semantics: done
-  2-5-expand-the-canonical-booqable-projection: backlog
+  2-5-expand-the-canonical-booqable-projection: done
   2-6-preserve-brownfield-projection-consumers: backlog
   2-7-persist-and-recover-authoritative-refresh-work: backlog
   2-8-run-bounded-workers-and-reconciliation-sweeps: backlog
