@@ -1,5 +1,10 @@
+import { createHmac } from "node:crypto";
 import { NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import {
+  REFRESH_WORK_CONTRACT_VERSION,
+  resolveRefreshDeliveryIdentity,
+} from "@/src/lib/booqable/contracts";
 import { isBooqableIngestionAllowed } from "@/src/lib/booqable/ingestion-guard";
 import { syncBooqableOrder } from "@/src/lib/booqable/sync";
 
@@ -24,7 +29,8 @@ export async function POST(request: Request) {
     const { searchParams } = new URL(request.url);
     const providedSecret = searchParams.get("secret");
 
-    if (!process.env.BOOQABLE_WEBHOOK_SECRET) {
+    const webhookSecret = process.env.BOOQABLE_WEBHOOK_SECRET;
+    if (!webhookSecret) {
       console.error(
         "[webhooks/booqable] CRITICAL: BOOQABLE_WEBHOOK_SECRET is missing in environment variables.",
       );
@@ -34,7 +40,7 @@ export async function POST(request: Request) {
       );
     }
 
-    if (providedSecret !== process.env.BOOQABLE_WEBHOOK_SECRET) {
+    if (providedSecret !== webhookSecret) {
       console.warn("[webhooks/booqable] Unauthorized webhook attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
@@ -70,6 +76,48 @@ export async function POST(request: Request) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.SUPABASE_SERVICE_ROLE_KEY!,
     );
+
+    const providerEventId =
+      data["event_id"] ||
+      data["webhook_id"] ||
+      data["data[event_id]"] ||
+      data["data[webhook_id]"] ||
+      null;
+    const delivery = resolveRefreshDeliveryIdentity({
+      providerEventId,
+      bodyHmacSha256: createHmac(
+        "sha256",
+        webhookSecret,
+      )
+        .update(rawText)
+        .digest("hex"),
+    });
+
+    const { data: recorded, error: recordError } = await supabase.rpc(
+      "record_booqable_refresh_work",
+      {
+        p_provider: "booqable",
+        p_source_kind: "order",
+        p_source_external_id: booqableOrderId,
+        p_delivery_identity: delivery.delivery_identity,
+        p_delivery_identity_kind: delivery.delivery_identity_kind,
+        p_contract_version: REFRESH_WORK_CONTRACT_VERSION,
+      },
+    );
+
+    if (recordError || recorded?.ok !== true) {
+      console.error(
+        "[webhooks/booqable] record_booqable_refresh_work:",
+        recordError ?? recorded,
+      );
+      return NextResponse.json(
+        {
+          error: "Failed to process webhook",
+          message: "Failed to persist refresh work",
+        },
+        { status: 500 },
+      );
+    }
 
     await syncBooqableOrder(supabase, booqableOrderId);
 
