@@ -13,9 +13,14 @@ filesIncluded:
   - _bmad-output/planning-artifacts/epics.md
   - _bmad-output/planning-artifacts/ux-designs/ux-echelon-cycling-hub-admin-2026-08-07/DESIGN.md
   - _bmad-output/planning-artifacts/ux-designs/ux-echelon-cycling-hub-admin-2026-08-07/EXPERIENCE.md
+status: superseded
+superseded_on: 2026-08-14
+superseded_by: implementation-readiness-report-2026-08-14-corrected.md
 ---
 
 # Implementation Readiness Assessment Report
+
+> Historical evidence only. The 2026-08-14 source-classification course correction changed PRD, architecture, UX, epics, sprint sequencing, and implementation scope. Use the corrected readiness report named in frontmatter as current authority.
 
 **Date:** 2026-08-12  
 **Project:** echelon-cycling-hub-admin  

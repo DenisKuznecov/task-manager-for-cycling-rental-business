@@ -43,7 +43,7 @@ The system is the record of synchronized Booqable intent, change history, and wo
 ### 2.3 Core Operational Flows
 
 - **UJ-1 — Prepare and verify one bike:** M1 opens Available Now, claims a Bike Task, completes all required Prep Items, records rental-specific changes as Structured Modifications when needed, and hands off. If Re-check Items apply, M2 claims the verification, independently resolves them, and completes Preparation. The next actionable Bike Task is immediately available.
-- **UJ-2 — Absorb a Booqable configuration change:** While M1 is preparing a claimed bike, a workshop-relevant Booqable update changes the required physical configuration. The same Bike Task stays assigned to M1, invalidates the affected Items when an approved complete Setup Category mapping version identifies them or otherwise opens the broad configuration-review requirement, and keeps Prep and any applicable Re-check as the path to completion.
+- **UJ-2 — Absorb a Booqable configuration change:** While M1 is preparing a claimed bike, a workshop-relevant Booqable update changes the required physical configuration. The same Bike Task stays assigned to M1 and opens the broad configuration-review requirement by default. If Epic 6 later proves a complete Setup Category mapping from stable source identifiers and fixtures, only the affected Items invalidate. Prep and any applicable Re-check remain the path to completion.
 - **UJ-3 — Check a returned bike:** When Booqable marks the order returned, the Return Checklist becomes actionable for each currently associated bike. The return-check mechanic reviews Notes and Structured Modifications, performs category-specific checks, acknowledges each Structured Modification, and completes the Bike Task.
 - **UJ-4 — Handle an exception:** A mechanic raises Needs Attention without blocking their own work. For a same-mechanic Re-check exception, M1 raises a request and a manager explicitly Approves or Declines it. A manager also finds and resolves other open flags in the Manager Attention List, reassigns work, resets stale work, or force-closes a genuinely abandoned Bike Task.
 
@@ -63,7 +63,7 @@ The system is the record of synchronized Booqable intent, change history, and wo
 - **Checklist Template** — An admin-authored, versioned definition for a bike category and phase.
 - **Prep Snapshot** — The immutable Prep Checklist Template version copied into a Bike Task when the task is created.
 - **Return Snapshot** — The immutable Return Checklist Template version selected when the Bike Task enters Needs Return Check.
-- **Setup Category** — A bounded Booqable configuration group used for context, grouping, and selective invalidation. The initial set is Pedals, Saddle, Wheelset, Power meter, and Computer mount.
+- **Setup Category** — A bounded Booqable configuration group used for context and grouping, and by Epic 6 for selective invalidation only after a complete source-backed mapping is proven. The initial set is Pedals, Saddle, Wheelset, Power meter, and Computer mount.
 - **Available Now** — The default queue of unassigned, claimable Bike Tasks ordered by rental start date.
 - **My Work** — The mechanic's currently assigned Bike Tasks so work can be resumed after interruption.
 - **Preparation Resolved** — The state reached when all required Prep Items and applicable Re-check Items for the current Work Cycle are resolved.
@@ -89,7 +89,8 @@ When a Booqable order becomes reserved, the system must reconcile independently 
 - A reserved quantity-one bike line without an exact StockItem assignment or human-readable `stock_identifier` still creates a Bike Task in Waiting for Bike ID. The task is visible but not claimable until Booqable provides both; the same task then becomes claimable without recreation.
 - An unknown multi-unit shortfall is visible through its Integration Incident but is not claimable workshop work.
 - Replacement, removal, and re-add preserve the physical-bike incarnation and history rules in FR-2 and FR-3.
-- Runtime identity must not depend on line title or ProductGroup label.
+- ProductGroup `tag_list` is authoritative for category admission: exactly one controlled Workshop bike tag classifies the bike. Runtime Bike Task identity remains the exact StockItem external ID and must not depend on line title, ProductGroup label, or tag value.
+- The controlled ProductGroup tags are `workshop-road-bike`, `workshop-e-road-bike`, `workshop-e-city-bike`, `workshop-gravel-bike`, `workshop-mtb-bike`, and `workshop-e-mtb-bike`. Untagged entities create no Workshop work; unknown, multiple, or conflicting Workshop tags create an Integration Incident and no task.
 - Waiting for Bike ID is a trial first-release behavior and may be revisited if mechanics need to start work before the identifier arrives.
 
 #### FR-2: Preserve physical-bike identity
@@ -158,11 +159,11 @@ A mechanic who performs reopened Prep becomes M1 for that cycle. M2 must differ 
 
 ### 4.3 Versioned checklist definition and execution
 
-**Description:** Admin-authored Checklist Templates define stable work language. Each Bike Task uses immutable phase snapshots while Setup Category links provide current Booqable context and, when backed by an approved stable mapping, targeted invalidation. Realizes UJ-1 and UJ-2.
+**Description:** Admin-authored Checklist Templates define stable work language. Each Bike Task uses immutable phase snapshots while Setup Category links provide current Booqable context. Broad configuration review is the initial change mode; Epic 6 may enable targeted invalidation only from complete source-backed mapping evidence. Realizes UJ-1 and UJ-2.
 
 #### FR-11: Manage category-specific templates
 
-An Admin / Manager must be able to create, activate, supersede, and reactivate separate Prep and Return Checklist Templates for e-city, e-road, road, gravel, and MTB bikes.
+An Admin / Manager must be able to create, activate, supersede, and reactivate separate Prep and Return Checklist Templates for e-city, e-road, road, gravel, MTB, and E-MTB bikes.
 
 Template activation must not require every Setup Category to have a linked Item. Administrators own checklist coverage quality; incomplete coverage is not a blocking validation rule.
 
@@ -246,11 +247,11 @@ M2 must differ from the current Work Cycle's M1 unless an Admin / Manager explic
 #### FR-26: Classify update outcomes
 
 The system must handle Booqable updates through three outcomes:
-- a recognized relevant change mapped through an active stable Setup Category contract invalidates Items linked to the changed Setup Category;
-- a relevant change that cannot be mapped safely invalidates the built-in "Review updated bike configuration" confirmation; and
+- a relevant change advances the built-in broad `review_updated_configuration` confirmation in the initial mode;
+- after Epic 6 proves and activates a complete stable Setup Category mapping, a recognized relevant change may invalidate only Items linked to the changed Setup Category; and
 - a non-workshop-relevant change refreshes data silently.
 
-Category-level selective invalidation may activate for a mapping version only when every active Setup Category has a Booqable source field or related resource identified by a stable, account-approved identifier and covered by redacted fixtures for null, unknown, changed, and removed values. Display labels are not mapping keys. Until that complete mapping version is approved, or if any relevant change cannot be mapped safely, the system creates or advances the broad `review_updated_configuration` requirement instead of guessing a target category. Missing stable mapping blocks targeted invalidation, not all Workshop Task execution.
+Product, ProductGroup, and Bundle `tag_list` values are persisted as read-only Booqable source facts, but v1 does not interpret or configure accessory tags before Epic 6. Category-level selective invalidation may activate only when every active Setup Category has a stable source field, relation, or accessory-tag identifier covered by redacted fixtures for null, unknown, changed, and removed values. Display labels are not mapping keys. Missing or stale proof keeps broad mode active rather than blocking all Workshop Task execution.
 
 Invalidation is evaluated against the last physically attested Booqable intent for the Bike Task. Multiple unresolved changes converge to the latest current intent without duplicating Work Cycles or resets.
 
@@ -424,15 +425,17 @@ The first release may require a live network connection and does not promise off
 
 ### Source-of-truth partition
 
-- **Booqable owns:** order lifecycle, current order-bike membership, stable opaque StockItem external identity, human-readable `stock_identifier`, rental timing, bike category/configuration, accessories, and `extra_information`.
+- **Booqable owns:** order lifecycle, current order-bike membership, stable opaque StockItem external identity, human-readable `stock_identifier`, Product/ProductGroup/Bundle `tag_list`, rental timing, bike category/configuration, accessories, and `extra_information`.
 - **Workshop Tasks owns:** derived workshop lifecycle, assignments, Work Cycles, Item outcomes, Notes, Structured Modifications, Needs Attention, overrides, and audit history.
 - Synchronized Booqable values are displayed snapshots and are not locally editable as Booqable intent.
 
 ### Dependencies and assumptions
 
 - Booqable order-update delivery triggers reconciliation of current order state.
+- Exactly one controlled ProductGroup Workshop bike tag classifies category; corresponding Bundles use the matching `workshop-*-bike-bundle` tag and must agree with their contained bike ProductGroup.
+- Admitted Product, ProductGroup, and Bundle tags are persisted as source facts. Untagged entities create no Workshop work; unknown, multiple, or conflicting Workshop tags fail closed with an Integration Incident.
 - Bundled-order accessory-to-bike association depends on Booqable parent linkage.
-- Targeted Setup Category invalidation depends on a mapping version in which all five active categories use stable, account-approved Booqable identifiers and fixture-backed normalized values; otherwise all relevant configuration changes use broad configuration review.
+- Broad configuration review is the initial mode. Targeted Setup Category invalidation belongs to Epic 6 and depends on a mapping version in which all five active Setup Categories use stable source identifiers and fixture-backed normalized values.
 - In v1, generic absence from a Booqable response never establishes bike removal or closes a source child, membership, or Bike Task. Removal requires a validated explicit archive/tombstone or another separately fixture-proven explicit removed state from the canonical refresh path.
 - The existing admin authentication and staff roles provide the access boundary.
 - `[ASSUMPTION]` Booqable webhooks provide enough information to identify the changed order and refresh current order data.
@@ -442,7 +445,7 @@ The first release may require a live network connection and does not promise off
 - `[ASSUMPTION]` Selective reopening can compare last accepted workshop configuration with refreshed current Booqable data.
 - `[ASSUMPTION]` Booqable exposes a distinguishable picked-up/active-rental condition between reserved and returned.
 
-Until all five active Setup Categories have a stable approved mapping version, targeted invalidation remains disabled and broad configuration review applies to all relevant changes. If bundled parent linkage fails technical discovery, bike-specific accessory display must be re-scoped before implementation commits to that behavior.
+Until Epic 6 proves all five active Setup Categories through a stable mapping version, targeted invalidation remains disabled and broad configuration review applies to all relevant changes. Accessory tags remain persisted but uninterpreted until that work. If bundled parent linkage fails technical discovery, bike-specific accessory display must be re-scoped before implementation commits to that behavior.
 
 ## 7. Non-Goals
 
@@ -453,6 +456,8 @@ The first release will not:
 - support offline work or recovery of unsaved local changes after the session is lost;
 - assign mechanics automatically;
 - generate runtime checklist Items from Booqable accessories;
+- provide a Workshop classification-approval screen or a second local category authority;
+- interpret or configure accessory tags before Epic 6;
 - maintain Notes revision history;
 - integrate Bike Fit reports into checklist Items;
 - create separate revalidation tasks, statuses, queues, or manager pings;
@@ -471,7 +476,7 @@ The first release will not:
 - Always-visible admin-authored Items with optional Setup Category links
 - Action Item Done/N/A outcomes and Value Item entry
 - Attributed M1 preparation and selective independent M2 verification
-- Targeted reopening after safely mapped reserved-order configuration changes, with broad configuration review for relevant changes that cannot be mapped safely
+- Broad configuration review after relevant reserved-order changes, with targeted reopening available only after Epic 6 proves a complete stable mapping
 - Same-rental Notes, durable Structured Modifications, and accessory context
 - Needs Attention, Manager Attention List, manager interventions, and attributable audit history
 - One-mechanic Return Check with per-Structured-Modification acknowledgement
@@ -495,7 +500,7 @@ The following remain valuable but will be reconsidered after the first release i
 ### Primary
 
 - **SM-1 — Paperless preparation completion:** During rollout observation, mechanics can routinely discover, claim, prepare, hand off, independently re-check, resolve, and move to the next Bike Task using a tablet without a manual paper checklist. Validates FR-6 through FR-25.
-- **SM-2 — Predictable Booqable convergence:** Observed Booqable updates produce no duplicate or missing exact-StockItem Bike Tasks; ambiguous multi-quantity shortfalls produce deduplicated Integration Incidents rather than guessed work; the queue reflects current order state; safely mapped relevant changes reopen exactly affected work; unmapped relevant changes open broad configuration review; irrelevant changes do not interrupt mechanics; and repeated updates converge to the same correct state. Validates FR-1 through FR-5, FR-26 through FR-33, FR-47, and FR-48.
+- **SM-2 — Predictable Booqable convergence:** Observed Booqable updates produce no duplicate or missing exact-StockItem Bike Tasks; source tags classify all six categories without a second local authority; untagged entities produce no work; ambiguous identity or unknown/multiple/conflicting Workshop tags produce deduplicated Integration Incidents rather than guessed work; the queue reflects current order state; relevant changes open broad review until any complete Epic 6 mapping safely targets affected work; irrelevant changes do not interrupt mechanics; and repeated updates converge to the same correct state. Validates FR-1 through FR-5, FR-26 through FR-33, FR-47, and FR-48.
 
 ### Secondary
 
@@ -522,21 +527,21 @@ Rollback to paper if sync creates missing or duplicate Bike Tasks, or if save/ha
 
 1. Configure and review initial category-specific Checklist Templates.
 2. Run Workshop Tasks alongside the current paper process for a short baseline and controlled pilot covering peak prep and return work.
-3. Observe complete Prep/Re-check cycles, Waiting for Bike ID → claim transitions, ambiguous multi-quantity incidents, mapped and broad-review Booqable changes, cancellation, explicit removal, replacement, same-bike reactivation with preserved safe stage/evidence and cleared assignment, save retries, and Return Checks.
+3. Observe complete Prep/Re-check cycles across all six bike categories, Waiting for Bike ID → claim transitions, untagged and conflicting-tag exclusion/incidents, ambiguous multi-quantity incidents, broad-review and any fixture-proven targeted Booqable changes, cancellation, explicit removal, replacement, same-bike reactivation with preserved safe stage/evidence and cleared assignment, save retries, and Return Checks.
 4. Collect direct mechanic feedback on comfort, speed, clarity, and focus.
 5. Retire the paper preparation checklist only when the paper-retirement gate in §9 is met.
 6. Revisit Waiting for Bike ID claimability, always-visible `No` display, and deferred manager/reporting capabilities using pilot evidence.
 
 ## 11. Open Questions
 
-1. Which stable, account-approved Booqable identifiers and fixture-backed normalized values complete one mapping version for all five initial Setup Categories? Targeted invalidation remains disabled until all five meet that proof.
+1. Which stable source identifiers—including any future accessory tags—and fixture-backed normalized values complete one mapping version for all five initial Setup Categories? This is Epic 6 discovery; broad review remains active until all five meet that proof.
 2. Is bundled-order parent linkage stable for every supported order configuration?
 3. What exact progressive-disclosure interaction should UX use for previous `extra_information`?
 4. Does the always-visible `No` behavior remain comfortable after mechanics use it on real tasks?
 5. Does Waiting for Bike ID create enough friction that claim-before-ID should be reconsidered?
 6. What exact Booqable field or status maps to picked-up/active rental for FR-32?
 
-Questions 1, 2, and 6 are technical-discovery dependencies that can re-scope selective invalidation, accessory display, or reopening boundaries. Questions 3–5 are UX/pilot questions and do not block architecture.
+Questions 1, 2, and 6 are technical-discovery dependencies that can re-scope selective invalidation, accessory display, or reopening boundaries. Question 1 does not block source ingestion, tag-based bike classification, or broad configuration review. Questions 3–5 are UX/pilot questions and do not block architecture.
 
 ## 12. Assumptions Index
 

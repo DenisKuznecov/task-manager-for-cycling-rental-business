@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 08-12-2026 15:55
-last_updated: 08-14-2026 13:58
+last_updated: 08-14-2026 16:37
 project: echelon-cycling-hub-admin
 project_key: NOKEY
 tracking_system: file-system
@@ -49,12 +49,12 @@ development_status:
   2-2-upgrade-to-a-supported-application-runtime: done
   2-3-pin-the-node-and-database-toolchain: done
   2-4-define-versioned-source-envelopes-and-result-semantics: done
-  2-5-approve-bike-classification-and-setup-mapping-configuration: backlog
-  2-6-expand-the-canonical-booqable-projection: backlog
-  2-7-preserve-brownfield-projection-consumers: backlog
-  2-8-persist-and-recover-authoritative-refresh-work: backlog
-  2-9-run-bounded-workers-and-reconciliation-sweeps: backlog
-  2-10-apply-canonical-source-state-atomically: backlog
+  2-5-expand-the-canonical-booqable-projection: backlog
+  2-6-preserve-brownfield-projection-consumers: backlog
+  2-7-persist-and-recover-authoritative-refresh-work: backlog
+  2-8-run-bounded-workers-and-reconciliation-sweeps: backlog
+  2-9-apply-canonical-source-state-atomically: backlog
+  2-10-seed-and-validate-workshop-source-data: backlog
   2-11-issue-exact-jit-freshness-proofs: backlog
   2-12-cut-over-every-booqable-writer-and-recovery-caller: backlog
   2-13-revoke-legacy-source-writers: backlog
@@ -89,7 +89,7 @@ development_status:
 
   epic-6: backlog
   6-1-establish-physically-attested-configuration-baselines: backlog
-  6-2-govern-safe-mapping-and-change-classification: backlog
+  6-2-interpret-accessory-tags-for-safe-change-targeting: backlog
   6-3-refresh-source-context-silently-before-first-claim: backlog
   6-4-reconfirm-changed-work-during-active-preparation: backlog
   6-5-reopen-re-check-or-resolved-preparation-safely: backlog

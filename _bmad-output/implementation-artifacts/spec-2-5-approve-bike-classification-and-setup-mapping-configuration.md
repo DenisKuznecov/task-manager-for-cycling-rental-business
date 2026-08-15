@@ -2,7 +2,9 @@
 title: 'Approve Bike Classification and Setup Mapping Configuration'
 type: 'feature'
 created: '2026-08-14'
-status: 'done'
+status: 'superseded'
+superseded_on: '2026-08-14'
+superseded_by: '_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-14.md'
 baseline_revision: 'd1cea92b576cd4a2bb9d3759e5295d0612cb0cbd'
 review_loop_iteration: 0
 followup_review_recommended: true
@@ -12,6 +14,10 @@ context:
 warnings: []
 deferred: []
 ---
+
+# Superseded
+
+This specification is retained as historical implementation evidence only. The 2026-08-14 course correction withdrew the local ProductGroup UUID allowlist, classification approval UI, Setup mapping database contract, RPCs, and Story 2.5. Current authority is the source-first Booqable `tag_list` contract in the corrected PRD, architecture, epics, project context, and Sprint Change Proposal.
 
 <intent-contract>
 

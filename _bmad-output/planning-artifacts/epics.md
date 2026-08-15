@@ -40,7 +40,7 @@ FR9: Resolve concurrent claims first-writer-wins: exactly one valid claimant suc
 
 FR10: Scope M1 and M2 to the current Work Cycle. A new cycle begins when Prep becomes actionable initially or through qualifying reopening; the mechanic who performs accepted handoff is M1, and M2 must differ unless the per-task manager override is recorded.
 
-FR11: Let Admins/Managers create, activate, supersede, and reactivate separate Prep and Return Checklist Template versions for e-city, e-road, road, gravel, and MTB. Do not block activation because a Setup Category lacks a linked Item.
+FR11: Let Admins/Managers create, activate, supersede, and reactivate separate Prep and Return Checklist Template versions for e-city, e-road, road, gravel, MTB, and E-MTB. Do not block activation because a Setup Category lacks a linked Item.
 
 FR12: Copy an immutable Prep Snapshot into each task at creation and an immutable Return Snapshot when Return Check begins, using the then-active category/phase version. Later template changes affect only future snapshots.
 
@@ -70,7 +70,7 @@ FR24: For M2-enabled Value Items, show M1's target value and let M2 attest verif
 
 FR25: Enforce that M2 differs from current-cycle M1 unless an Admin/Manager approves the explicit, auditable per-task and per-Work-Cycle override request defined in FR45.
 
-FR26: Classify Booqable changes as safely mapped relevant, relevant but unsafe to map, or irrelevant. Use targeted invalidation only under a complete approved stable Setup Category mapping version; otherwise advance broad `review_updated_configuration`. Compare against last physically attested intent and converge repeated unresolved changes to latest intent without duplicate cycles or resets.
+FR26: Classify Booqable changes as relevant or irrelevant and use broad `review_updated_configuration` as the initial relevant-change mode. Epic 6 may introduce safely mapped targeted invalidation only under a complete stable Setup Category mapping version. Compare against last physically attested intent and converge repeated unresolved changes to latest intent without duplicate cycles or resets.
 
 FR27: Before first claim, refresh changed Booqable details silently without persistent change alerts.
 
@@ -159,8 +159,8 @@ NFR8: V1 is online-only and need not recover unsaved data after browser/session 
 - AR21: Consequential transitions must perform a just-in-time canonical refresh, require an exact current database-signed freshness proof plus displayed workflow revision, then re-read local pending evidence under lock. Ordinary Item/Notes/attention/modification saves remain local-only.
 - AR22: Implement a durable integration inbox, coalesced refresh intents, attempt/receipt/JIT generations, leases, bounded backoff/retry budgets, exhausted/quarantined states, operator successor retry, reconciliation runs/checkpoints, freshness/coverage watermarks, and deduplicated integration incidents.
 - AR23: Protect one bounded Node.js worker route with `Authorization: Bearer ${CRON_SECRET}`. Vercel Cron starts low-latency intents and nightly sweep work; worker batches must stop within a measured deployment budget and remain recoverable after interruption or overlap.
-- AR24: Use a business-approved, versioned ProductGroup UUID allowlist; labels are display-only. Unmapped trackable groups fail closed with an incident and create no Workshop task.
-- AR25: Keep targeted Setup Category invalidation disabled until all five active categories have stable approved identifiers and fixture-backed null/unknown/changed/removed normalization. Broadly invalidate `review_updated_configuration` for relevant changes until that complete mapping is approved.
+- AR24: Classify bike category from exactly one controlled ProductGroup `tag_list` value: `workshop-road-bike`, `workshop-e-road-bike`, `workshop-e-city-bike`, `workshop-gravel-bike`, `workshop-mtb-bike`, or `workshop-e-mtb-bike`. Require corresponding `workshop-*-bike-bundle` agreement, persist admitted Product/ProductGroup/Bundle tags, exclude untagged entities, and fail closed with an incident for unknown, multiple, conflicting, or bundle-disagreeing Workshop tags. Labels are display-only and tag values never replace exact StockItem identity.
+- AR25: Use broad `review_updated_configuration` as the initial relevant-change mode and keep accessory tags uninterpreted until Epic 6. Targeted Setup Category invalidation remains disabled until all five active Setup Categories have stable source identifiers and fixture-backed null/unknown/changed/removed normalization.
 - AR26: Derive per-bike reserved/started/stopped phase only from exact Planning/StockItem context after target-account fixtures cover reserved, partial/full start, partial/full stop, cancellation, removal, and re-add. Keep phase unknown and disable automatic Return where proof is incomplete.
 - AR27: Preserve shared brownfield authority/provenance through a migration-owned field manifest. Keep local and Booqable customers distinct, do not auto-merge PII, retain existing partner scoping, and defer automated archived-customer anonymization until policy approval.
 - AR28: Version the Workshop event catalogue and task-context contract with generated/fixture-checked producer and consumer representations, stable unknown-event fallback, additive compatibility, and explicit deprecation rules.
@@ -306,7 +306,7 @@ Application operators have one contained, versioned, recoverable source pipeline
 
 **FRs covered:** FR47; NFR3 foundation
 
-**Implementation notes:** Use active templates from Epic 1. Deliver security/runtime containment, source envelopes and configuration contracts, canonical projection, atomic source application, durable recovery, privileges, and rollout controls before task derivation begins.
+**Implementation notes:** Use active templates from Epic 1. Deliver security/runtime containment, source envelopes and the source-tag contract, canonical projection including Product/ProductGroup/Bundle tag lists, atomic source application, durable recovery, source-data seeding/validation, privileges, and rollout controls before task derivation begins.
 
 ### Epic 3: Exact Per-Bike Membership and Bike Task Creation
 Workshop staff receive correctly identified task records, immutable snapshots, lifecycle initialization, and safe source-lifecycle behavior.
@@ -334,7 +334,7 @@ Mechanics can absorb Booqable changes through targeted or broad reopening while 
 
 **FRs covered:** FR26, FR27, FR28, FR29, FR30, FR31, FR32, FR33
 
-**Implementation notes:** Extend Epic 5 with source-generation comparison, approved Setup mapping or broad review, convergent invalidation, Work Cycle rules, persistent change notices, previous/current context, and server-confirmed self-clearing emphasis.
+**Implementation notes:** Extend Epic 5 with source-generation comparison, broad review as the initial mode, optional fixture-proven accessory-tag/source mapping for targeted invalidation, convergent invalidation, Work Cycle rules, persistent change notices, previous/current context, and server-confirmed self-clearing emphasis.
 
 ### Epic 7: Manager Exception Control and Trustworthy Audit
 Managers can resolve attention, assign or reset exceptional work, force-close abandoned work, approve two-person overrides, and inspect durable attribution without blocking ordinary mechanic completion.
@@ -760,30 +760,7 @@ So that source uncertainty cannot become inconsistent canonical state.
 **Then** missing regeneration, incompatible vocabulary, or unversioned breaking change fails the check
 **And** additive/deprecation rules remain explicit.
 
-### Story 2.5: Approve Bike Classification and Setup Mapping Configuration
-
-As an Admin,
-I want bike classification and Setup mapping configuration explicitly approved and versioned,
-So that Workshop never derives bikes or targets changed work from labels or incomplete mappings.
-
-**Acceptance Criteria:**
-
-**Given** bike ProductGroups require classification
-**When** configuration is prepared
-**Then** a versioned business-approved allowlist stores actual ProductGroup UUIDs with provenance
-**And** labels and analyst-candidate names remain display-only and cannot create tasks.
-
-**Given** Setup Category mapping is not fully proven
-**When** the active configuration contract is selected
-**Then** broad `review_updated_configuration` mode is the explicit safe default and targeted mode remains disabled
-**And** targeted mode cannot activate until all five categories have stable approved identifiers and complete null/unknown/changed/removed fixtures.
-
-**Given** an Admin approves, rolls back, or supersedes classification or mapping configuration
-**When** the capability commits
-**Then** configuration revision, approver, time, provenance, mode, and prior version are recorded atomically
-**And** drift checks fail closed when the approved identifiers or fixtures no longer match the editable source and generated representations.
-
-### Story 2.6: Expand the Canonical Booqable Projection
+### Story 2.5: Expand the Canonical Booqable Projection
 
 As a Workshop operator,
 I want the minimum source-backed bike and rental graph stored locally,
@@ -793,8 +770,13 @@ So that Workshop work uses exact identities without creating a second order syst
 
 **Given** the shared projection already contains customers, orders, and order items
 **When** the expand migration runs
-**Then** it additively admits only approved ProductGroups/Products, required Bundles/BundleItems, Plannings, StockItemPlannings, physical StockItems, immutable order-bike membership roots, source-version state, and provenance
+**Then** it additively admits only tagged ProductGroups/Products, matching tagged Bundles/BundleItems, Plannings, StockItemPlannings, physical StockItems, immutable order-bike membership roots, source-version state, and provenance
 **And** existing bookings, order, customer, partner, and reporting readers remain compatible.
+
+**Given** Product, ProductGroup, and Bundle source resources are admitted
+**When** their canonical projection is applied
+**Then** each resource's complete `tag_list` is persisted as one-way read-only Booqable source data
+**And** tag values do not replace opaque resource IDs, exact StockItem identity, or the source envelope's version/fingerprint authority.
 
 **Given** a projected field is introduced
 **When** authority is declared
@@ -806,7 +788,7 @@ So that Workshop work uses exact identities without creating a second order syst
 **Then** opaque external IDs, UTC source/ingestion times, restrictive foreign keys, provenance, and open/closed state are preserved
 **And** referenced source/history rows cannot cascade-delete.
 
-### Story 2.7: Preserve Brownfield Projection Consumers
+### Story 2.6: Preserve Brownfield Projection Consumers
 
 As the application owner,
 I want existing Booqable consumers preserved through projection expansion,
@@ -824,7 +806,7 @@ So that Workshop source fields can be introduced without regressing shipped feat
 **Then** existing behavior remains unchanged
 **And** new Workshop fields remain read-only outside the ingestion authority.
 
-### Story 2.8: Persist and Recover Authoritative Refresh Work
+### Story 2.7: Persist and Recover Authoritative Refresh Work
 
 As a Workshop operator,
 I want webhook and reconciliation work durably tracked and retryable,
@@ -852,7 +834,7 @@ So that missed or failed signals do not require manual source-table repair.
 **Then** each code versions producer, severity, deduplication scope, retryability, activation effect, resolution, acknowledgement, and retry-budget consequence
 **And** free-form codes are prohibited and an unknown newer code fails closed without unsafe activation or silent disappearance.
 
-### Story 2.9: Run Bounded Workers and Reconciliation Sweeps
+### Story 2.8: Run Bounded Workers and Reconciliation Sweeps
 
 As a Workshop operator,
 I want due refresh work processed in bounded recoverable batches,
@@ -875,7 +857,7 @@ So that transient failures and missed signals converge without exceeding deploym
 **Then** stable sort/cursor/tie-breaker, overlap/restart rules, and two-sweep completion prevent replay damage
 **And** generic absence never deletes projected state.
 
-### Story 2.10: Apply Canonical Source State Atomically
+### Story 2.9: Apply Canonical Source State Atomically
 
 As a Workshop operator,
 I want each refreshed Booqable graph applied atomically and idempotently,
@@ -907,6 +889,44 @@ So that partial, stale, or conflicting source data cannot corrupt Workshop intak
 **When** its producer profile and source authority validate
 **Then** only the documented resource/domain consequence may close
 **And** independent child versions do not assume a parent timestamp advanced.
+
+### Story 2.10: Seed and Validate Workshop Source Data
+
+As a Workshop operator,
+I want the Booqable source tagged and validated before task derivation activates,
+So that Workshop creates work only from the controlled six-category contract.
+
+**Acceptance Criteria:**
+
+**Given** the six supported bike categories are prepared in Booqable
+**When** source-data seeding and validation run
+**Then** ProductGroups use exactly one of `workshop-road-bike`, `workshop-e-road-bike`, `workshop-e-city-bike`, `workshop-gravel-bike`, `workshop-mtb-bike`, or `workshop-e-mtb-bike`
+**And** the corresponding Bundle uses the matching `workshop-*-bike-bundle` tag.
+
+**Given** Products inherit ProductGroup tags and Bundles contain bike ProductGroups
+**When** canonical fixtures and seeded data are inspected
+**Then** Product, ProductGroup, and Bundle tag lists are all persisted as source facts
+**And** each Bundle tag agrees with exactly one contained bike ProductGroup category.
+
+**Given** a source entity is untagged
+**When** Workshop admission is evaluated
+**Then** no Workshop membership or task derives
+**And** ordinary non-Workshop tags remain persisted without being treated as category.
+
+**Given** a source entity carries an unknown, multiple, or conflicting Workshop tag, or a Bundle disagrees with its contained bike ProductGroup
+**When** validation or later admission runs
+**Then** the source graph fails closed with a catalogue-defined deduplicated Integration Incident and no Workshop membership/task
+**And** labels, titles, array position, quantity, or local Admin configuration cannot override the result.
+
+**Given** accessory tags exist or are introduced
+**When** Epic 2 validation completes
+**Then** they are retained as uninterpreted source facts and do not target checklist Items
+**And** accessory interpretation remains deferred to Epic 6 while broad `review_updated_configuration` stays the initial relevant-change mode.
+
+**Given** local contract, adapter, and database fixtures run
+**When** all six ProductGroup tags, all six Bundle tags, Product inheritance, bundle agreement, untagged exclusion, and fail-closed branches are exercised
+**Then** TypeScript and PostgreSQL representations agree and repeat validation is idempotent
+**And** no remote database is modified.
 
 ### Story 2.11: Issue Exact JIT Freshness Proofs
 
@@ -1036,10 +1056,20 @@ So that quantity and ordering can never fabricate or transfer bike identity.
 **Then** every affected graph quarantines under StockItem-keyed locking with one blocking incident
 **And** terminal task state does not waive an unresolved source rental overlap.
 
-**Given** a newly observed trackable ProductGroup is outside the approved allowlist
-**When** classification runs
-**Then** an incident is created and no membership derives
-**And** display labels cannot override the decision.
+**Given** an accepted source graph contains a bike ProductGroup
+**When** membership admission evaluates its persisted `tag_list`
+**Then** exactly one controlled ProductGroup bike tag determines the six-category checklist key while exact StockItem identity determines the physical membership
+**And** display labels, titles, quantity, or local configuration cannot override either decision.
+
+**Given** a ProductGroup is untagged
+**When** admission runs
+**Then** no Workshop membership or task derives
+**And** the source resource remains available as an ordinary persisted Booqable fact.
+
+**Given** a ProductGroup or Bundle has an unknown, multiple, conflicting, or disagreeing Workshop tag
+**When** admission runs
+**Then** a catalogue-defined deduplicated Integration Incident is created and no membership derives
+**And** retry after corrected authoritative source data converges without fabricating prior work.
 
 ### Story 3.2: Initialize Bike Tasks, Work Cycles, and Prep Snapshots
 
@@ -1683,26 +1713,31 @@ So that fetched but unverified values never become the reopening baseline.
 **Then** the mutation is denied without altering attested intent
 **And** local fixtures prove immutability, rollback, and deterministic baseline selection.
 
-### Story 6.2: Govern Safe Mapping and Change Classification
+### Story 6.2: Interpret Accessory Tags for Safe Change Targeting
 
-As an Admin,
-I want targeted change mapping enabled only from complete approved evidence,
-So that uncertain configuration changes fall back to safe broad review.
+As a Workshop operator,
+I want accessory and configuration source facts interpreted only from complete evidence,
+So that broad review remains safe until targeted invalidation is trustworthy.
 
 **Acceptance Criteria:**
 
-**Given** all five active Setup Categories have stable approved identifiers and complete fixtures
-**When** an Admin activates a versioned mapping configuration
-**Then** the capability validates null, unknown, changed, removed, and selective Item-impact behavior before targeted mode becomes active
-**And** actor, approval provenance, version, time, and resulting configuration revision are recorded.
+**Given** Epic 2 has persisted Product, ProductGroup, and Bundle tag lists without interpreting accessory tags
+**When** configuration-change handling first activates
+**Then** relevant changes advance broad `review_updated_configuration`
+**And** no Admin classification screen, local ProductGroup allowlist, label match, or partial accessory-tag map may target Items.
 
-**Given** mapping proof is incomplete, stale, or invalidated
+**Given** every active Setup Category has a stable source field, relation, or accessory-tag identifier and complete fixtures
+**When** a versioned targeted-mapping contract is proposed
+**Then** null, unknown, changed, removed, cross-bike association, and selective Item-impact behavior are validated before targeted mode can activate
+**And** contract provenance, version, time, source vocabulary, and resulting mode revision are recorded.
+
+**Given** mapping proof is incomplete, stale, conflicting, or invalidated
 **When** configuration comparison runs
 **Then** targeted mode is unavailable and relevant changes advance broad `review_updated_configuration`
-**And** the system never guesses selective Item impact from labels or partial mapping.
+**And** source tags remain persisted without guessing selective Item impact.
 
 **Given** current source intent is compared with the attested baseline
-**When** classification runs
+**When** change classification runs
 **Then** the result is exactly safely mapped relevant, relevant but unsafe to map, or irrelevant using versioned catalogue codes
 **And** prior/current values, known source, affected scope, and mapping version are retained for attributable history.
 
@@ -1714,7 +1749,7 @@ So that uncertain configuration changes fall back to safe broad review.
 **Given** mapping activation or comparison is attempted through direct DML or an unauthorized role
 **When** privileges evaluate
 **Then** the write is denied and no baseline or mapping state changes
-**And** local fixtures prove classification, fallback, convergence, rollback, and version invalidation.
+**And** local fixtures prove source-tag interpretation, broad fallback, convergence, rollback, and version invalidation.
 
 ### Story 6.3: Refresh Source Context Silently Before First Claim
 
@@ -2396,7 +2431,7 @@ So that complete digital Prep, Re-check, exception, and Return workflows are pro
 **And** no order label, quantity, deployment flag, or ambiguous identity can enroll work.
 
 **Given** pilot activation is requested
-**When** proof, cohort, allowlist/mapping choice, caller cutover, DML revocation, incident state, and rollback/repair runbooks are approved
+**When** proof, cohort, seeded six-category source-tag validation, broad initial change mode, caller cutover, DML revocation, incident state, and rollback/repair runbooks are approved
 **Then** the database transitions only the approved cohort to pilot
 **And** derivation, reads, context, JIT, and user mutations admit only enrolled memberships while out-of-cohort access is denied by role fixtures.
 

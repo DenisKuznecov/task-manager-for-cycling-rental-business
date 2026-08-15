@@ -52,6 +52,7 @@ describe("workshop template URL filters", () => {
   it("keeps every supported URL filter value", () => {
     expect(normalizeWorkshopChecklistPhase("prep")).toBe("prep");
     expect(normalizeWorkshopBikeCategory("e-road")).toBe("e-road");
+    expect(normalizeWorkshopBikeCategory("e-mtb")).toBe("e-mtb");
     expect(normalizeWorkshopChecklistStatus("superseded")).toBe("superseded");
   });
 

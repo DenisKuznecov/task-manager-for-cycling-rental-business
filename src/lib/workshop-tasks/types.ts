@@ -1,13 +1,15 @@
 import { z } from "zod";
+import {
+  WORKSHOP_BIKE_CATEGORIES,
+  type WorkshopBikeCategory,
+} from "../booqable/contracts/workshop-tags";
+
+export {
+  WORKSHOP_BIKE_CATEGORIES,
+  type WorkshopBikeCategory,
+} from "../booqable/contracts/workshop-tags";
 
 export const WORKSHOP_CHECKLIST_PHASES = ["prep", "return"] as const;
-export const WORKSHOP_BIKE_CATEGORIES = [
-  "e-city",
-  "e-road",
-  "road",
-  "gravel",
-  "mtb",
-] as const;
 export const WORKSHOP_CHECKLIST_STATUSES = [
   "draft",
   "active",
@@ -25,7 +27,6 @@ export const M2_REQUIRES_M1_MESSAGE = "M2 requires M1";
 export const LABEL_REQUIRED_MESSAGE = "Label is required";
 
 export type WorkshopChecklistPhase = (typeof WORKSHOP_CHECKLIST_PHASES)[number];
-export type WorkshopBikeCategory = (typeof WORKSHOP_BIKE_CATEGORIES)[number];
 export type WorkshopChecklistStatus =
   (typeof WORKSHOP_CHECKLIST_STATUSES)[number];
 export type WorkshopChecklistItemType =
@@ -52,6 +53,7 @@ export const WORKSHOP_BIKE_CATEGORY_LABELS: Record<
   road: "Road",
   gravel: "Gravel",
   mtb: "MTB",
+  "e-mtb": "E-MTB",
 };
 
 export const WORKSHOP_CHECKLIST_STATUS_LABELS: Record<

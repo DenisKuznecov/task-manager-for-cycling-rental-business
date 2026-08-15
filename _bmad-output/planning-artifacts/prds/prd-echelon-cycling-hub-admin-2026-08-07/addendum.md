@@ -21,6 +21,19 @@ This addendum preserves technical-discovery assumptions, decision rationale, and
 - Picked-up/active rental must be distinguishable from reserved and returned; the exact Booqable field/status remains a discovery item.
 - Generic absence from a Booqable response is non-closing in v1, including absence from a transport-complete relationship. Bike removal requires a validated explicit archive/tombstone or another separately fixture-proven explicit removed state returned through the canonical refresh path; absence may update observation metadata or an Integration Incident but must not suspend or terminate workshop history.
 
+### Source classification tags
+
+Booqable `tag_list` is the category authority. The controlled ProductGroup tags are:
+
+1. `workshop-road-bike`
+2. `workshop-e-road-bike`
+3. `workshop-e-city-bike`
+4. `workshop-gravel-bike`
+5. `workshop-mtb-bike`
+6. `workshop-e-mtb-bike`
+
+Bundles use the corresponding `workshop-*-bike-bundle` tag and must agree with the contained bike ProductGroup. Products inherit ProductGroup tags. The canonical projection persists admitted Product, ProductGroup, and Bundle tag lists as read-only source facts. Exactly one controlled ProductGroup bike tag admits Workshop work; untagged entities create no work, while unknown, multiple, or conflicting Workshop tags create a deduplicated Integration Incident and no task. Tag values classify category but never replace exact StockItem identity.
+
 ### Setup Category mapping
 
 The accepted first-release Setup Categories are:
@@ -31,9 +44,9 @@ The accepted first-release Setup Categories are:
 4. Power meter
 5. Computer mount
 
-Category-level selective invalidation may activate for a mapping version only when every active Setup Category has a Booqable source field or related resource identified by a stable, account-approved identifier and covered by redacted fixtures for null, unknown, changed, and removed values. Display labels are not mapping keys.
+The initial behavior for every relevant configuration change is the broad `review_updated_configuration` requirement. Accessory tags are persisted but not interpreted or configured before Epic 6.
 
-Until that complete mapping version is approved, or if any relevant change cannot be mapped safely, the system creates or advances the built-in broad `review_updated_configuration` requirement instead of guessing a target category. Missing stable mapping blocks targeted invalidation, not all Workshop Task execution.
+Epic 6 may activate category-level selective invalidation only when every active Setup Category has a stable source field, related resource, or accessory-tag identifier covered by redacted fixtures for null, unknown, changed, and removed values. Display labels are not mapping keys. Until that complete mapping version is proven, or whenever the proof is stale, the system remains in broad mode instead of guessing a target category. Missing stable mapping blocks targeted invalidation, not source ingestion, bike classification, or Workshop Task execution.
 
 ### Multi-quantity physical-bike identity
 
@@ -125,6 +138,7 @@ Needs Attention must not block mechanical completion. Open flags remain visible 
 - **Claim before bike ID:** Deferred as a possible post-pilot change; first release keeps provisional tasks unclaimable.
 - **Provisional tasks for ambiguous multi-quantity units:** Rejected because no source-backed per-unit identity exists; unknown quantity is represented by a deduplicated Integration Incident.
 - **Retain assignment when the same mechanic appears active after cancellation/removal:** Rejected for v1 because task state and open sessions are not enforceable presence proof.
+- **Local ProductGroup UUID allowlist and Workshop classification screen:** Withdrawn because Booqable `tag_list` is the authoritative category contract; a second approval surface would create drift without classifying live source data.
 - **Label-based Setup Category targeting:** Rejected; targeted invalidation requires stable approved identifiers and fixture-backed normalization, otherwise broad configuration review applies.
 - **Attention blocking Done:** Rejected; attention remains orthogonal to completion.
 - **Resuming a Replaced task after re-add:** Rejected; Replaced is terminal and re-add creates a new task.
