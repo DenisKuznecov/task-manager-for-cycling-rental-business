@@ -22,3 +22,9 @@
 ## Deferred from: code review of spec-2-2-upgrade-to-a-supported-application-runtime (2026-08-14)
 
 - Add automated application build verification. The existing staging and production GitHub workflows only run `supabase db push`, so `next build` is not checked in an automated validation path. This pre-dates Story 2.2; its proof records a local build result.
+
+## Deferred from: Story 2.6 spec review (2026-08-15)
+
+- source_spec: spec-2-6-preserve-brownfield-projection-consumers.md
+  summary: On the first story that implements canonical Booqable fetch (not today's sync.ts), contract and fixture-prove the nested-order include `customer,coupon,lines.planning.stock_item_plannings.stock_item.barcode` before anyone lists StockItems or StockItemPlannings as a collection.
+  evidence: Den cut this from 2.6 so the story stays a consumer-column freeze. Standalone inventory remains an unverified optimization and must not become the only path. Live sync stays `include=customer,coupon,lines` until that fetch story.

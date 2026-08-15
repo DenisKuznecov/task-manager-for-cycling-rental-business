@@ -160,3 +160,25 @@ export type {
   StockItemPlanningProjection,
   StockItemProjection,
 } from "./canonical-projection";
+
+export {
+  BIKE_FIT_DETAIL_SELECT,
+  BROWNFIELD_CONSUMERS_CONTRACT_VERSION,
+  BROWNFIELD_CONSUMER_FILES,
+  BROWNFIELD_REMOTE_SCHEMA,
+  BROWNFIELD_STAR_SELECT_VIEWS,
+  CUSTOMER_OPTION_SELECT,
+  LIVE_BOOQABLE_ORDER_INCLUDE,
+  LOCAL_CUSTOMER_INSERT_COLUMNS,
+  ORDER_DETAIL_SELECT,
+  PARTNER_DAILY_STATS_COLUMNS,
+  PARTNER_DAILY_STATS_RPC,
+  PARTNER_RECENT_ORDERS_SELECT,
+  PARTNER_REPORT_BOOKINGS_SELECT,
+  LiveBooqableOrderIncludeSchema,
+  LocalCustomerInsertSchema,
+  assertNoBrownfieldConsumerLeaks,
+  findBrownfieldConsumerLeaks,
+  normalizeProjectionList,
+  projectionListFromColumns,
+} from "./brownfield-consumers";
