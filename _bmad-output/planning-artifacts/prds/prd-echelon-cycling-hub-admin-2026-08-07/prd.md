@@ -84,6 +84,7 @@ When a Booqable order becomes reserved, the system must reconcile independently 
 
 **Testable consequences:**
 - Draft, new, or concept orders do not make workshop work actionable.
+- During the one-time initial Booqable import/materialization, an order with Booqable status `canceled`, `stopped`, or `archived` creates no Workshop Tasks when no Workshop Bike Task already exists. This rule does not affect live task lifecycle, cancellation/reactivation, or later Return Check.
 - Repeated reconciliation of the same current order state does not create duplicate Bike Tasks for an exact StockItem or duplicate Integration Incidents for the same unknown shortfall.
 - A multi-bike order creates independently addressable Bike Tasks only for exact StockItem assignments on multi-quantity lines.
 - A reserved quantity-one bike line without an exact StockItem assignment or human-readable `stock_identifier` still creates a Bike Task in Waiting for Bike ID. The task is visible but not claimable until Booqable provides both; the same task then becomes claimable without recreation.
@@ -431,7 +432,7 @@ The first release may require a live network connection and does not promise off
 
 ### Dependencies and assumptions
 
-- Booqable order-update delivery triggers reconciliation of current order state.
+- Booqable order-update delivery triggers synchronous authoritative refetch and application of current order state.
 - Exactly one controlled ProductGroup Workshop bike tag classifies category; corresponding Bundles use the matching `workshop-*-bike-bundle` tag and must agree with their contained bike ProductGroup.
 - Admitted Product, ProductGroup, and Bundle tags are persisted as source facts. Untagged entities create no Workshop work; unknown, multiple, or conflicting Workshop tags fail closed with an Integration Incident.
 - Bundled-order accessory-to-bike association depends on Booqable parent linkage.
@@ -463,8 +464,9 @@ The first release will not:
 - create separate revalidation tasks, statuses, queues, or manager pings;
 - infer flat-order accessory-to-bike associations;
 - require manager approval before ordinary work enters the queue;
-- provide manager dashboards, mechanic performance views, changed-work filters, or broader workshop analytics beyond the Manager Attention List; or
-- allow claiming work before `stock_identifier` arrives, unless later pilot evidence changes that trial rule.
+- provide manager dashboards, mechanic performance views, changed-work filters, or broader workshop analytics beyond the Manager Attention List;
+- allow claiming work before `stock_identifier` arrives, unless later pilot evidence changes that trial rule; or
+- provide an application-managed retry queue, background webhook worker, or missed-webhook reconciliation sweep.
 
 ## 8. First-Release Scope
 
@@ -500,7 +502,7 @@ The following remain valuable but will be reconsidered after the first release i
 ### Primary
 
 - **SM-1 — Paperless preparation completion:** During rollout observation, mechanics can routinely discover, claim, prepare, hand off, independently re-check, resolve, and move to the next Bike Task using a tablet without a manual paper checklist. Validates FR-6 through FR-25.
-- **SM-2 — Predictable Booqable convergence:** Observed Booqable updates produce no duplicate or missing exact-StockItem Bike Tasks; source tags classify all six categories without a second local authority; untagged entities produce no work; ambiguous identity or unknown/multiple/conflicting Workshop tags produce deduplicated Integration Incidents rather than guessed work; the queue reflects current order state; relevant changes open broad review until any complete Epic 6 mapping safely targets affected work; irrelevant changes do not interrupt mechanics; and repeated updates converge to the same correct state. Validates FR-1 through FR-5, FR-26 through FR-33, FR-47, and FR-48.
+- **SM-2 — Predictable Booqable convergence:** Booqable updates successfully received and processed produce no duplicate or missing exact-StockItem Bike Tasks; source tags classify all six categories without a second local authority; untagged entities produce no work; ambiguous identity or unknown/multiple/conflicting Workshop tags produce deduplicated Integration Incidents rather than guessed work; the queue reflects current order state; relevant changes open broad review until any complete Epic 6 mapping safely targets affected work; irrelevant changes do not interrupt mechanics; and repeated updates converge to the same correct state. Validates FR-1 through FR-5, FR-26 through FR-33, FR-47, and FR-48.
 
 ### Secondary
 

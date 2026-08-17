@@ -122,7 +122,7 @@ NFR1: The complete Prep/Re-check flow must be practical without paper on a mount
 
 NFR2: Mechanic workflows must support phones and landscape/portrait tablets; manager workflows must also support desktop.
 
-NFR3: Duplicate, delayed, missed, and out-of-order Booqable signals must converge from the same current source state to the same correct local state without losing or duplicating Bike Tasks.
+NFR3: Duplicate, delayed, and out-of-order Booqable signals that are successfully processed must converge from the same current source state to the same correct local state without losing or duplicating Bike Tasks. Missed or failed delivery has no automatic recovery guarantee in v1.
 
 NFR4: Every save, claim, handoff, and lifecycle transition must distinguish unsaved, pending, failed, and server-confirmed state. Failures must identify the action, retain open-screen input for retry, never appear successful, and exclude unconfirmed outcomes from transitions.
 
@@ -157,8 +157,8 @@ NFR8: V1 is online-only and need not recover unsaved data after browser/session 
 - AR19: All server actions must use `withAuth`, map expected failures to `{ ok: false, error }`/typed result codes, log unexpected failures with context, explicitly revalidate affected paths, and never use service-role access in Workshop routes or user-facing loaders.
 - AR20: All loaders must return data plus `error`; distinguish successful empty/not-found from load failure and surface in-context errors instead of rendering empty success.
 - AR21: Consequential transitions must perform a just-in-time canonical refresh, require an exact current database-signed freshness proof plus displayed workflow revision, then re-read local pending evidence under lock. Ordinary Item/Notes/attention/modification saves remain local-only.
-- AR22: Implement a durable integration inbox, coalesced refresh intents, attempt/receipt/JIT generations, leases, bounded backoff/retry budgets, exhausted/quarantined states, operator successor retry, reconciliation runs/checkpoints, freshness/coverage watermarks, and deduplicated integration incidents.
-- AR23: Protect one bounded Node.js worker route with `Authorization: Bearer ${CRON_SECRET}`. Vercel Cron starts low-latency intents and nightly sweep work; worker batches must stop within a measured deployment budget and remain recoverable after interruption or overlap.
+- AR22: Use one atomic canonical ingestion path for synchronous webhook and JIT callers. Preserve exact JIT freshness proofs and deduplicated integration incidents.
+- AR23: Do not introduce a durable replay inbox, application-managed retry worker, Cron dispatcher, reconciliation run, checkpoint, or coverage watermark in v1.
 - AR24: Classify bike category from exactly one controlled ProductGroup `tag_list` value: `workshop-road-bike`, `workshop-e-road-bike`, `workshop-e-city-bike`, `workshop-gravel-bike`, `workshop-mtb-bike`, or `workshop-e-mtb-bike`. Require corresponding `workshop-*-bike-bundle` agreement, persist admitted Product/ProductGroup/Bundle tags, exclude untagged entities, and fail closed with an incident for unknown, multiple, conflicting, or bundle-disagreeing Workshop tags. Labels are display-only and tag values never replace exact StockItem identity.
 - AR25: Use broad `review_updated_configuration` as the initial relevant-change mode and keep accessory tags uninterpreted until Epic 6. Targeted Setup Category invalidation remains disabled until all five active Setup Categories have stable source identifiers and fixture-backed null/unknown/changed/removed normalization.
 - AR26: Derive per-bike reserved/started/stopped phase only from exact Planning/StockItem context after target-account fixtures cover reserved, partial/full start, partial/full stop, cancellation, removal, and re-add. Keep phase unknown and disable automatic Return where proof is incomplete.
@@ -169,9 +169,9 @@ NFR8: V1 is online-only and need not recover unsaved data after browser/session 
 - AR31: Correct false irreversible derivation through an admin-only immutable correction-successor capability; never edit the false terminal row or permit branching successors. Integration, API, service-role, mechanic, or manager roles cannot execute it.
 - AR32: Before foundation expansion, stop logging supplied webhook secrets, remove or strongly authenticate and least-privilege the service-role sandbox sync route, apply Supabase SSR refresh cache-prevention headers, and verify no preview/branch deployment receives Booqable, service-role, or Cron credentials.
 - AR33: Upgrade Next.js from unsupported 14 through a tested supported-LTS compatibility path, verify React/Subframe/editor/PDF/email/auth/routes, pin Node 24.x and one locally tested stable Supabase CLI in source and CI, and verify PostgreSQL 17 plus required extension parity.
-- AR34: Add redacted adapter fixtures, pgTAP database tests, and a true multi-session harness covering the complete AD-14 proof floor: identity/cardinality/incarnation, lifecycle/archive/absence, comparators, atomic rollback, revisions, privileges, append-only events, concurrent claims/ingestion, activation-vs-snapshot, and expired-lease completion.
-- AR35: Use only local Supabase migration application/testing during development. Remote DDL is CI-only after merge. Require local reset/tests/lint/types, staging disabled/shadow proof, production disabled proof, two stable sweeps, privilege/freshness evidence, runbooks, explicit pilot approval, separate general activation, and a separate paper-retirement evidence gate.
-- AR36: Keep app structure consistent with the architecture seed: route-local components under `src/app/workshop/_components`, loaders/actions/types under `src/lib/workshop-tasks`, Booqable adapters/contracts/schemas/workers under `src/lib/booqable`, and idempotent SQL/RLS/views/RPCs/tests under `supabase`.
+- AR34: Add redacted adapter fixtures, pgTAP database tests, and a true multi-session harness covering the complete AD-14 proof floor: identity/cardinality/incarnation, lifecycle/archive/absence, comparators, atomic rollback, revisions, privileges, append-only events, concurrent ingestion safety, and activation-vs-snapshot.
+- AR35: Use only local Supabase migration application/testing during development. Remote DDL is CI-only after merge. Require local reset/tests/lint/types, staging disabled/shadow proof, production disabled proof, one operator-triggered pre-pilot validation of the initial Booqable import, privilege/freshness evidence, runbooks, explicit pilot approval, separate general activation, and a separate paper-retirement evidence gate.
+- AR36: Keep app structure consistent with the architecture seed: route-local components under `src/app/workshop/_components`, loaders/actions/types under `src/lib/workshop-tasks`, Booqable adapters/contracts/schemas under `src/lib/booqable`, and idempotent SQL/RLS/views/RPCs/tests under `supabase`.
 - AR37: Use UUID local keys, opaque text external IDs, plural `snake_case` database names with `workshop_`/`booqable_` prefixes, UTC `timestamptz`, explicit source versus ingestion times, stable queue tie-breakers, and restrictive cardinality/uniqueness constraints.
 - AR38: Preserve activation and repair evidence in a durable environment-proof manifest binding commit, migrations, contract versions, privileges, config, rollout epoch/cohort, boundary manifest, test results, incidents, exceptions, and approvers; invalidate proof whenever a bound fact changes.
 
@@ -301,8 +301,8 @@ Managers can create and govern active, versioned Prep and Return checklists for 
 
 **Implementation notes:** Deliver the independently usable Checklist Template Library and Detail/Editor, immutable activation rules, M2-implies-M1 validation, non-blocking Setup Category coverage, full manager UX states, and the underlying capability/RLS/event foundations required by this domain.
 
-### Epic 2: Secure and Recoverable Canonical Booqable Operations
-Application operators have one contained, versioned, recoverable source pipeline that preserves brownfield consumers and cannot be bypassed.
+### Epic 2: Secure and Synchronous Authoritative Booqable Ingestion
+Application operators have one contained, synchronous Booqable ingestion path that applies current authoritative source data, preserves brownfield consumers, and cannot be bypassed.
 
 **FRs covered:** FR47; NFR3 foundation
 
@@ -659,9 +659,9 @@ So that I can restore a prior standard without rewriting workshop history.
 **When** success, concurrent activation, stale status, unauthorized access, immutable-definition writes, and rollback cases run
 **Then** active uniqueness, historical preservation, event attribution, and future-snapshot-only behavior are proven.
 
-## Epic 2: Secure and Recoverable Canonical Booqable Operations
+## Epic 2: Secure and Synchronous Authoritative Booqable Ingestion
 
-Application operators have one contained, versioned, recoverable source pipeline that preserves brownfield consumers and cannot be bypassed.
+Application operators have one contained, synchronous Booqable ingestion path that applies current authoritative source data, preserves brownfield consumers, and cannot be bypassed.
 
 ### Story 2.1: Contain Existing Integration Security Risks
 
@@ -806,57 +806,6 @@ So that Workshop source fields can be introduced without regressing shipped feat
 **Then** existing behavior remains unchanged
 **And** new Workshop fields remain read-only outside the ingestion authority.
 
-### Story 2.7: Persist and Recover Authoritative Refresh Work
-
-As a Workshop operator,
-I want webhook and reconciliation work durably tracked and retryable,
-So that missed or failed signals do not require manual source-table repair.
-
-**Acceptance Criteria:**
-
-**Given** an authenticated webhook signal arrives
-**When** it is accepted
-**Then** a minimal receipt is inserted idempotently before external fetch work and correlated to one pending refresh intent
-**And** raw payload PII is not retained as replay truth.
-
-**Given** duplicate receipts or repeated repair requests target the same source root
-**When** intents are correlated
-**Then** receipt generation advances monotonically while work coalesces safely
-**And** no receipt is mistaken for current Booqable state.
-
-**Given** a bounded worker claims due work
-**When** it obtains a lease
-**Then** claimable/leased/succeeded/exhausted/quarantined/rejected-terminal state, lease expiry/generation, attempt count, and redacted last error update through compare-and-set
-**And** an expired or superseded worker cannot complete domain mutation.
-
-**Given** refresh results or integration incidents cross producer and operator boundaries
-**When** their repository-owned transition catalogue is defined
-**Then** each code versions producer, severity, deduplication scope, retryability, activation effect, resolution, acknowledgement, and retry-budget consequence
-**And** free-form codes are prohibited and an unknown newer code fails closed without unsafe activation or silent disappearance.
-
-### Story 2.8: Run Bounded Workers and Reconciliation Sweeps
-
-As a Workshop operator,
-I want due refresh work processed in bounded recoverable batches,
-So that transient failures and missed signals converge without exceeding deployment limits.
-
-**Acceptance Criteria:**
-
-**Given** the protected worker route is invoked
-**When** `Authorization: Bearer ${CRON_SECRET}` is missing or invalid
-**Then** it rejects without claiming work or disclosing the secret
-**And** valid Cron invocation still relies on database leases for overlap safety.
-
-**Given** 429, transient 5xx, timeout, terminal validation, or quarantine occurs
-**When** the result catalogue is applied
-**Then** bounded backoff, retry-budget consumption, successor behavior, incident creation, and operator retry authorization follow the versioned transition rule
-**And** exhausted work remains visible rather than silently disappearing.
-
-**Given** nightly reconciliation is interrupted or repeated
-**When** it resumes from durable checkpoints
-**Then** stable sort/cursor/tie-breaker, overlap/restart rules, and two-sweep completion prevent replay damage
-**And** generic absence never deletes projected state.
-
 ### Story 2.9: Apply Canonical Source State Atomically
 
 As a Workshop operator,
@@ -923,6 +872,16 @@ So that Workshop creates work only from the controlled six-category contract.
 **Then** they are retained as uninterpreted source facts and do not target checklist Items
 **And** accessory interpretation remains deferred to Epic 6 while broad `review_updated_configuration` stays the initial relevant-change mode.
 
+**Given** the one-time initial Booqable import completes before pilot activation
+**When** an operator triggers initial-source seed validation
+**Then** during initial materialization only, no Workshop Bike Task is created for a Booqable order whose exact order status is `canceled`, `stopped`, or `archived` when no Workshop Bike Task already exists
+**And** applicable Workshop Tasks are created for orders outside those exact statuses, while any existing Workshop Bike Task retains its normal lifecycle, cancellation/reactivation behavior, and Return Check.
+
+**Given** the one operator-triggered pre-pilot source validation runs
+**When** initial materialization and task derivation are evaluated
+**Then** source materialization and task derivation are stable with zero catalogue-defined blocking incidents
+**And** this rollout validation is not a scheduled, durable, or recovery mechanism.
+
 **Given** local contract, adapter, and database fixtures run
 **When** all six ProductGroup tags, all six Bundle tags, Product inheritance, bundle agreement, untagged exclusion, and fail-closed branches are exercised
 **Then** TypeScript and PostgreSQL representations agree and repeat validation is idempotent
@@ -945,15 +904,15 @@ So that stale or superseded refresh attempts cannot authorize domain transitions
 **When** every comparator, omission, archive, rollback, no-op, and generation-fence branch executes
 **Then** result vocabulary, atomicity, idempotency, and source precedence are proven.
 
-### Story 2.12: Cut Over Every Booqable Writer and Recovery Caller
+### Story 2.12: Cut Over Every Booqable Writer
 
 As the application owner,
 I want all existing Booqable paths to use one canonical coordinator,
-So that no competing writer can bypass convergence and recovery rules.
+So that no competing writer can bypass canonical convergence.
 
 **Acceptance Criteria:**
 
-**Given** webhook, existing sync, backfill/recovery, reconciliation, and future JIT callers are registered
+**Given** synchronous webhook, existing sync/backfill where still required, and future consequential JIT callers are registered
 **When** cutover occurs
 **Then** each caller fetches through the canonical adapter and submits only versioned envelopes to the coordinator
 **And** no caller performs direct multi-request projection writes.
@@ -967,19 +926,19 @@ So that no competing writer can bypass convergence and recovery rules.
 
 As the application owner,
 I want legacy direct-write paths removed after caller cutover,
-So that canonical convergence cannot be bypassed by application or recovery code.
+So that canonical convergence cannot be bypassed by application code.
 
 **Acceptance Criteria:**
 
 **Given** every registered caller has passed shadow comparison
 **When** the contract migration runs
-**Then** legacy direct DML grants and obsolete recovery entry points are revoked or removed
+**Then** legacy direct DML grants are revoked or removed
 **And** API roles including service role cannot write authoritative source or event tables directly.
 
 **Given** an unregistered or legacy caller attempts a write after contract
 **When** database privileges are enforced
 **Then** it fails without partial mutation
-**And** operator guidance points to canonical retry/reconciliation rather than manual row edits.
+**And** operator guidance does not direct operators to direct table edits or a manual recovery API.
 
 **Given** local role fixtures execute as `anon`, authenticated staff roles, Partner, and service role
 **When** approved and forbidden paths are exercised
@@ -2407,10 +2366,15 @@ So that pilot approval is bound to the exact complete implementation and current
 **Then** migration/configuration/privilege parity, disabled/shadow enforcement, route/action denial, extension/runtime compatibility, and blocking incident state are captured
 **And** feature behavior already proven by originating stories is treated as a signed prerequisite rather than duplicated in this environment gate.
 
-**Given** two complete disabled/shadow reconciliation sweeps finish
-**When** their manifests are compared
-**Then** accepted source, materialization debt, task derivation, current enrolled candidates, and coverage watermarks are stable with zero catalogue-defined blocking incidents
-**And** missing/duplicate tasks, uncertain source coverage, unproved lifecycle fixtures, or unresolved save/transition ambiguity is an automatic no-go.
+**Given** the one-time initial Booqable import completes before pilot activation
+**When** an operator triggers pre-pilot validation
+**Then** during initial materialization only, no Workshop Bike Task is created for a Booqable order whose exact order status is `canceled`, `stopped`, or `archived` when no Workshop Bike Task already exists
+**And** applicable Workshop Tasks are created for orders outside those exact statuses, while any existing Workshop Bike Task retains its normal lifecycle, cancellation/reactivation behavior, and Return Check.
+
+**Given** the one operator-triggered pre-pilot source validation runs
+**When** initial materialization and task derivation are evaluated
+**Then** source materialization and task derivation are stable with zero catalogue-defined blocking incidents
+**And** missing/duplicate tasks, uncertain source coverage, unproved lifecycle fixtures, or unresolved save/transition ambiguity is an automatic no-go; this rollout validation is non-recovery and is not a scheduled, durable, API recovery, or retry mechanism.
 
 **Given** rollback and repair readiness is reviewed
 **When** the environment-proof manifest is signed
