@@ -45,6 +45,8 @@ context:
 - `supabase/migrations/20260815140000_persist_authoritative_refresh_work.sql` -- remove before the local database reset; no remote compensating DDL.
 - `tests/booqable-contracts/refresh-work.test.ts`, `tests/booqable-containment/webhook.test.ts`, and `supabase/tests/database/booqable-integration/004_refresh_work.pgtap.sql` -- remove focused recovery coverage and restore webhook assertions to synchronous behavior.
 - `package.json` -- remove the deleted refresh-work contract test from `contracts:check`.
+- `_bmad-output/implementation-artifacts/epic-2-context.md`, `_bmad-output/implementation-artifacts/sprint-status.yaml`, and `_bmad-output/project-context.md` -- likely forward-revert conflict surfaces; retain the committed `c5b10c8` planning reconciliation, including its v1 no-recovery model and removed 2.7/2.8 status entries.
+- `src/app/api/sandbox/booqable/sync-orders/route.ts` -- retained legacy exception: secret-protected and preview-denied, refetching through the synchronous sync path; do not change it in this rollback.
 - `_bmad-output/implementation-artifacts/spec-2-7-persist-and-recover-authoritative-refresh-work.md` and `_bmad-output/implementation-artifacts/spec-2-8-run-bounded-workers-and-reconciliation-sweeps.md` -- the only obsolete active Story 2.7/2.8 specs to delete.
 - `_bmad-output/party-mode/memories/installed/.memlog.md` -- explicit read-only protected local change; never stage, delete, or alter.
 - `c5b10c8cbbb463145d3d4cb1dd07701cb1da6378` -- committed planning reconciliation; preserve its PRD, epics, architecture, Epic 2 context, sprint-status, proposal, and project-context results.
