@@ -2,7 +2,8 @@
 title: 'Remove local webhook recovery infrastructure'
 type: 'chore'
 created: '2026-08-17'
-status: 'draft'
+status: 'done'
+baseline_commit: 'ad723f8ef0feda550492667b7c305ff0ea5b874a'
 review_loop_iteration: 0
 context:
   - '{project-root}/_bmad-output/project-context.md'
@@ -54,11 +55,11 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] Working tree / Git history -- use forward `git revert --no-commit` operations for `4988674` followed by `36cffdc`, resolving only rollback conflicts while retaining the protected `.memlog.md` and `c5b10c8` planning state -- removes local-only Story 2.7 without history rewrite or a new commit.
-- [ ] `src/app/api/webhooks/booqable/route.ts`, `src/lib/booqable/contracts/refresh-work.ts`, `src/lib/booqable/contracts/index.ts`, `package.json`, focused test files, and `supabase/migrations/20260815140000_persist_authoritative_refresh_work.sql` -- accept the two inverses as the contained code/schema rollback -- returns v1 to synchronous authoritative refetch without application-managed recovery infrastructure.
-- [ ] `_bmad-output/implementation-artifacts/spec-2-7-persist-and-recover-authoritative-refresh-work.md` and `_bmad-output/implementation-artifacts/spec-2-8-run-bounded-workers-and-reconciliation-sweeps.md` -- remove exactly these obsolete Story 2.7/2.8 active specs -- aligns active implementation artifacts with the approved proposal.
-- [ ] Local Supabase stack -- run a local-only database reset after migration removal -- makes the local schema match the retained migration history.
-- [ ] Verification commands -- execute the six approved checks and capture their outcomes -- proves typing, linting, contracts, unit coverage, database tests, and local type generation remain healthy.
+- [x] Working tree / Git history -- use forward `git revert --no-commit` operations for `4988674` followed by `36cffdc`, resolving only rollback conflicts while retaining the protected `.memlog.md` and `c5b10c8` planning state -- removes local-only Story 2.7 without history rewrite or a new commit.
+- [x] `src/app/api/webhooks/booqable/route.ts`, `src/lib/booqable/contracts/refresh-work.ts`, `src/lib/booqable/contracts/index.ts`, `package.json`, focused test files, and `supabase/migrations/20260815140000_persist_authoritative_refresh_work.sql` -- accept the two inverses as the contained code/schema rollback -- returns v1 to synchronous authoritative refetch without application-managed recovery infrastructure.
+- [x] `_bmad-output/implementation-artifacts/spec-2-7-persist-and-recover-authoritative-refresh-work.md` and `_bmad-output/implementation-artifacts/spec-2-8-run-bounded-workers-and-reconciliation-sweeps.md` -- remove exactly these obsolete Story 2.7/2.8 active specs -- aligns active implementation artifacts with the approved proposal.
+- [x] Local Supabase stack -- run a local-only database reset after migration removal -- makes the local schema match the retained migration history.
+- [x] Verification commands -- execute the six approved checks and capture their outcomes -- proves typing, linting, contracts, unit coverage, database tests, and local type generation remain healthy.
 
 **Acceptance Criteria:**
 - Given the current feature branch contains `c5b10c8` and the two Story 2.7 commits, when the rollback completes, then `4988674` and `36cffdc` are reversed as uncommitted forward history and no new commit exists.
@@ -81,3 +82,21 @@ The reverse order matters because `4988674` narrows and hardens infrastructure f
 - `npm run test:unit` -- expected: Vitest suite exits successfully.
 - `npx supabase test db` -- expected: pgTAP database suite exits successfully.
 - `npm run db:types` -- expected: local generated type command exits successfully.
+
+## Suggested Review Order
+
+**Synchronous webhook baseline**
+
+- Restores direct authoritative refetch after authentication and ghost-order filtering.
+  [`route.ts:14`](../../src/app/api/webhooks/booqable/route.ts#L14)
+
+- Confirms direct sync failures retain Booqable's retryable 500 response.
+  [`webhook.test.ts:127`](../../tests/booqable-containment/webhook.test.ts#L127)
+
+**Recovery infrastructure removal**
+
+- Removes the refresh-work public contract from the Booqable contracts barrel.
+  [`index.ts:1`](../../src/lib/booqable/contracts/index.ts#L1)
+
+- Stops the contract suite from invoking removed refresh-work coverage.
+  [`package.json:15`](../../package.json#L15)

@@ -1,9 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
-const { createClient, syncBooqableOrder, rpc } = vi.hoisted(() => ({
+const { createClient, syncBooqableOrder } = vi.hoisted(() => ({
   createClient: vi.fn(),
   syncBooqableOrder: vi.fn(),
-  rpc: vi.fn(),
 }));
 
 vi.mock("@supabase/supabase-js", () => ({ createClient }));
@@ -42,10 +41,8 @@ describe("POST /api/webhooks/booqable", () => {
     vi.stubEnv("BOOQABLE_API_KEY", API_KEY);
     vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", SERVICE_ROLE_KEY);
     vi.stubEnv("NEXT_PUBLIC_SUPABASE_URL", SUPABASE_URL);
-    rpc.mockReset();
-    rpc.mockResolvedValue({ data: { ok: true }, error: null });
     createClient.mockReset();
-    createClient.mockReturnValue({ mocked: true, rpc });
+    createClient.mockReturnValue({ mocked: true });
     syncBooqableOrder.mockReset();
     syncBooqableOrder.mockResolvedValue(undefined);
   });
@@ -68,7 +65,6 @@ describe("POST /api/webhooks/booqable", () => {
     expect(response.status).toBe(401);
     expect(request.bodyUsed).toBe(false);
     expect(createClient).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalled();
     expect(syncBooqableOrder).not.toHaveBeenCalled();
     expectNoSecretsOrPii(loggedText(warnSpy));
   });
@@ -86,7 +82,6 @@ describe("POST /api/webhooks/booqable", () => {
     expect(response.status).toBe(401);
     expect(request.bodyUsed).toBe(false);
     expect(createClient).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalled();
     expect(syncBooqableOrder).not.toHaveBeenCalled();
     expectNoSecretsOrPii(loggedText(warnSpy));
   });
@@ -104,53 +99,11 @@ describe("POST /api/webhooks/booqable", () => {
     expect(await response.json()).toEqual({ received: true });
     expect(createClient).toHaveBeenCalledTimes(1);
     expect(createClient).toHaveBeenCalledWith(SUPABASE_URL, SERVICE_ROLE_KEY);
-    expect(rpc).toHaveBeenCalledTimes(1);
     expect(syncBooqableOrder).toHaveBeenCalledTimes(1);
     expect(syncBooqableOrder).toHaveBeenCalledWith(
-      { mocked: true, rpc },
+      { mocked: true },
       "bq-order-1",
     );
-    expect(rpc.mock.invocationCallOrder[0]).toBeLessThan(
-      syncBooqableOrder.mock.invocationCallOrder[0],
-    );
-    const rpcArgs = rpc.mock.calls[0]?.[1] as Record<string, unknown>;
-    expect(rpc.mock.calls[0]?.[0]).toBe("record_booqable_refresh_work");
-    expect(rpcArgs).toMatchObject({
-      p_provider: "booqable",
-      p_source_kind: "order",
-      p_source_external_id: "bq-order-1",
-      p_delivery_identity_kind: "body_hmac_sha256",
-      p_contract_version: 1,
-    });
-    expect(JSON.stringify(rpcArgs)).not.toContain("rider@example.com");
-    expect(JSON.stringify(rpcArgs)).not.toContain(LIVE_BODY);
-    expect(String(rpcArgs.p_delivery_identity)).toMatch(/^[a-f0-9]{64}$/);
-  });
-
-  it("uses an explicit provider event id as delivery identity", async () => {
-    const { POST } = await import("@/src/app/api/webhooks/booqable/route");
-    const request = new Request(
-      `http://localhost/api/webhooks/booqable?secret=${WEBHOOK_SECRET}`,
-      {
-        method: "POST",
-        body: `${LIVE_BODY}&data[event_id]=evt-77`,
-      },
-    );
-
-    const response = await POST(request);
-
-    expect(response.status).toBe(200);
-    expect(rpc).toHaveBeenCalledTimes(1);
-    const rpcArgs = rpc.mock.calls[0]?.[1] as Record<string, unknown>;
-    expect(rpcArgs).toMatchObject({
-      p_provider: "booqable",
-      p_source_kind: "order",
-      p_source_external_id: "bq-order-1",
-      p_delivery_identity: "evt-77",
-      p_delivery_identity_kind: "provider_event_id",
-      p_contract_version: 1,
-    });
-    expect(JSON.stringify(rpcArgs)).not.toContain("rider@example.com");
   });
 
   it("keeps ghost-order 200 without calling syncBooqableOrder", async () => {
@@ -168,33 +121,7 @@ describe("POST /api/webhooks/booqable", () => {
     expect(response.status).toBe(200);
     expect(await response.json()).toEqual({ received: true, ignored: true });
     expect(createClient).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalled();
     expect(syncBooqableOrder).not.toHaveBeenCalled();
-  });
-
-  it("returns 500 without fetching when refresh-work persistence fails", async () => {
-    const { POST } = await import("@/src/app/api/webhooks/booqable/route");
-    rpc.mockResolvedValue({
-      data: null,
-      error: { message: "persist failed" },
-    });
-    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {});
-    const request = new Request(
-      `http://localhost/api/webhooks/booqable?secret=${WEBHOOK_SECRET}`,
-      { method: "POST", body: LIVE_BODY },
-    );
-
-    const response = await POST(request);
-
-    expect(response.status).toBe(500);
-    expect(await response.json()).toEqual({
-      error: "Failed to process webhook",
-      message: "Failed to persist refresh work",
-    });
-    expect(rpc).toHaveBeenCalledTimes(1);
-    expect(syncBooqableOrder).not.toHaveBeenCalled();
-    expect(errorSpy).toHaveBeenCalled();
-    expectNoSecretsOrPii(loggedText(errorSpy));
   });
 
   it("keeps the 500 retry path when syncBooqableOrder throws", async () => {
@@ -230,7 +157,6 @@ describe("POST /api/webhooks/booqable", () => {
     expect(response.status).toBeGreaterThanOrEqual(400);
     expect(request.bodyUsed).toBe(false);
     expect(createClient).not.toHaveBeenCalled();
-    expect(rpc).not.toHaveBeenCalled();
     expect(syncBooqableOrder).not.toHaveBeenCalled();
     expectNoSecretsOrPii(loggedText(warnSpy));
   });
