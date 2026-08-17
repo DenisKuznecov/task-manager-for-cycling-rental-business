@@ -197,10 +197,29 @@ export function extractPgEnumLabels(
       "i",
     ),
   );
-  if (!match) {
+  const created = match
+    ? [...match[1].matchAll(/'([^']+)'/g)].map((entry) => entry[1])
+    : [];
+  const added = [
+    ...sql.matchAll(
+      new RegExp(
+        `ALTER TYPE\\s+(?:public\\.)?${escaped}\\s+ADD VALUE IF NOT EXISTS\\s+'([^']+)'`,
+        "gi",
+      ),
+    ),
+  ].map((entry) => entry[1]);
+
+  if (created.length === 0 && added.length === 0) {
     return null;
   }
-  return [...match[1].matchAll(/'([^']+)'/g)].map((entry) => entry[1]);
+
+  const labels = [...created];
+  for (const label of added) {
+    if (!labels.includes(label)) {
+      labels.push(label);
+    }
+  }
+  return labels;
 }
 
 function sameStringList(

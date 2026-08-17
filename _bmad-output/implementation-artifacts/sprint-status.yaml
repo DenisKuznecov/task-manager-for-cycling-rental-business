@@ -29,7 +29,7 @@
 # - Dev moves story to 'review', then runs code-review (fresh context, different LLM recommended)
 # - Retrospective appends its action items to action_items; the status view surfaces open ones
 generated: 08-12-2026 15:55
-last_updated: 08-17-2026 16:34
+last_updated: 08-17-2026 18:25
 project: echelon-cycling-hub-admin
 project_key: NOKEY
 tracking_system: file-system
@@ -51,7 +51,7 @@ development_status:
   2-4-define-versioned-source-envelopes-and-result-semantics: done
   2-5-expand-the-canonical-booqable-projection: done
   2-6-preserve-brownfield-projection-consumers: done
-  2-9-apply-canonical-source-state-atomically: backlog
+  2-9-apply-canonical-source-state-atomically: done
   2-10-seed-and-validate-workshop-source-data: backlog
   2-11-issue-exact-jit-freshness-proofs: backlog
   2-12-cut-over-every-booqable-writer: backlog

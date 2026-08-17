@@ -24,6 +24,7 @@ export type {
 } from "./check";
 
 export {
+  CANONICAL_FINGERPRINT_FIELD_BINDINGS,
   CanonicalIdentitySchema,
   DerivedContextRevisionSchema,
   FingerprintInputsSchema,
@@ -47,6 +48,7 @@ export {
   SourceVersionEntrySchema,
 } from "./source-envelope";
 export type {
+  CanonicalFingerprintResourceType,
   CanonicalIdentity,
   DerivedContextRevision,
   FingerprintInputs,
@@ -88,8 +90,14 @@ export {
   BACKFILL_RULES,
   BOOQABLE_SOURCE_TABLES,
   BROWNFIELD_READER_VIEWS,
+  CANONICAL_COORDINATOR_ENUM_MIGRATION,
+  CANONICAL_COORDINATOR_MIGRATION,
   CANONICAL_PROJECTION_CONTRACT_VERSION,
   CANONICAL_PROJECTION_MIGRATION,
+  INTEGRATION_INCIDENT_KINDS,
+  RENTAL_LINE_ATTENTION_CLOSE_REASONS,
+  RENTAL_LINE_ATTENTION_STATUSES,
+  TERMINAL_ORDER_STATUSES,
   ENTITY_ORIGINS,
   FIELD_AUTHORITIES,
   FIELD_AUTHORITY_MANIFEST,
@@ -138,6 +146,9 @@ export {
 export type {
   AdmittedResourceType,
   BackfillRule,
+  IntegrationIncidentKind,
+  RentalLineAttentionCloseReason,
+  RentalLineAttentionStatus,
   BundleItemProjection,
   BundleProjection,
   CanonicalAdmissionResult,
@@ -182,3 +193,10 @@ export {
   normalizeProjectionList,
   projectionListFromColumns,
 } from "./brownfield-consumers";
+
+export {
+  CANONICAL_FINGERPRINT_HASH_VERSION,
+  fingerprintResource,
+  hashFingerprintInputs,
+  pickFingerprintInputs,
+} from "./fingerprints";

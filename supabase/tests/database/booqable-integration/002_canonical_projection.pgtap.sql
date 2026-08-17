@@ -147,7 +147,7 @@ select throws_ok(
 
 select is(
   (select count(*)::integer from public.booqable_field_authority_manifest),
-  163,
+  201,
   'manifest contains one row per projected field'
 );
 

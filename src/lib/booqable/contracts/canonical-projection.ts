@@ -16,6 +16,10 @@ import {
 export const CANONICAL_PROJECTION_CONTRACT_VERSION = 1;
 export const CANONICAL_PROJECTION_MIGRATION =
   "supabase/migrations/20260815000000_expand_canonical_booqable_projection.sql";
+export const CANONICAL_COORDINATOR_ENUM_MIGRATION =
+  "supabase/migrations/20260816595900_add_canonical_coordinator_enum_values.sql";
+export const CANONICAL_COORDINATOR_MIGRATION =
+  "supabase/migrations/20260817000000_apply_canonical_source_state.sql";
 
 export const QUANTITY_ONE_UNIT_DISCRIMINATOR = "single";
 
@@ -47,6 +51,30 @@ export const FORBIDDEN_MEMBERSHIP_IDENTITY_KINDS = [
   "array_position",
 ] as const;
 
+export const INTEGRATION_INCIDENT_KINDS = [
+  "equal_version_conflict",
+  "older_present_state",
+  "incomparable_present_state",
+  "unsupported_schema",
+  "unauthoritative_addition",
+  "omitted_child",
+] as const;
+
+export const RENTAL_LINE_ATTENTION_STATUSES = ["open", "closed"] as const;
+
+export const RENTAL_LINE_ATTENTION_CLOSE_REASONS = [
+  "fully_identified",
+  "order_canceled",
+  "order_stopped",
+  "order_archived",
+] as const;
+
+export const TERMINAL_ORDER_STATUSES = [
+  "canceled",
+  "stopped",
+  "archived",
+] as const;
+
 export const PROJECTION_ROW_ORIGINS = ["local", "booqable"] as const;
 export const SOURCE_LIFECYCLES = ["open", "closed"] as const;
 
@@ -64,6 +92,9 @@ export const ENTITY_ORIGINS = [
   "booqable_stock_item_planning",
   "booqable_order_bike_membership",
   "booqable_membership_predecessor",
+  "booqable_accepted_order_graph",
+  "booqable_integration_incident",
+  "booqable_rental_line_attention",
 ] as const;
 
 export const FIELD_AUTHORITIES = [
@@ -77,6 +108,7 @@ export const FIELD_WRITERS = [
   "legacy_sync",
   "local_customer_capability",
   "none_until_coordinator_cutover",
+  "canonical_coordinator",
 ] as const;
 
 export const BACKFILL_RULES = [
@@ -113,6 +145,9 @@ export const BOOQABLE_SOURCE_TABLES = [
   "booqable_order_bike_memberships",
   "booqable_membership_predecessors",
   "booqable_field_authority_manifest",
+  "booqable_accepted_order_graphs",
+  "booqable_integration_incidents",
+  "booqable_rental_line_attention",
 ] as const;
 
 export const SHARED_PROJECTION_TABLES = [
@@ -188,6 +223,12 @@ export type FieldAuthority = (typeof FIELD_AUTHORITIES)[number];
 export type FieldWriter = (typeof FIELD_WRITERS)[number];
 export type BackfillRule = (typeof BACKFILL_RULES)[number];
 export type FieldDisposition = (typeof FIELD_DISPOSITIONS)[number];
+export type IntegrationIncidentKind =
+  (typeof INTEGRATION_INCIDENT_KINDS)[number];
+export type RentalLineAttentionStatus =
+  (typeof RENTAL_LINE_ATTENTION_STATUSES)[number];
+export type RentalLineAttentionCloseReason =
+  (typeof RENTAL_LINE_ATTENTION_CLOSE_REASONS)[number];
 
 export const ProjectionRowOriginSchema = z.enum(PROJECTION_ROW_ORIGINS);
 export const SourceLifecycleSchema = z.enum(SOURCE_LIFECYCLES);
@@ -578,6 +619,14 @@ const TAG_LIST_FIELD = [
   "tag_list",
   "booqable_source",
   "none_until_coordinator_cutover",
+  "not_applicable_new_table",
+  "project_source",
+] as const satisfies ManifestSeed;
+
+const SOURCE_FINGERPRINT_FIELD = [
+  "source_fingerprint",
+  "booqable_source",
+  "canonical_coordinator",
   "not_applicable_new_table",
   "project_source",
 ] as const satisfies ManifestSeed;
@@ -998,6 +1047,7 @@ const MANIFEST_SEEDS_BY_ORIGIN: Record<
   booqable_product_group: [
     ...NEW_TABLE_IDENTITY_FIELDS,
     TAG_LIST_FIELD,
+    SOURCE_FINGERPRINT_FIELD,
     ...NEW_TABLE_SOURCE_STATE_FIELDS,
   ],
   booqable_product: [
@@ -1005,11 +1055,13 @@ const MANIFEST_SEEDS_BY_ORIGIN: Record<
     ["product_group_external_id", ...OPAQUE_LINK_FIELD],
     ["product_group_id", ...LOCAL_UUID_LINK_FIELD],
     TAG_LIST_FIELD,
+    SOURCE_FINGERPRINT_FIELD,
     ...NEW_TABLE_SOURCE_STATE_FIELDS,
   ],
   booqable_bundle: [
     ...NEW_TABLE_IDENTITY_FIELDS,
     TAG_LIST_FIELD,
+    SOURCE_FINGERPRINT_FIELD,
     ...NEW_TABLE_SOURCE_STATE_FIELDS,
   ],
   booqable_bundle_item: [
@@ -1020,12 +1072,14 @@ const MANIFEST_SEEDS_BY_ORIGIN: Record<
     ["product_id", ...LOCAL_UUID_LINK_FIELD],
     ["product_group_external_id", ...OPAQUE_LINK_FIELD],
     ["product_group_id", ...LOCAL_UUID_LINK_FIELD],
+    SOURCE_FINGERPRINT_FIELD,
     ...NEW_TABLE_SOURCE_STATE_FIELDS,
   ],
   booqable_stock_item: [
     ...NEW_TABLE_IDENTITY_FIELDS,
     ["product_external_id", ...OPAQUE_LINK_FIELD],
     ["product_id", ...LOCAL_UUID_LINK_FIELD],
+    SOURCE_FINGERPRINT_FIELD,
     ...NEW_TABLE_SOURCE_STATE_FIELDS,
   ],
   booqable_planning: [
@@ -1034,6 +1088,7 @@ const MANIFEST_SEEDS_BY_ORIGIN: Record<
     ["order_id", ...LOCAL_UUID_LINK_FIELD],
     ["line_external_id", ...OPAQUE_LINK_FIELD],
     ["order_item_id", ...LOCAL_UUID_LINK_FIELD],
+    SOURCE_FINGERPRINT_FIELD,
     ...NEW_TABLE_SOURCE_STATE_FIELDS,
   ],
   booqable_stock_item_planning: [
@@ -1042,6 +1097,7 @@ const MANIFEST_SEEDS_BY_ORIGIN: Record<
     ["planning_id", ...LOCAL_UUID_LINK_FIELD],
     ["stock_item_external_id", ...OPAQUE_LINK_FIELD],
     ["stock_item_id", ...LOCAL_UUID_LINK_FIELD],
+    SOURCE_FINGERPRINT_FIELD,
     ...NEW_TABLE_SOURCE_STATE_FIELDS,
   ],
   booqable_order_bike_membership: [
@@ -1076,6 +1132,27 @@ const MANIFEST_SEEDS_BY_ORIGIN: Record<
     ["stock_item_planning_id", ...LOCAL_UUID_LINK_FIELD],
     ["stock_item_external_id", ...OPAQUE_LINK_FIELD],
     ["stock_item_id", ...LOCAL_UUID_LINK_FIELD],
+    [
+      "identity_kind",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "line_quantity",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "source_fingerprint",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
     ...NEW_TABLE_SOURCE_STATE_FIELDS,
   ],
   booqable_membership_predecessor: [
@@ -1090,6 +1167,208 @@ const MANIFEST_SEEDS_BY_ORIGIN: Record<
       "predecessor_id",
       "app_owned",
       "none_until_coordinator_cutover",
+      "not_applicable_new_table",
+      "retain",
+    ],
+  ],
+  booqable_accepted_order_graph: [
+    [
+      "order_external_id",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "schema_version",
+      "app_owned",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "producer_version",
+      "app_owned",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "profile_version",
+      "app_owned",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "source_fingerprint",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "source_vector",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "order_status",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "applied_at",
+      "app_owned",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+  ],
+  booqable_integration_incident: [
+    [
+      "id",
+      "app_owned",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "incident_kind",
+      "app_derived",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "root_resource_type",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "root_external_id",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "resource_type",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "resource_external_id",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "source_version",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "field_name",
+      "app_derived",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "status",
+      "app_owned",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "created_at",
+      "app_owned",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "updated_at",
+      "app_owned",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+  ],
+  booqable_rental_line_attention: [
+    [
+      "id",
+      "app_owned",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "order_external_id",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "line_external_id",
+      "booqable_source",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "project_source",
+    ],
+    [
+      "unidentified_count",
+      "app_derived",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "status",
+      "app_owned",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "close_reason",
+      "app_derived",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "opened_at",
+      "app_owned",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "closed_at",
+      "app_owned",
+      "canonical_coordinator",
+      "not_applicable_new_table",
+      "retain",
+    ],
+    [
+      "updated_at",
+      "app_owned",
+      "canonical_coordinator",
       "not_applicable_new_table",
       "retain",
     ],
@@ -1372,9 +1651,9 @@ export function admitCanonicalGraph(input: unknown): CanonicalAdmissionResult {
       const openMemberships = memberships.filter(
         (row) => row.source_lifecycle === "open",
       );
-      if (openMemberships.length !== quantity) {
+      if (openMemberships.length > quantity) {
         issues.push(
-          `multi-quantity line ${lineKey.replaceAll("\0", "/")} requires exactly ${quantity} open memberships`,
+          `multi-quantity line ${lineKey.replaceAll("\0", "/")} has more assignments than quantity ${quantity}`,
         );
       }
       const discriminators = openMemberships.map(

@@ -216,3 +216,22 @@ export type DerivedContextRevision = z.infer<
 >;
 export type SourceEnvelope = z.infer<typeof SourceEnvelopeSchema>;
 export type FingerprintInputs = z.infer<typeof FingerprintInputsSchema>;
+
+/**
+ * Typed bindings for meaningful fingerprint fields. Envelope vocabulary
+ * stays frozen; this only names which source facts may enter
+ * `fingerprint_inputs` after carry-forward.
+ */
+export const CANONICAL_FINGERPRINT_FIELD_BINDINGS = {
+  order: ["status", "starts_at", "stops_at", "customer_external_id"],
+  customer: ["name", "email", "phone", "birthday"],
+  order_item: ["quantity", "title", "line_type", "tag_list"],
+  stock_item: ["product_external_id", "barcode"],
+  membership: ["stock_item_external_id"],
+  product_group: ["tag_list"],
+  product: ["tag_list", "product_group_external_id"],
+  bundle: ["tag_list"],
+} as const;
+
+export type CanonicalFingerprintResourceType =
+  keyof typeof CANONICAL_FINGERPRINT_FIELD_BINDINGS;

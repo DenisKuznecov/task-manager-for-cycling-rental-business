@@ -1,0 +1,137 @@
+{
+  "data": {
+    "id": "ord_canonical_1",
+    "type": "orders",
+    "attributes": {
+      "status": "reserved",
+      "number": "1001",
+      "starts_at": "2026-08-17T08:00:00.000Z",
+      "stops_at": "2026-08-20T18:00:00.000Z",
+      "created_at": "2026-08-16T10:00:00.000Z",
+      "updated_at": "2026-08-17T09:00:00.000Z"
+    },
+    "relationships": {
+      "customer": { "data": { "id": "cus_1", "type": "customers" } },
+      "coupon": { "data": null },
+      "lines": {
+        "data": [
+          { "id": "line_bike", "type": "lines" },
+          { "id": "line_accessory", "type": "lines" }
+        ]
+      }
+    }
+  },
+  "included": [
+    {
+      "id": "cus_1",
+      "type": "customers",
+      "attributes": {
+        "name": "Ada Rider",
+        "email": "ada@example.com",
+        "created_at": "2026-08-01T10:00:00.000Z",
+        "updated_at": "2026-08-16T10:00:00.000Z",
+        "properties": {
+          "phone": "+34600000000",
+          "birthday_date": "1990-04-12"
+        }
+      }
+    },
+    {
+      "id": "line_bike",
+      "type": "lines",
+      "attributes": {
+        "title": "Road bike",
+        "quantity": 1,
+        "line_type": "rental",
+        "created_at": "2026-08-16T10:00:00.000Z",
+        "updated_at": "2026-08-17T09:00:00.000Z",
+        "tag_list": ["workshop-road-bike"]
+      },
+      "relationships": {
+        "planning": { "data": { "id": "plan_1", "type": "plannings" } }
+      }
+    },
+    {
+      "id": "line_accessory",
+      "type": "lines",
+      "attributes": {
+        "title": "Helmet",
+        "quantity": 1,
+        "line_type": "rental",
+        "created_at": "2026-08-16T10:00:00.000Z",
+        "updated_at": "2026-08-17T09:00:00.000Z",
+        "tag_list": ["workshop-helmet", "size-m"]
+      },
+      "relationships": {
+        "planning": { "data": null }
+      }
+    },
+    {
+      "id": "plan_1",
+      "type": "plannings",
+      "attributes": {
+        "created_at": "2026-08-16T10:00:00.000Z",
+        "updated_at": "2026-08-17T09:00:00.000Z"
+      },
+      "relationships": {
+        "order": { "data": { "id": "ord_canonical_1", "type": "orders" } },
+        "line": { "data": { "id": "line_bike", "type": "lines" } },
+        "stock_item_plannings": {
+          "data": [{ "id": "sip_1", "type": "stock_item_plannings" }]
+        }
+      }
+    },
+    {
+      "id": "sip_1",
+      "type": "stock_item_plannings",
+      "attributes": {
+        "created_at": "2026-08-16T10:00:00.000Z",
+        "updated_at": "2026-08-17T09:00:00.000Z"
+      },
+      "relationships": {
+        "planning": { "data": { "id": "plan_1", "type": "plannings" } },
+        "stock_item": { "data": { "id": "si_1", "type": "stock_items" } }
+      }
+    },
+    {
+      "id": "si_1",
+      "type": "stock_items",
+      "attributes": {
+        "created_at": "2026-08-01T10:00:00.000Z",
+        "updated_at": "2026-08-17T09:00:00.000Z"
+      },
+      "relationships": {
+        "product": { "data": { "id": "prod_road", "type": "products" } },
+        "barcode": { "data": { "id": "bc_1", "type": "barcodes" } }
+      }
+    },
+    {
+      "id": "bc_1",
+      "type": "barcodes",
+      "attributes": {
+        "barcode": "ECH-ROAD-001"
+      }
+    },
+    {
+      "id": "pg_road",
+      "type": "product_groups",
+      "attributes": {
+        "tag_list": ["workshop-road-bike", "season-2026"],
+        "created_at": "2026-01-01T00:00:00.000Z",
+        "updated_at": "2026-08-01T00:00:00.000Z"
+      }
+    },
+    {
+      "id": "prod_road",
+      "type": "products",
+      "attributes": {
+        "tag_list": ["workshop-road-bike", "season-2026"],
+        "created_at": "2026-01-01T00:00:00.000Z",
+        "updated_at": "2026-08-01T00:00:00.000Z"
+      },
+      "relationships": {
+        "product_group": { "data": { "id": "pg_road", "type": "product_groups" } }
+      }
+    }
+  ]
+}

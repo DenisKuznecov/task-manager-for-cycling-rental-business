@@ -5,6 +5,8 @@ import { describe, expect, it } from "vitest";
 import { extractPgEnumLabels } from "@/src/lib/booqable/contracts";
 import {
   BROWNFIELD_READER_VIEWS,
+  CANONICAL_COORDINATOR_ENUM_MIGRATION,
+  CANONICAL_COORDINATOR_MIGRATION,
   CANONICAL_PROJECTION_CONTRACT_VERSION,
   CANONICAL_PROJECTION_MIGRATION,
   ENTITY_ORIGINS,
@@ -389,7 +391,24 @@ describe("canonical projection I/O matrix", () => {
 
     const incomplete = structuredClone(graph);
     incomplete.memberships.pop();
-    expect(admitCanonicalGraph(incomplete)).toMatchObject({
+    expect(admitCanonicalGraph(incomplete).status).toBe("accepted");
+
+    const excess = structuredClone(graph);
+    excess.stock_items.push({
+      resource_type: "stock_item",
+      external_id: "si_3",
+      product_external_id: "prod_road",
+      ...PROVENANCE,
+    });
+    excess.memberships.push({
+      ...graph.memberships[0],
+      id: "33333333-3333-4333-8333-333333333333",
+      identity_kind: "stock_item_external_id",
+      line_quantity: 2,
+      source_unit_discriminator: "si_3",
+      stock_item_external_id: "si_3",
+    });
+    expect(admitCanonicalGraph(excess)).toMatchObject({
       status: "rejected",
       reason: "membership_identity",
     });
@@ -446,10 +465,13 @@ describe("canonical projection drift", () => {
   });
 
   it("fixture-checks contract vocabulary and manifest tuples against the migration", () => {
-    const sql = readFileSync(
-      join(repoRoot, CANONICAL_PROJECTION_MIGRATION),
-      "utf8",
-    );
+    const sql = [
+      CANONICAL_PROJECTION_MIGRATION,
+      CANONICAL_COORDINATOR_ENUM_MIGRATION,
+      CANONICAL_COORDINATOR_MIGRATION,
+    ]
+      .map((path) => readFileSync(join(repoRoot, path), "utf8"))
+      .join("\n");
 
     for (const [typeName, labels] of Object.entries(PG_PROJECTION_ENUM_LABELS)) {
       expect(extractPgEnumLabels(sql, typeName)).toEqual([...labels]);
@@ -474,6 +496,9 @@ describe("canonical projection drift", () => {
       "booqable_order_bike_memberships",
       "booqable_membership_predecessors",
       "booqable_field_authority_manifest",
+      "booqable_accepted_order_graphs",
+      "booqable_integration_incidents",
+      "booqable_rental_line_attention",
     ]) {
       expect(sql).toContain(`CREATE TABLE IF NOT EXISTS public.${table}`);
     }
