@@ -1,6 +1,6 @@
 begin;
 
-select plan(39);
+select plan(42);
 
 select has_table('public', 'booqable_product_groups', 'product groups are persisted');
 select has_table('public', 'booqable_products', 'products are persisted');
@@ -65,6 +65,135 @@ insert into public.booqable_products (
   'pg_road',
   '00000000-0000-4000-8000-000000000001',
   array['workshop-road-bike', 'season-2026']
+);
+insert into public.booqable_product_groups (id, external_id, tag_list)
+values
+  (
+    '00000000-0000-4000-8000-000000000031',
+    'pg_e_road',
+    array['workshop-e-road-bike']
+  ),
+  (
+    '00000000-0000-4000-8000-000000000032',
+    'pg_e_city',
+    array['workshop-e-city-bike']
+  ),
+  (
+    '00000000-0000-4000-8000-000000000033',
+    'pg_gravel',
+    array['workshop-gravel-bike']
+  ),
+  (
+    '00000000-0000-4000-8000-000000000034',
+    'pg_mtb',
+    array['workshop-mtb-bike']
+  ),
+  (
+    '00000000-0000-4000-8000-000000000035',
+    'pg_e_mtb',
+    array['workshop-e-mtb-bike']
+  );
+insert into public.booqable_products (
+  id, external_id, product_group_external_id, product_group_id, tag_list
+) values
+  (
+    '00000000-0000-4000-8000-000000000041',
+    'prod_e_road',
+    'pg_e_road',
+    '00000000-0000-4000-8000-000000000031',
+    array['workshop-e-road-bike']
+  ),
+  (
+    '00000000-0000-4000-8000-000000000042',
+    'prod_e_city',
+    'pg_e_city',
+    '00000000-0000-4000-8000-000000000032',
+    array['workshop-e-city-bike']
+  ),
+  (
+    '00000000-0000-4000-8000-000000000043',
+    'prod_gravel',
+    'pg_gravel',
+    '00000000-0000-4000-8000-000000000033',
+    array['workshop-gravel-bike']
+  ),
+  (
+    '00000000-0000-4000-8000-000000000044',
+    'prod_mtb',
+    'pg_mtb',
+    '00000000-0000-4000-8000-000000000034',
+    array['workshop-mtb-bike']
+  ),
+  (
+    '00000000-0000-4000-8000-000000000045',
+    'prod_e_mtb',
+    'pg_e_mtb',
+    '00000000-0000-4000-8000-000000000035',
+    array['workshop-e-mtb-bike']
+  );
+insert into public.booqable_bundles (id, external_id, tag_list)
+values (
+  '00000000-0000-4000-8000-000000000051',
+  'bundle_road',
+  array['workshop-road-bike-bundle']
+);
+
+select is(
+  (
+    select array_agg(external_id || ':' || array_to_string(tag_list, ',') order by external_id)
+    from public.booqable_product_groups
+    where external_id in (
+      'pg_road',
+      'pg_e_road',
+      'pg_e_city',
+      'pg_gravel',
+      'pg_mtb',
+      'pg_e_mtb'
+    )
+  ),
+  array[
+    'pg_e_city:workshop-e-city-bike',
+    'pg_e_mtb:workshop-e-mtb-bike',
+    'pg_e_road:workshop-e-road-bike',
+    'pg_gravel:workshop-gravel-bike',
+    'pg_mtb:workshop-mtb-bike',
+    'pg_road:workshop-road-bike,season-2026'
+  ]::text[],
+  'all six ProductGroup tag_list values persist as source facts'
+);
+
+select is(
+  (
+    select array_agg(external_id || ':' || array_to_string(tag_list, ',') order by external_id)
+    from public.booqable_products
+    where external_id in (
+      'prod_road',
+      'prod_e_road',
+      'prod_e_city',
+      'prod_gravel',
+      'prod_mtb',
+      'prod_e_mtb'
+    )
+  ),
+  array[
+    'prod_e_city:workshop-e-city-bike',
+    'prod_e_mtb:workshop-e-mtb-bike',
+    'prod_e_road:workshop-e-road-bike',
+    'prod_gravel:workshop-gravel-bike',
+    'prod_mtb:workshop-mtb-bike',
+    'prod_road:workshop-road-bike,season-2026'
+  ]::text[],
+  'all six Product tag_list values persist as source facts'
+);
+
+select is(
+  (
+    select tag_list
+    from public.booqable_bundles
+    where external_id = 'bundle_road'
+  ),
+  array['workshop-road-bike-bundle']::text[],
+  'Bundle tag_list persists as a source fact'
 );
 insert into public.booqable_order_bike_memberships (
   id,

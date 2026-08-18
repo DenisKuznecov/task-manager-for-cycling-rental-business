@@ -1,6 +1,6 @@
 begin;
 
-select plan(51);
+select plan(63);
 
 select has_table('public', 'booqable_accepted_order_graphs', 'accepted graphs are persisted');
 select has_table('public', 'booqable_integration_incidents', 'incidents are persisted');
@@ -1025,6 +1025,312 @@ select is(
   ),
   'order_archived',
   'archived order retains its terminal attention reason'
+);
+
+select is(
+  public.apply_canonical_order_graph($payload$
+    {
+      "schema_version": 1,
+      "producer_version": "canonical-adapter@v1",
+      "profile_version": "nested-order@v1",
+      "root": { "resource_type": "order", "external_id": "ord_bundle_tags" },
+      "order_status": "reserved",
+      "source_vector": [
+        {
+          "resource_type": "order",
+          "external_id": "ord_bundle_tags",
+          "source_version": "2026-08-17T09:00:00.000Z"
+        }
+      ],
+      "merged_fingerprint": "fp-bundle-tags",
+      "graph": {
+        "product_groups": [
+          {
+            "resource_type": "product_group",
+            "external_id": "pg_bundle_tags",
+            "tag_list": ["workshop-road-bike", "season-2026"],
+            "source_lifecycle": "open",
+            "source_version": "2026-08-17T09:00:00.000Z",
+            "source_updated_at": "2026-08-17T09:00:00.000Z",
+            "ingested_at": "2026-08-17T09:05:00.000Z"
+          }
+        ],
+        "products": [
+          {
+            "resource_type": "product",
+            "external_id": "prod_bundle_tags",
+            "product_group_external_id": "pg_bundle_tags",
+            "tag_list": ["workshop-road-bike", "season-2026"],
+            "source_lifecycle": "open",
+            "source_version": "2026-08-17T09:00:00.000Z",
+            "source_updated_at": "2026-08-17T09:00:00.000Z",
+            "ingested_at": "2026-08-17T09:05:00.000Z"
+          }
+        ],
+        "bundles": [
+          {
+            "resource_type": "bundle",
+            "external_id": "bundle_bundle_tags",
+            "tag_list": ["workshop-road-bike-bundle"],
+            "source_lifecycle": "open",
+            "source_version": "2026-08-17T09:00:00.000Z",
+            "source_updated_at": "2026-08-17T09:00:00.000Z",
+            "ingested_at": "2026-08-17T09:05:00.000Z"
+          }
+        ],
+        "bundle_items": [
+          {
+            "resource_type": "bundle_item",
+            "external_id": "bi_bundle_tags",
+            "bundle_external_id": "bundle_bundle_tags",
+            "product_external_id": "prod_bundle_tags",
+            "product_group_external_id": "pg_bundle_tags",
+            "source_lifecycle": "open",
+            "source_version": "2026-08-17T09:00:00.000Z",
+            "source_updated_at": "2026-08-17T09:00:00.000Z",
+            "ingested_at": "2026-08-17T09:05:00.000Z"
+          }
+        ],
+        "stock_items": [],
+        "plannings": [],
+        "stock_item_plannings": [],
+        "memberships": [],
+        "predecessors": []
+      },
+      "resource_fingerprints": [
+        {
+          "resource_type": "product_group",
+          "external_id": "pg_bundle_tags",
+          "source_fingerprint": "pg-bundle-fp-1"
+        },
+        {
+          "resource_type": "product",
+          "external_id": "prod_bundle_tags",
+          "source_fingerprint": "prod-bundle-fp-1"
+        },
+        {
+          "resource_type": "bundle",
+          "external_id": "bundle_bundle_tags",
+          "source_fingerprint": "bundle-fp-1"
+        }
+      ],
+      "rental_lines": [],
+      "omissions": [],
+      "incident": null,
+      "comparison_result": "applied"
+    }
+  $payload$::jsonb)::text,
+  'applied',
+  'accepted graph applies ProductGroup, Product, and Bundle tag lists'
+);
+
+select is(
+  (
+    select tag_list
+    from public.booqable_product_groups
+    where external_id = 'pg_bundle_tags'
+  ),
+  array['workshop-road-bike', 'season-2026']::text[],
+  'applied graph persists complete ProductGroup tag_list'
+);
+
+select is(
+  (
+    select tag_list
+    from public.booqable_products
+    where external_id = 'prod_bundle_tags'
+  ),
+  array['workshop-road-bike', 'season-2026']::text[],
+  'applied graph persists complete Product tag_list'
+);
+
+select is(
+  (
+    select tag_list
+    from public.booqable_bundles
+    where external_id = 'bundle_bundle_tags'
+  ),
+  array['workshop-road-bike-bundle']::text[],
+  'applied graph persists Bundle tag_list as a source fact'
+);
+
+select is(
+  (
+    select source_fingerprint
+    from public.booqable_bundles
+    where external_id = 'bundle_bundle_tags'
+  ),
+  'bundle-fp-1',
+  'applied graph persists Bundle source_fingerprint'
+);
+
+select is(
+  public.apply_canonical_order_graph($payload$
+    {
+      "schema_version": 1,
+      "producer_version": "canonical-adapter@v1",
+      "profile_version": "nested-order@v1",
+      "root": { "resource_type": "order", "external_id": "ord_bundle_tags" },
+      "order_status": "reserved",
+      "source_vector": [
+        {
+          "resource_type": "order",
+          "external_id": "ord_bundle_tags",
+          "source_version": "2026-08-17T09:00:00.000Z"
+        },
+        {
+          "resource_type": "product_group",
+          "external_id": "pg_tag_admission_blocked",
+          "source_version": "2026-08-17T09:00:00.000Z"
+        }
+      ],
+      "merged_fingerprint": "fp-tag-admission",
+      "graph": {
+        "product_groups": [
+          {
+            "resource_type": "product_group",
+            "external_id": "pg_tag_admission_blocked",
+            "tag_list": ["workshop-road-bike", "season-2026"],
+            "source_lifecycle": "open",
+            "source_version": "2026-08-17T09:00:00.000Z",
+            "source_updated_at": "2026-08-17T09:00:00.000Z",
+            "ingested_at": "2026-08-17T09:05:00.000Z"
+          }
+        ],
+        "products": [],
+        "bundles": [],
+        "bundle_items": [],
+        "stock_items": [],
+        "plannings": [],
+        "stock_item_plannings": [],
+        "memberships": [],
+        "predecessors": []
+      },
+      "resource_fingerprints": [],
+      "rental_lines": [],
+      "omissions": [],
+      "incident": {
+        "kind": "unauthoritative_addition",
+        "field_name": "tag_admission",
+        "resource_type": "order",
+        "resource_external_id": "ord_bundle_tags"
+      },
+      "comparison_result": "quarantined"
+    }
+  $payload$::jsonb)::text,
+  'quarantined',
+  'tag admission quarantines with unauthoritative_addition'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.booqable_product_groups
+    where external_id = 'pg_tag_admission_blocked'
+  ),
+  0,
+  'tag admission quarantine does not write a ProductGroup'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.booqable_order_bike_memberships
+    where order_external_id = 'ord_bundle_tags'
+  ),
+  0,
+  'tag admission quarantine writes no membership'
+);
+
+select is(
+  (
+    select source_fingerprint
+    from public.booqable_bundles
+    where external_id = 'bundle_bundle_tags'
+  ),
+  'bundle-fp-1',
+  'tag admission quarantine does not mutate previously applied Bundle rows'
+);
+
+select is(
+  (
+    select field_name
+    from public.booqable_integration_incidents
+    where root_external_id = 'ord_bundle_tags'
+      and incident_kind = 'unauthoritative_addition'
+  ),
+  'tag_admission',
+  'tag admission incident records field_name tag_admission'
+);
+
+select is(
+  public.apply_canonical_order_graph($payload$
+    {
+      "schema_version": 1,
+      "producer_version": "canonical-adapter@v1",
+      "profile_version": "nested-order@v1",
+      "root": { "resource_type": "order", "external_id": "ord_bundle_tags" },
+      "order_status": "reserved",
+      "source_vector": [
+        {
+          "resource_type": "order",
+          "external_id": "ord_bundle_tags",
+          "source_version": "2026-08-17T09:00:00.000Z"
+        },
+        {
+          "resource_type": "product_group",
+          "external_id": "pg_tag_admission_blocked",
+          "source_version": "2026-08-17T09:00:00.000Z"
+        }
+      ],
+      "merged_fingerprint": "fp-tag-admission",
+      "graph": {
+        "product_groups": [
+          {
+            "resource_type": "product_group",
+            "external_id": "pg_tag_admission_blocked",
+            "tag_list": ["workshop-road-bike", "season-2026"],
+            "source_lifecycle": "open",
+            "source_version": "2026-08-17T09:00:00.000Z",
+            "source_updated_at": "2026-08-17T09:00:00.000Z",
+            "ingested_at": "2026-08-17T09:05:00.000Z"
+          }
+        ],
+        "products": [],
+        "bundles": [],
+        "bundle_items": [],
+        "stock_items": [],
+        "plannings": [],
+        "stock_item_plannings": [],
+        "memberships": [],
+        "predecessors": []
+      },
+      "resource_fingerprints": [],
+      "rental_lines": [],
+      "omissions": [],
+      "incident": {
+        "kind": "unauthoritative_addition",
+        "field_name": "tag_admission",
+        "resource_type": "order",
+        "resource_external_id": "ord_bundle_tags"
+      },
+      "comparison_result": "quarantined"
+    }
+  $payload$::jsonb)::text,
+  'quarantined',
+  'repeat tag admission stays quarantined'
+);
+
+select is(
+  (
+    select count(*)::integer
+    from public.booqable_integration_incidents
+    where root_external_id = 'ord_bundle_tags'
+      and incident_kind = 'unauthoritative_addition'
+      and field_name = 'tag_admission'
+  ),
+  1,
+  'repeat tag admission does not duplicate the incident'
 );
 
 select * from finish();

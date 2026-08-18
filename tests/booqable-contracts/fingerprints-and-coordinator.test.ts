@@ -187,10 +187,27 @@ describe("canonical nested-order profile", () => {
         (membership) => membership.line_external_id === "line_accessory",
       ),
     ).toBe(false);
+    expect(result.graph.bundles).toEqual([
+      expect.objectContaining({
+        external_id: "bundle_road",
+        tag_list: ["workshop-road-bike-bundle"],
+      }),
+    ]);
+    expect(result.graph.bundle_items).toEqual([
+      expect.objectContaining({
+        external_id: "bi_road",
+        bundle_external_id: "bundle_road",
+        product_external_id: "prod_road",
+        product_group_external_id: "pg_road",
+      }),
+    ]);
     const accessory = result.envelope.resources.find(
       (resource) => resource.external_id === "line_accessory",
     );
     expect(accessory?.fingerprint_inputs?.tag_list).toContain("workshop-helmet");
+    expect(accessory?.fingerprint_inputs?.tag_list).toBe(
+      "size-m\0workshop-helmet",
+    );
     expect(
       rentalLineAttentionFacts(result.graph, result.envelope).some(
         (row) => row.line_external_id === "line_accessory",
@@ -476,6 +493,23 @@ describe("comparator and coordinator", () => {
     });
     expect(repeat.result).toBe("no_op");
     expect(repeat.payload.graph.memberships).toHaveLength(1);
+  });
+
+  it("quarantines tag admission without writing membership", () => {
+    const graph = validGraph();
+    graph.product_groups[0].tag_list = ["season-2026"];
+    const prepared = prepareCanonicalApply({
+      graph,
+      envelope: validEnvelope(),
+      accepted: null,
+      orderStatus: "reserved",
+    });
+    expect(prepared.result).toBe("quarantined");
+    expect(prepared.payload.incident).toMatchObject({
+      kind: "unauthoritative_addition",
+      field_name: "tag_admission",
+    });
+    expect(prepared.payload.graph.memberships).toHaveLength(0);
   });
 
   it("quarantines equal version with a different meaningful fingerprint", () => {

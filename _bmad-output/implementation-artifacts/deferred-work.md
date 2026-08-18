@@ -72,3 +72,13 @@
 - source_spec: spec-2-9-apply-canonical-source-state-atomically.md
   summary: Add a child-side reachability fallback for included stock and catalog resources.
   evidence: defer until real Booqable payload evidence identifies the reliable child-side foreign key; adding an unverified fallback would be speculative. Reviewer decision: defer.
+
+## Deferred from: Story 2.10 scope split (2026-08-18)
+
+- source_spec: none
+  summary: Operator-triggered one-time Booqable import that skips canceled/stopped/archived orders when no Workshop task exists and materializes the rest.
+  evidence: Split from Story 2.10 so source-tag fixture validation can ship without live import, caller cutover, or Bike Task creation.
+
+- source_spec: none
+  summary: Pre-pilot validation that source materialization and task derivation are stable with zero catalogue-defined blocking incidents.
+  evidence: Split from Story 2.10 because it requires Epic 3 Bike Tasks and later rollout control, and cannot be completed in Epic 2 today.

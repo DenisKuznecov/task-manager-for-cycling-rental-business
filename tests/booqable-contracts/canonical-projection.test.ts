@@ -18,6 +18,7 @@ import {
   QUANTITY_ONE_UNIT_DISCRIMINATOR,
   SHARED_PROJECTION_SOURCE_COLUMNS,
   SHARED_PROJECTION_TABLES,
+  WORKSHOP_BIKE_CATEGORIES,
   WORKSHOP_BUNDLE_TAGS,
   WORKSHOP_PRODUCT_GROUP_TAGS,
   admitCanonicalGraph,
@@ -27,6 +28,7 @@ import {
   fieldAuthorityKey,
   manifestSqlTuple,
   type CanonicalGraph,
+  type WorkshopBikeCategory,
 } from "@/src/lib/booqable/contracts";
 
 const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -38,30 +40,40 @@ const PROVENANCE = {
   source_lifecycle: "open" as const,
 };
 
-function validGraph(): CanonicalGraph {
+function catalogIds(category: WorkshopBikeCategory) {
+  const slug = category.replace(/-/g, "_");
+  return {
+    productGroup: `pg_${slug}`,
+    product: `prod_${slug}`,
+    bundle: `bundle_${slug}`,
+  };
+}
+
+function validGraph(category: WorkshopBikeCategory = "road"): CanonicalGraph {
+  const ids = catalogIds(category);
   return {
     product_groups: [
       {
         resource_type: "product_group",
-        external_id: "pg_road",
-        tag_list: [WORKSHOP_PRODUCT_GROUP_TAGS.road, "season-2026"],
+        external_id: ids.productGroup,
+        tag_list: [WORKSHOP_PRODUCT_GROUP_TAGS[category], "season-2026"],
         ...PROVENANCE,
       },
     ],
     products: [
       {
         resource_type: "product",
-        external_id: "prod_road",
-        product_group_external_id: "pg_road",
-        tag_list: [WORKSHOP_PRODUCT_GROUP_TAGS.road, "season-2026"],
+        external_id: ids.product,
+        product_group_external_id: ids.productGroup,
+        tag_list: [WORKSHOP_PRODUCT_GROUP_TAGS[category], "season-2026"],
         ...PROVENANCE,
       },
     ],
     bundles: [
       {
         resource_type: "bundle",
-        external_id: "bundle_road",
-        tag_list: [WORKSHOP_BUNDLE_TAGS.road],
+        external_id: ids.bundle,
+        tag_list: [WORKSHOP_BUNDLE_TAGS[category]],
         ...PROVENANCE,
       },
     ],
@@ -69,9 +81,9 @@ function validGraph(): CanonicalGraph {
       {
         resource_type: "bundle_item",
         external_id: "bi_1",
-        bundle_external_id: "bundle_road",
-        product_external_id: "prod_road",
-        product_group_external_id: "pg_road",
+        bundle_external_id: ids.bundle,
+        product_external_id: ids.product,
+        product_group_external_id: ids.productGroup,
         ...PROVENANCE,
       },
     ],
@@ -79,7 +91,7 @@ function validGraph(): CanonicalGraph {
       {
         resource_type: "stock_item",
         external_id: "si_1",
-        product_external_id: "prod_road",
+        product_external_id: ids.product,
         ...PROVENANCE,
       },
     ],
@@ -121,6 +133,28 @@ function validGraph(): CanonicalGraph {
 }
 
 describe("canonical projection I/O matrix", () => {
+  it.each(WORKSHOP_BIKE_CATEGORIES)(
+    "admits a %s ProductGroup, matching Product inheritance, and agreeing Bundle",
+    (category) => {
+      const result = admitCanonicalGraph(validGraph(category));
+      expect(result.status).toBe("accepted");
+      if (result.status !== "accepted") {
+        return;
+      }
+      expect(result.graph.product_groups[0].tag_list).toEqual([
+        WORKSHOP_PRODUCT_GROUP_TAGS[category],
+        "season-2026",
+      ]);
+      expect(result.graph.products[0].tag_list).toEqual([
+        WORKSHOP_PRODUCT_GROUP_TAGS[category],
+        "season-2026",
+      ]);
+      expect(result.graph.bundles[0].tag_list).toEqual([
+        WORKSHOP_BUNDLE_TAGS[category],
+      ]);
+    },
+  );
+
   it("accepts a valid tagged graph with complete tags, provenance, and membership identity", () => {
     const result = admitCanonicalGraph(validGraph());
     expect(result.status).toBe("accepted");
@@ -139,7 +173,7 @@ describe("canonical projection I/O matrix", () => {
     }
   });
 
-  it("rejects untagged, unknown, multiple, inherited, and disagreeing bundle tags", () => {
+  it("rejects untagged, unknown, multiple, conflicting, inherited, and disagreeing bundle tags", () => {
     const untagged = validGraph();
     untagged.product_groups[0].tag_list = ["season-2026"];
     const untaggedResult = admitCanonicalGraph(untagged);
@@ -168,6 +202,17 @@ describe("canonical projection I/O matrix", () => {
       classification: {
         status: "incident",
         code: "multiple_workshop_bike_tags",
+      },
+    });
+
+    const conflicting = validGraph();
+    conflicting.product_groups[0].tag_list = [WORKSHOP_BUNDLE_TAGS.road];
+    expect(admitCanonicalGraph(conflicting)).toMatchObject({
+      status: "rejected",
+      reason: "tag_admission",
+      classification: {
+        status: "incident",
+        code: "conflicting_resource_tag",
       },
     });
 
