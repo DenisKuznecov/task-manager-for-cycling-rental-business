@@ -32,3 +32,43 @@
 ## Deferred from: code review of spec-2-6-preserve-brownfield-projection-consumers (2026-08-15)
 
 - Run the pgTAP database consumer-contract suite in CI. The existing pull-request workflow runs `npm run contracts:check` only, so it cannot exercise migration-produced view/RPC contracts. This repository-wide CI coverage gap predates Story 2.6 and needs an intentional local-Supabase CI design.
+
+## Deferred from: code review of spec-2-9-apply-canonical-source-state-atomically (2026-08-18)
+
+- source_spec: spec-2-9-apply-canonical-source-state-atomically.md
+  summary: Nested include never reaches `product`/`product_group`/`bundle`/`bundle_item`, so those projection arrays stay empty on a live fetch.
+  evidence: already documented in this spec's own frontmatter as a deferred item (catalog-from-include); `src/lib/booqable/canonical-adapter.ts` only maps catalog types from included extras that the include cannot actually return.
+
+- source_spec: spec-2-9-apply-canonical-source-state-atomically.md
+  summary: `CANONICAL_FINGERPRINT_FIELD_BINDINGS` has no `planning`/`stock_item_planning`/`bundle_item` entries, so their `source_fingerprint` columns stay unused.
+  evidence: already documented in this spec's own frontmatter as a deferred item; adding bindings is an Ask-First change to the defined fingerprint fields.
+
+- source_spec: spec-2-9-apply-canonical-source-state-atomically.md
+  summary: `replacement_chain_incarnation` is always `1` and `predecessors` is always empty from the adapter — no replacement-chain detection exists yet, which also makes `carryForwardOmittedChildren`'s all-or-nothing predecessor merge currently inert.
+  evidence: already documented in this spec's own frontmatter as a deferred item (quantity-one replacement incarnations); replacement-chain policy is not in this story's intent matrix.
+
+- source_spec: spec-2-9-apply-canonical-source-state-atomically.md
+  summary: `coupon` is fetched via the nested include but never read or projected anywhere.
+  evidence: the include string itself is spec-frozen under the "Always" boundary, so this is fetched-now/consumed-later by design, not an oversight to fix in this story.
+
+- source_spec: spec-2-9-apply-canonical-source-state-atomically.md
+  summary: No allow-list/validation for order status beyond the ghost set (`new`/`concept`); an unrecognized status string from Booqable is treated as a normal open order with no warning or incident.
+  evidence: `src/lib/booqable/canonical-adapter.ts` `normalizeCanonicalOrderPayload` only special-cases `new`/`concept`; not required by the current spec's I/O matrix.
+
+- source_spec: spec-2-9-apply-canonical-source-state-atomically.md
+  summary: `compareMergedState` gates new-child acceptance on the order root's version being strictly newer than the previously accepted root version; if Booqable doesn't always bump `order.updated_at` on a nested-only change, legitimate additions get permanently quarantined as `unauthoritative_addition`.
+  evidence: needs verification against real Booqable webhook payloads (does `updated_at` bump on nested-only changes?) before touching frozen comparator logic in `src/lib/booqable/ingestion-coordinator.ts` `compareMergedState`. Reviewer decision: defer.
+
+- source_spec: spec-2-9-apply-canonical-source-state-atomically.md
+  summary: `normalizeCanonicalOrderPayload` always asserts `scope: "complete"` for the nested include regardless of order size; whether Booqable's nested include can silently paginate/truncate for very large orders is unverified.
+  evidence: Booqable's nested-include pagination behavior for very large orders is unverified; revisit if truncation is ever observed in practice. Reviewer decision: defer.
+
+- source_spec: spec-2-9-apply-canonical-source-state-atomically.md
+  summary: All five distinct `admitCanonicalGraph` rejection reasons (`schema`, `orphan_link`, `membership_identity`, `tag_admission`, `inconsistent_link`) collapse into the single frozen `unauthoritative_addition` incident kind, only varying `field_name`.
+  evidence: existing `field_name` variance is sufficient for now; introducing a new incident kind is out of scope (Ask-First). Reviewer decision: defer.
+
+## Deferred from: code review of spec-2-9-apply-canonical-source-state-atomically (2026-08-18)
+
+- source_spec: spec-2-9-apply-canonical-source-state-atomically.md
+  summary: Add a child-side reachability fallback for included stock and catalog resources.
+  evidence: defer until real Booqable payload evidence identifies the reliable child-side foreign key; adding an unverified fallback would be speculative. Reviewer decision: defer.

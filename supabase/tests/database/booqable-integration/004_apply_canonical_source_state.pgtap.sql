@@ -1,6 +1,6 @@
 begin;
 
-select plan(36);
+select plan(51);
 
 select has_table('public', 'booqable_accepted_order_graphs', 'accepted graphs are persisted');
 select has_table('public', 'booqable_integration_incidents', 'incidents are persisted');
@@ -773,6 +773,258 @@ select is(
   ),
   'order_canceled',
   'attention closes with a retained reason on a terminal order'
+);
+
+select is(
+  public.apply_canonical_order_graph($payload$
+    {
+      "schema_version": 2,
+      "root": { "resource_type": "order", "external_id": "ord_unsupported_schema" },
+      "source_vector": [],
+      "merged_fingerprint": "fp-unsupported-schema",
+      "graph": {}
+    }
+  $payload$::jsonb)::text,
+  'quarantined',
+  'unsupported schema quarantines in the database coordinator'
+);
+
+select is(
+  (
+    select count(*)
+    from public.booqable_integration_incidents
+    where incident_kind = 'unsupported_schema'
+      and root_external_id = 'ord_unsupported_schema'
+  ),
+  1::bigint,
+  'unsupported schema records one deduplicated incident'
+);
+
+select is(
+  public.apply_canonical_order_graph($payload$
+    {
+      "schema_version": 1,
+      "root": { "resource_type": "order", "external_id": "ord_sql_quarantine" },
+      "source_vector": [
+        {
+          "resource_type": "order",
+          "external_id": "ord_sql_quarantine",
+          "source_version": "2026-08-18T10:00:00.000Z"
+        }
+      ],
+      "merged_fingerprint": "fp-sql-baseline",
+      "graph": {}
+    }
+  $payload$::jsonb)::text,
+  'applied',
+  'database quarantine fixture establishes an accepted baseline'
+);
+
+select is(
+  public.apply_canonical_order_graph($payload$
+    {
+      "schema_version": 1,
+      "root": { "resource_type": "order", "external_id": "ord_sql_quarantine" },
+      "source_vector": [
+        {
+          "resource_type": "order",
+          "external_id": "ord_sql_quarantine",
+          "source_version": ""
+        }
+      ],
+      "merged_fingerprint": "fp-incomparable",
+      "graph": {}
+    }
+  $payload$::jsonb)::text,
+  'quarantined',
+  'blank present source version quarantines in the database coordinator'
+);
+
+select is(
+  (
+    select source_fingerprint
+    from public.booqable_accepted_order_graphs
+    where order_external_id = 'ord_sql_quarantine'
+  ),
+  'fp-sql-baseline',
+  'incomparable state does not mutate the accepted graph'
+);
+
+select is(
+  (
+    select count(*)
+    from public.booqable_integration_incidents
+    where incident_kind = 'incomparable_present_state'
+      and root_external_id = 'ord_sql_quarantine'
+  ),
+  1::bigint,
+  'incomparable state records one deduplicated incident'
+);
+
+select is(
+  public.apply_canonical_order_graph($payload$
+    {
+      "schema_version": 1,
+      "root": { "resource_type": "order", "external_id": "ord_sql_quarantine" },
+      "source_vector": [
+        {
+          "resource_type": "order",
+          "external_id": "ord_sql_quarantine",
+          "source_version": "2026-08-18T10:00:00.000Z"
+        },
+        {
+          "resource_type": "product_group",
+          "external_id": "pg_unauthoritative",
+          "source_version": "2026-08-18T10:00:00.000Z"
+        }
+      ],
+      "merged_fingerprint": "fp-unauthoritative",
+      "graph": {}
+    }
+  $payload$::jsonb)::text,
+  'quarantined',
+  'new child without a newer root quarantines in the database coordinator'
+);
+
+select is(
+  (
+    select source_fingerprint
+    from public.booqable_accepted_order_graphs
+    where order_external_id = 'ord_sql_quarantine'
+  ),
+  'fp-sql-baseline',
+  'unauthoritative addition does not mutate the accepted graph'
+);
+
+select is(
+  (
+    select count(*)
+    from public.booqable_integration_incidents
+    where incident_kind = 'unauthoritative_addition'
+      and root_external_id = 'ord_sql_quarantine'
+  ),
+  1::bigint,
+  'unauthoritative addition records one deduplicated incident'
+);
+
+select is(
+  public.apply_canonical_order_graph($payload$
+    {
+      "schema_version": 1,
+      "root": { "resource_type": "order", "external_id": "ord_initially_identified" },
+      "order_status": "reserved",
+      "source_vector": [
+        {
+          "resource_type": "order",
+          "external_id": "ord_initially_identified",
+          "source_version": "2026-08-18T10:00:00.000Z"
+        }
+      ],
+      "merged_fingerprint": "fp-initially-identified",
+      "graph": {},
+      "rental_lines": [
+        {
+          "line_external_id": "line_initially_identified",
+          "line_quantity": 1,
+          "identified_count": 1,
+          "unidentified_count": 0
+        }
+      ]
+    }
+  $payload$::jsonb)::text,
+  'applied',
+  'initially identified bike line applies without opening attention'
+);
+
+select is(
+  (
+    select count(*)
+    from public.booqable_rental_line_attention
+    where order_external_id = 'ord_initially_identified'
+      and line_external_id = 'line_initially_identified'
+  ),
+  0::bigint,
+  'initially identified bike line creates no closed attention record'
+);
+
+select is(
+  public.apply_canonical_order_graph($payload$
+    {
+      "schema_version": 1,
+      "root": { "resource_type": "order", "external_id": "ord_stopped_attention" },
+      "order_status": "stopped",
+      "source_vector": [
+        {
+          "resource_type": "order",
+          "external_id": "ord_stopped_attention",
+          "source_version": "2026-08-18T10:00:00.000Z"
+        }
+      ],
+      "merged_fingerprint": "fp-stopped-attention",
+      "graph": {},
+      "rental_lines": [
+        {
+          "line_external_id": "line_stopped_attention",
+          "line_quantity": 2,
+          "identified_count": 0,
+          "unidentified_count": 2
+        }
+      ]
+    }
+  $payload$::jsonb)::text,
+  'applied',
+  'stopped order applies terminal attention closure'
+);
+
+select is(
+  (
+    select close_reason
+    from public.booqable_rental_line_attention
+    where order_external_id = 'ord_stopped_attention'
+      and line_external_id = 'line_stopped_attention'
+  ),
+  'order_stopped',
+  'stopped order retains its terminal attention reason'
+);
+
+select is(
+  public.apply_canonical_order_graph($payload$
+    {
+      "schema_version": 1,
+      "root": { "resource_type": "order", "external_id": "ord_archived_attention" },
+      "order_status": "archived",
+      "source_vector": [
+        {
+          "resource_type": "order",
+          "external_id": "ord_archived_attention",
+          "source_version": "2026-08-18T10:00:00.000Z"
+        }
+      ],
+      "merged_fingerprint": "fp-archived-attention",
+      "graph": {},
+      "rental_lines": [
+        {
+          "line_external_id": "line_archived_attention",
+          "line_quantity": 2,
+          "identified_count": 0,
+          "unidentified_count": 2
+        }
+      ]
+    }
+  $payload$::jsonb)::text,
+  'applied',
+  'archived order applies terminal attention closure'
+);
+
+select is(
+  (
+    select close_reason
+    from public.booqable_rental_line_attention
+    where order_external_id = 'ord_archived_attention'
+      and line_external_id = 'line_archived_attention'
+  ),
+  'order_archived',
+  'archived order retains its terminal attention reason'
 );
 
 select * from finish();

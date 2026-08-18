@@ -240,30 +240,16 @@ BEGIN
   v_status := CASE WHEN v_close_reason IS NULL THEN 'open' ELSE 'closed' END;
 
   IF v_status = 'closed' AND p_unidentified <= 0 AND v_close_reason = 'fully_identified' THEN
-    INSERT INTO public.booqable_rental_line_attention (
-      order_external_id,
-      line_external_id,
-      unidentified_count,
-      status,
-      close_reason,
-      closed_at
-    ) VALUES (
-      p_order_id,
-      p_line_id,
-      0,
-      'closed',
-      'fully_identified',
-      now()
-    )
-    ON CONFLICT (order_external_id, line_external_id) DO UPDATE SET
+    UPDATE public.booqable_rental_line_attention
+    SET
       unidentified_count = 0,
       status = 'closed',
-      close_reason = COALESCE(
-        public.booqable_rental_line_attention.close_reason,
-        'fully_identified'
-      ),
-      closed_at = COALESCE(public.booqable_rental_line_attention.closed_at, now()),
-      updated_at = now();
+      close_reason = 'fully_identified',
+      closed_at = COALESCE(closed_at, now()),
+      updated_at = now()
+    WHERE order_external_id = p_order_id
+      AND line_external_id = p_line_id
+      AND status = 'open';
     RETURN;
   END IF;
 

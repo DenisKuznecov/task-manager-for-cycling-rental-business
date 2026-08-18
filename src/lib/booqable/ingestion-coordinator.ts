@@ -8,6 +8,7 @@ import {
   type CanonicalGraph,
   type IntegrationIncidentKind,
   type MembershipProjection,
+  type ResourceSlot,
   type SourceApplyResult,
   type SourceEnvelope,
   type SourceVersionEntry,
@@ -19,6 +20,7 @@ export type AcceptedCanonicalState = {
   sourceFingerprint: string;
   schemaVersion: number;
   orderStatus: string | null;
+  acceptedEnvelopeResources?: ResourceSlot[];
 };
 
 export type OmittedChild = {
@@ -140,6 +142,8 @@ export function compareMergedState(input: {
 }): {
   result: Extract<SourceApplyResult, "applied" | "no_op" | "quarantined">;
   incidentKind: IntegrationIncidentKind | null;
+  incidentResourceType?: string;
+  incidentResourceExternalId?: string;
 } {
   if (input.schemaVersion !== SOURCE_ENVELOPE_SCHEMA_VERSION) {
     return { result: "quarantined", incidentKind: "unsupported_schema" };
@@ -161,12 +165,21 @@ export function compareMergedState(input: {
     }
     const cmp = compareSourceVersions(incomingVersion, acceptedVersion);
     if (cmp === "older") {
-      return { result: "quarantined", incidentKind: "older_present_state" };
+      const [incidentResourceType, incidentResourceExternalId] = key.split("\0");
+      return {
+        result: "quarantined",
+        incidentKind: "older_present_state",
+        incidentResourceType,
+        incidentResourceExternalId,
+      };
     }
     if (cmp === "incomparable") {
+      const [incidentResourceType, incidentResourceExternalId] = key.split("\0");
       return {
         result: "quarantined",
         incidentKind: "incomparable_present_state",
+        incidentResourceType,
+        incidentResourceExternalId,
       };
     }
   }
@@ -179,7 +192,13 @@ export function compareMergedState(input: {
 
   for (const key of incomingMap.keys()) {
     if (!acceptedMap.has(key) && rootCmp !== "newer") {
-      return { result: "quarantined", incidentKind: "unauthoritative_addition" };
+      const [incidentResourceType, incidentResourceExternalId] = key.split("\0");
+      return {
+        result: "quarantined",
+        incidentKind: "unauthoritative_addition",
+        incidentResourceType,
+        incidentResourceExternalId,
+      };
     }
   }
 
@@ -200,7 +219,22 @@ export function compareMergedState(input: {
 export function mergedGraphFingerprint(
   graph: CanonicalGraph,
   envelope: SourceEnvelope,
+  acceptedResources: ResourceSlot[] = [],
 ): string {
+  const incomingOrderItems = envelope.resources.filter(
+    (resource) => resource.resource_type === "order_item",
+  );
+  const incomingOrderItemIds = new Set(
+    incomingOrderItems.map((resource) => resource.external_id),
+  );
+  const effectiveOrderItems = [
+    ...incomingOrderItems,
+    ...acceptedResources.filter(
+      (resource) =>
+        resource.resource_type === "order_item" &&
+        !incomingOrderItemIds.has(resource.external_id),
+    ),
+  ];
   const facts = [
     pickFingerprintInputs("order", {
       status: scalarFromEnvelope(envelope, "order", "status"),
@@ -218,15 +252,20 @@ export function mergedGraphFingerprint(
       phone: scalarFromEnvelope(envelope, "customer", "phone"),
       birthday: scalarFromEnvelope(envelope, "customer", "birthday"),
     }),
-    ...envelope.resources
-      .filter((resource) => resource.resource_type === "order_item")
+    ...effectiveOrderItems
       .map((resource) =>
         pickFingerprintInputs("order_item", resource.fingerprint_inputs ?? {}),
       ),
     ...graph.stock_items.map((resource) =>
       pickFingerprintInputs("stock_item", {
         product_external_id: resource.product_external_id,
-        barcode: scalarFromEnvelope(envelope, "stock_item", "barcode", resource.external_id),
+        barcode: scalarFromEnvelopeOrAccepted(
+          envelope,
+          acceptedResources,
+          "stock_item",
+          "barcode",
+          resource.external_id,
+        ),
       }),
     ),
     ...graph.memberships.map((membership) =>
@@ -372,7 +411,12 @@ export function prepareCanonicalApply(input: {
   }
 
   const graph = mergedAdmission.graph;
-  const mergedFingerprint = mergedGraphFingerprint(graph, input.envelope);
+  const acceptedResources = input.accepted?.acceptedEnvelopeResources ?? [];
+  const mergedFingerprint = mergedGraphFingerprint(
+    graph,
+    input.envelope,
+    acceptedResources,
+  );
   const sourceVector = mergeSourceVectors(
     input.envelope.source_versions,
     graph,
@@ -397,7 +441,11 @@ export function prepareCanonicalApply(input: {
       source_vector: sourceVector,
       merged_fingerprint: mergedFingerprint,
       graph,
-      resource_fingerprints: resourceFingerprints(graph, input.envelope),
+      resource_fingerprints: resourceFingerprints(
+        graph,
+        input.envelope,
+        acceptedResources,
+      ),
       rental_lines: rentalLineAttentionFacts(graph, input.envelope),
       omissions,
       incident: incidentKind
@@ -405,10 +453,17 @@ export function prepareCanonicalApply(input: {
             kind: incidentKind,
             field_name: incidentKind === "omitted_child"
               ? omissions[0]?.resource_type ?? null
-              : "source_fingerprint",
-            resource_type: omissions[0]?.resource_type ?? root.resource_type,
+              : comparison.incidentResourceType
+                ? "source_version"
+                : "source_fingerprint",
+            resource_type:
+              comparison.incidentResourceType ??
+              omissions[0]?.resource_type ??
+              root.resource_type,
             resource_external_id:
-              omissions[0]?.external_id ?? root.external_id,
+              comparison.incidentResourceExternalId ??
+              omissions[0]?.external_id ??
+              root.external_id,
           }
         : null,
       comparison_result: comparison.result,
@@ -568,8 +623,9 @@ function normalizeUtcTimestamp(value: string): string | null {
   if (!trimmed) {
     return null;
   }
-  const hasZone = /Z$/i.test(trimmed) || /[+-]\d{2}:?\d{2}$/.test(trimmed);
-  const candidate = hasZone ? trimmed : `${trimmed}Z`;
+  const expanded = trimmed.replace(/([+-])(\d{2})$/, "$1$2:00");
+  const hasZone = /Z$/i.test(expanded) || /[+-]\d{2}:?\d{2}$/.test(expanded);
+  const candidate = hasZone ? expanded : `${expanded}Z`;
   const parsed = Date.parse(candidate);
   if (!Number.isFinite(parsed)) {
     return null;
@@ -612,7 +668,11 @@ function mergeSourceVectors(
   return [...merged.values()];
 }
 
-function resourceFingerprints(graph: CanonicalGraph, envelope: SourceEnvelope) {
+function resourceFingerprints(
+  graph: CanonicalGraph,
+  envelope: SourceEnvelope,
+  acceptedResources: ResourceSlot[] = [],
+) {
   return [
     ...graph.product_groups.map((row) => ({
       resource_type: row.resource_type,
@@ -641,8 +701,9 @@ function resourceFingerprints(graph: CanonicalGraph, envelope: SourceEnvelope) {
       external_id: row.external_id,
       source_fingerprint: fingerprintResource("stock_item", {
         product_external_id: row.product_external_id,
-        barcode: scalarFromEnvelope(
+        barcode: scalarFromEnvelopeOrAccepted(
           envelope,
+          acceptedResources,
           "stock_item",
           "barcode",
           row.external_id,
@@ -694,6 +755,30 @@ function scalarFromEnvelope(
       (externalId ? entry.external_id === externalId : true),
   );
   return resource?.fingerprint_inputs?.[field] ?? null;
+}
+
+function scalarFromEnvelopeOrAccepted(
+  envelope: SourceEnvelope,
+  acceptedResources: ResourceSlot[],
+  resourceType: string,
+  field: string,
+  externalId?: string,
+): unknown {
+  const incoming = envelope.resources.find(
+    (entry) =>
+      entry.resource_type === resourceType &&
+      (externalId ? entry.external_id === externalId : true),
+  );
+  if (incoming) {
+    return incoming.fingerprint_inputs?.[field] ?? null;
+  }
+
+  const accepted = acceptedResources.find(
+    (entry) =>
+      entry.resource_type === resourceType &&
+      (externalId ? entry.external_id === externalId : true),
+  );
+  return accepted?.fingerprint_inputs?.[field] ?? null;
 }
 
 function emptyGraph(): CanonicalGraph {

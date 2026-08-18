@@ -198,6 +198,31 @@ describe("canonical nested-order profile", () => {
     ).toBe(false);
   });
 
+  it("normalizes order-item tags in a stable order", () => {
+    const reordered = structuredClone(fixture);
+    const line = reordered.included.find((row) => row.id === "line_bike");
+    if (Array.isArray(line?.attributes?.tag_list)) {
+      line.attributes.tag_list = [...line.attributes.tag_list].reverse();
+    }
+
+    const original = normalizeCanonicalOrderPayload(fixture, INGESTED_AT);
+    const normalized = normalizeCanonicalOrderPayload(reordered, INGESTED_AT);
+    expect(original.status).toBe("normalized");
+    expect(normalized.status).toBe("normalized");
+    if (original.status !== "normalized" || normalized.status !== "normalized") {
+      return;
+    }
+    const originalLine = original.envelope.resources.find(
+      (resource) => resource.external_id === "line_bike",
+    );
+    const reorderedLine = normalized.envelope.resources.find(
+      (resource) => resource.external_id === "line_bike",
+    );
+    expect(reorderedLine?.fingerprint_inputs?.tag_list).toBe(
+      originalLine?.fingerprint_inputs?.tag_list,
+    );
+  });
+
   it("rejects missing status and a non-array included document", () => {
     const blankStatus = structuredClone(fixture);
     blankStatus.data.attributes = { ...blankStatus.data.attributes, status: "" };
@@ -327,6 +352,17 @@ describe("canonical nested-order profile", () => {
         stock_item: { data: { id: "si_2", type: "stock_items" } },
       },
     });
+    conflicted.included.push({
+      id: "si_2",
+      type: "stock_items",
+      attributes: {
+        created_at: "2026-08-16T10:00:00.000Z",
+        updated_at: "2026-08-17T09:00:00.000Z",
+      },
+      relationships: {
+        product: { data: { id: "prod_road", type: "products" } },
+      },
+    });
     const result = normalizeCanonicalOrderPayload(conflicted, INGESTED_AT);
     expect(result.status).toBe("invalid");
     if (result.status !== "invalid") {
@@ -339,6 +375,13 @@ describe("canonical nested-order profile", () => {
     const ghost = structuredClone(fixture);
     ghost.data.attributes = { ...ghost.data.attributes, status: "concept" };
     expect(normalizeCanonicalOrderPayload(ghost, INGESTED_AT)).toEqual({
+      status: "discarded",
+      reason: "ghost",
+    });
+
+    const newGhost = structuredClone(fixture);
+    newGhost.data.attributes = { ...newGhost.data.attributes, status: "new" };
+    expect(normalizeCanonicalOrderPayload(newGhost, INGESTED_AT)).toEqual({
       status: "discarded",
       reason: "ghost",
     });
@@ -481,6 +524,16 @@ describe("comparator and coordinator", () => {
   it("records omitted_child on a no-op when the incoming graph omits a carried child", () => {
     const graph = validGraph();
     const envelope = validEnvelope();
+    envelope.resources.push({
+      resource_type: "stock_item",
+      external_id: "si_1",
+      presence: "known",
+      source_version: PROVENANCE.source_version,
+      fingerprint_inputs: {
+        product_external_id: "prod_road",
+        barcode: "ECH-ROAD-001",
+      },
+    });
     const first = prepareCanonicalApply({
       graph,
       envelope,
@@ -491,15 +544,26 @@ describe("comparator and coordinator", () => {
 
     const incoming = validGraph();
     incoming.stock_items = [];
+    const incomingEnvelope = {
+      ...envelope,
+      resources: envelope.resources.filter(
+        (resource) =>
+          !(
+            resource.resource_type === "stock_item" &&
+            resource.external_id === "si_1"
+          ),
+      ),
+    };
     const omitted = prepareCanonicalApply({
       graph: incoming,
-      envelope,
+      envelope: incomingEnvelope,
       accepted: {
         graph,
         sourceVector: first.payload.source_vector,
         sourceFingerprint: first.payload.merged_fingerprint,
         schemaVersion: 1,
         orderStatus: "reserved",
+        acceptedEnvelopeResources: envelope.resources,
       },
       orderStatus: "reserved",
     });
@@ -547,6 +611,24 @@ describe("comparator and coordinator", () => {
     });
     expect(older.result).toBe("quarantined");
     expect(older.payload.incident?.kind).toBe("older_present_state");
+
+    const newerEnvelope = validEnvelope();
+    newerEnvelope.source_versions[0].source_version = "2026-08-18T09:00:00.000Z";
+    newerEnvelope.resources[0].source_version = "2026-08-18T09:00:00.000Z";
+    const newerGraph = validGraph();
+    newerGraph.stock_items.push({
+      resource_type: "stock_item",
+      external_id: "si_new",
+      product_external_id: "prod_road",
+      ...PROVENANCE,
+    });
+    const newer = prepareCanonicalApply({
+      graph: newerGraph,
+      envelope: newerEnvelope,
+      accepted,
+      orderStatus: "reserved",
+    });
+    expect(newer.result).toBe("applied");
 
     const incomparableEnvelope = validEnvelope();
     incomparableEnvelope.source_versions[0].source_version = "not-a-timestamp";
@@ -647,9 +729,11 @@ describe("comparator and coordinator", () => {
         orderStatus: "reserved",
       },
     });
-    expect(older).toEqual({
+    expect(older).toMatchObject({
       result: "quarantined",
       incidentKind: "older_present_state",
+      incidentResourceType: "order",
+      incidentResourceExternalId: "ord_1",
     });
 
     const incomparable = compareMergedState({
@@ -677,7 +761,11 @@ describe("comparator and coordinator", () => {
         orderStatus: "reserved",
       },
     });
-    expect(incomparable.incidentKind).toBe("incomparable_present_state");
+    expect(incomparable).toMatchObject({
+      incidentKind: "incomparable_present_state",
+      incidentResourceType: "order",
+      incidentResourceExternalId: "ord_1",
+    });
 
     expect(
       compareMergedState({
@@ -719,6 +807,38 @@ describe("comparator and coordinator", () => {
         orderStatus: "reserved",
       },
     });
-    expect(addition.incidentKind).toBe("unauthoritative_addition");
+    expect(addition).toMatchObject({
+      incidentKind: "unauthoritative_addition",
+      incidentResourceType: "stock_item",
+      incidentResourceExternalId: "si_new",
+    });
+
+    expect(
+      compareMergedState({
+        schemaVersion: 1,
+        rootExternalId: "ord_1",
+        incomingVector: [
+          {
+            resource_type: "order",
+            external_id: "ord_1",
+            source_version: "2026-08-17T11:00:00+02",
+          },
+        ],
+        incomingFingerprint: "bbb",
+        accepted: {
+          graph: validGraph(),
+          sourceVector: [
+            {
+              resource_type: "order",
+              external_id: "ord_1",
+              source_version: "2026-08-17T11:00:00+02",
+            },
+          ],
+          sourceFingerprint: "bbb",
+          schemaVersion: 1,
+          orderStatus: "reserved",
+        },
+      }).result,
+    ).toBe("no_op");
   });
 });

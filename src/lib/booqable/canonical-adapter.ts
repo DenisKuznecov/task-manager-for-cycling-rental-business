@@ -61,35 +61,72 @@ export async function fetchCanonicalOrder(
 
   const url = `https://${slug}.booqable.com/api/4/orders/${booqableOrderId}?include=${CANONICAL_NESTED_ORDER_INCLUDE}`;
 
-  const MAX_ATTEMPTS = 3;
-  let res: Response;
+  const MAX_ATTEMPTS = 2;
+  const REQUEST_TIMEOUT_MS = 4000;
+  let res: Response | null = null;
   for (let attempt = 1; ; attempt++) {
-    res = await fetch(url, {
-      headers: {
-        Accept: "application/vnd.api+json",
-        Authorization: `Bearer ${apiKey}`,
-      },
-      cache: "no-store",
-      signal: AbortSignal.timeout(8000),
-    });
+    try {
+      res = await fetch(url, {
+        headers: {
+          Accept: "application/vnd.api+json",
+          Authorization: `Bearer ${apiKey}`,
+        },
+        cache: "no-store",
+        signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+      });
+    } catch (error) {
+      console.error(
+        "fetchCanonicalOrder: request failed for order",
+        booqableOrderId,
+        error,
+      );
+      if (attempt >= MAX_ATTEMPTS) {
+        throw new Error(
+          `fetchCanonicalOrder: request failed for order ${booqableOrderId}`,
+          { cause: error },
+        );
+      }
+      await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
+      continue;
+    }
 
     if (res.status !== 429 || attempt >= MAX_ATTEMPTS) break;
-    await new Promise((resolve) => setTimeout(resolve, 2000 * attempt));
+    await new Promise((resolve) => setTimeout(resolve, 1000 * attempt));
   }
 
   if (!res.ok) {
     const body = await res.text();
+    console.error(
+      "fetchCanonicalOrder: HTTP response",
+      res.status,
+      "for order",
+      booqableOrderId,
+    );
     throw new Error(
       `Booqable API responded ${res.status} for order ${booqableOrderId}: ${body}`,
     );
   }
 
-  const payload = (await res.json()) as {
-    data?: JsonApiResource;
-    included?: JsonApiResource[];
-  };
+  let payload: { data?: JsonApiResource; included?: JsonApiResource[] };
+  try {
+    payload = (await res.json()) as {
+      data?: JsonApiResource;
+      included?: JsonApiResource[];
+    };
+  } catch (error) {
+    console.error(
+      "fetchCanonicalOrder: JSON parse failed for order",
+      booqableOrderId,
+      error,
+    );
+    throw new Error(
+      `fetchCanonicalOrder: response for order ${booqableOrderId} was not valid JSON`,
+      { cause: error },
+    );
+  }
 
   if (!payload.data) {
+    console.error("fetchCanonicalOrder: no data for order", booqableOrderId);
     throw new Error(
       `Booqable API returned no data for order ${booqableOrderId}`,
     );
@@ -316,7 +353,7 @@ export function normalizeCanonicalOrderPayload(
         quantity: asFiniteNumber(line.attributes?.quantity),
         title: asString(line.attributes?.title),
         line_type: asString(line.attributes?.line_type),
-        tag_list: tagListOf(line).join("\0") || null,
+        tag_list: [...tagListOf(line)].sort().join("\0") || null,
       },
     });
   }
