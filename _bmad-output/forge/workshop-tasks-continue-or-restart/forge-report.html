@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge Report — Workshop Tasks: Continue or Restart</title>
+<style>
+  :root {
+    --ink: #2b2620; --paper: #f6f1e7; --card: #fffdf8; --rule: #d8cfbe;
+    --accent: #8a5a2b; --green: #2e6b3f; --red: #8c2f2f; --muted: #7a715f;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--paper); color: var(--ink);
+    font-family: Georgia, 'Times New Roman', serif; line-height: 1.55;
+  }
+  .wrap { max-width: 860px; margin: 0 auto; padding: 40px 24px 80px; }
+  header { display: flex; align-items: flex-start; justify-content: space-between; gap: 24px; border-bottom: 3px double var(--rule); padding-bottom: 24px; }
+  h1 { font-size: 1.7rem; margin: 0 0 6px; letter-spacing: 0.5px; }
+  .sub { color: var(--muted); font-size: 0.95rem; margin: 0; }
+  h2 { font-size: 1.15rem; margin: 36px 0 10px; border-bottom: 1px solid var(--rule); padding-bottom: 6px; letter-spacing: 0.4px; text-transform: uppercase; font-size: 0.95rem; color: var(--accent); }
+  .card { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 16px 20px; margin: 10px 0; }
+  ul { margin: 8px 0; padding-left: 22px; }
+  li { margin: 6px 0; }
+  .kill { color: var(--red); }
+  .keep { color: var(--green); }
+  .verdict-line { font-size: 1.05rem; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.92rem; margin: 10px 0; }
+  th, td { text-align: left; padding: 7px 10px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  th { color: var(--muted); font-weight: normal; text-transform: uppercase; font-size: 0.75rem; letter-spacing: 0.8px; }
+  .personas { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+  .persona { background: var(--card); border: 1px solid var(--rule); border-radius: 6px; padding: 12px 14px; font-size: 0.9rem; }
+  .persona b { display: block; }
+  .persona span.role { color: var(--muted); font-size: 0.8rem; }
+  .quote { font-style: italic; color: var(--muted); margin-top: 6px; }
+  .seal { flex-shrink: 0; }
+  footer { margin-top: 48px; color: var(--muted); font-size: 0.85rem; border-top: 1px solid var(--rule); padding-top: 14px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Forge Report — Workshop Tasks</h1>
+      <p class="sub">Session: 2026-08-18 &nbsp;·&nbsp; Owner: Den &nbsp;·&nbsp; Question: kill it, restart it, or continue?</p>
+      <p class="verdict-line"><b>Verdict: continue — pivoted.</b> Neither of the two options Den walked in with survived. The plan was over-built for the shop he has and under-built for the business he wants; the shipped parts are real value and stay.</p>
+    </div>
+    <svg class="seal" width="150" height="150" viewBox="0 0 150 150" role="img" aria-label="Wax seal stamped HARDENED">
+      <defs>
+        <radialGradient id="wax" cx="42%" cy="38%" r="70%">
+          <stop offset="0%" stop-color="#b03a2e"/>
+          <stop offset="55%" stop-color="#8c2f2f"/>
+          <stop offset="100%" stop-color="#5e1f1f"/>
+        </radialGradient>
+      </defs>
+      <path d="M75 8c14 0 18 9 30 11s26-3 33 9-2 22 3 33 14 12 12 26-13 16-17 27-1 23-13 28-21-5-33-4-20 10-32 6-13-15-23-21-22-5-26-17 6-20 6-32-9-21-4-32 18-10 26-19S61 8 75 8z" fill="url(#wax)"/>
+      <circle cx="75" cy="75" r="46" fill="none" stroke="#e8c9a0" stroke-width="2" stroke-dasharray="3 4"/>
+      <text x="75" y="70" text-anchor="middle" font-family="Georgia, serif" font-size="15" letter-spacing="2.5" fill="#f2ddc0" font-weight="bold">HARDENED</text>
+      <text x="75" y="90" text-anchor="middle" font-family="Georgia, serif" font-size="9" letter-spacing="1.5" fill="#e8c9a0">AT THE FORGE</text>
+      <text x="75" y="106" text-anchor="middle" font-family="Georgia, serif" font-size="8" fill="#d9b892">2026-08-18</text>
+    </svg>
+  </header>
+
+  <h2>What was on the anvil</h2>
+  <div class="card">
+    A "workshop tasks" feature (digital bike-prep and return checklists) whose plan had grown to <b>9 epics and ~50 stories</b>. Den was 12 stories in, buried in Epic&nbsp;2's canonical-ingestion vocabulary, three sprint-change proposals deep in four days, and could no longer tell what the AI was building or why it kept asking for clarification.
+  </div>
+
+  <h2>Locked decisions</h2>
+  <div class="card">
+    <ul>
+      <li class="keep"><b>Keep as shipped:</b> Epic 1 (checklist template library) and stories 2.1–2.3 (webhook security, Next 16 / Node 24 upgrade, toolchain pins).</li>
+      <li class="keep"><b>Keep frozen:</b> the canonical layer 2.4–2.9 — no extensions, deferred items stay deferred; one slim wiring story (webhook → canonical fetch-and-apply + refetch-on-claim) replaces stories 2.11 and 2.12 and finally plugs the dark engine in. Story 2.10 continues in its separate agent window.</li>
+      <li class="kill"><b>Killed:</b> 2.13 (revoke legacy writers) and 2.14 (rollout control plane) — exactness insurance for a failure whose full cost is a walk back to the bike rack.</li>
+      <li><b>Compressed:</b> epics 3–9 shrink from 34 stories to ~13. The M2 second-mechanic re-check survives on hard evidence (the paper checklist really has two columns and dual signatures); claim races demote to a unique constraint; Epic 9 becomes simply using the thing.</li>
+      <li><b>Franchise ambition:</b> direction only, nothing signed — no tenancy features; the pitch will be a system Den's own shop demonstrably runs on. Shop-scope columns were offered and consciously rejected.</li>
+    </ul>
+  </div>
+
+  <h2>What was rejected, and why</h2>
+  <div class="card">
+    <table>
+      <tr><th>Option</th><th>Fate</th><th>Reason</th></tr>
+      <tr><td>Kill the feature entirely</td><td class="kill">Rejected</td><td>The goals (automated manager→mechanic flow, dual-signoff checklists, historical data) are real; Epic 1 and the infra work are shipped value.</td></tr>
+      <tr><td>Delete everything, restart</td><td class="kill">Rejected</td><td>A false option from the start — the shipped parts are sound; only the plan's tail was rotten.</td></tr>
+      <tr><td>Continue the 9-epic plan as written</td><td class="kill">Rejected</td><td>Its complexity served a question nobody asked ("provably exact Booqable mirroring") while containing zero provisions for the actual strategic driver (multi-shop). Evidence: 2,471 lines of epics, zero mentions of franchise, tenant, or shop.</td></tr>
+      <tr><td>Shop-scope column now</td><td class="kill">Rejected by Den</td><td>Retrofit cost consciously accepted; nothing signed, nothing built.</td></tr>
+    </table>
+  </div>
+
+  <h2>Weak points that survived scrutiny</h2>
+  <div class="card">
+    <ul>
+      <li>If a franchisee ever signs, workshop history will need a tenancy retrofit migration — a known, accepted debt.</li>
+      <li>The frozen canonical layer carries known inert machinery (fingerprint columns, replacement-chain fields) that will confuse future readers until something consumes or removes it.</li>
+      <li>An unexecuted forward-revert action item for Story 2.7 still sits open in <code>sprint-status.yaml</code>.</li>
+      <li>Whether Booqable bumps <code>order.updated_at</code> on nested-only changes remains unverified; the comparator could quarantine legitimate additions (deferred, watch in practice).</li>
+    </ul>
+  </div>
+
+  <h2>The voices that worked the metal</h2>
+  <div class="personas">
+    <div class="persona"><b>📋 John — Product Manager</b><span class="role">installed agent</span><div class="quote">Forced the one-sentence job-to-be-done and ran every contested story through the "which growing bottleneck does this remove?" test.</div></div>
+    <div class="persona"><b>🏗️ Winston — System Architect</b><span class="role">installed agent</span><div class="quote">Exposed that bike identity is human-assigned in Booqable, and that the canonical engine was built but never plugged in.</div></div>
+    <div class="persona"><b>📏 Level — Claim Checker</b><span class="role">custom member</span><div class="quote">Held the franchise claim to evidence and found the plan contained zero multi-shop provisions.</div></div>
+    <div class="persona"><b>🚢 Dana — The Pragmatist</b><span class="role">custom member</span><div class="quote">Demanded headcount and the truth about the second-mechanic check before letting anyone re-plan.</div></div>
+    <div class="persona"><b>🪵 Splinter — Consensus Challenger</b><span class="role">custom member</span><div class="quote">Steelmanned Den's "automate for scale" pushback so the cuts had to be earned, not assumed.</div></div>
+    <div class="persona"><b>🔧 Rocco — Head Mechanic</b><span class="role">generated</span><div class="quote">"Bolt the engine in or sell it for parts, boss — but stop polishing it."</div></div>
+    <div class="persona"><b>🏪 Imma — Prospective Valencia Franchisee</b><span class="role">generated</span><div class="quote">"I won't ask if your webhook ingestion is provably exact. I'll ask what my mechanic taps on Monday morning."</div></div>
+  </div>
+
+  <footer>
+    Artifacts: <code>forged-idea.md</code> (handoff for re-planning) · <code>.memlog.md</code> (session record) — <code>_bmad-output/forge/workshop-tasks-continue-or-restart/</code>
+  </footer>
+</div>
+</body>
+</html>

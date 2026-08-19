@@ -1,73 +1,92 @@
-# Final Good-Spine Rubric Gate — Workshop Tasks
+# Good-Spine Rubric Review — Workshop Tasks
 
-**Reviewed:** 2026-08-12  
+**Reviewed:** 2026-08-18  
 **Artifact:** `../ARCHITECTURE-SPINE.md`  
-**Intent:** Final validation only; the spine was not edited.  
-**Verdict:** **PASS WITH EXPLICIT ACTIVATION BLOCKERS — no critical or high rubric finding remains.**
+**Intent:** Validate only; the spine was not edited.  
+**Verdict:** **NEEDS REVISION — no critical finding, but four high-severity seams can still produce incompatible epic implementations.**
 
-The second closure pass preserves the prior H1–H5 fixes and closes the additional cross-module, rollout, reconciliation, identity, event, and operational seams exposed during the broader gate. The unresolved source/product conditions are now hard gates: affected contracts and decomposition cannot proceed while their source truth remains unknown. They no longer allow independent units to make incompatible choices.
+## Evidence checked
 
-## Review boundary
+- Approved MVP PRD (`prd.md`), addendum, and 2026-08-18 sprint-change proposal.
+- Brownfield project context and the shipped canonical adapter, coordinator, webhook, legacy `sync.ts`, and preview-ingestion guard.
+- The good-spine checklist: real feature-level divergence points, enforceable ADs, safe deferral, source coverage, brownfield ratification, and all structural dimensions including operations.
+- Deterministic spine lint: **pass** — no placeholders, duplicate/non-monotonic AD IDs, missing AD fields, or unpinned stack rows.
 
-The final gate applied the BMad good-spine checklist to the latest spine and architecture memlog, using the finalized PRD/addendum, UX package, completed Workshop brainstorm, completed Booqable technical research, brownfield code/migrations/RLS/deployment/configuration, package lock, project context, and the prior rubric findings as reconciliation evidence.
+## Critical
 
-The deterministic linter passes with zero findings:
+None.
 
-- AD-1 through AD-18 are unique and monotonic;
-- every AD has Binds, Prevents, and Rule;
-- every Stack entry is pinned;
-- no placeholder remains.
+## High
 
-## Prior H1–H5 closure
+### H1 — The source-to-Workshop derivation transaction is not owned by one enforceable seam
 
-- **H1 — source-vector removal semantics: closed.** AD-4 now defines the union comparison domain, complete/partial scope, newer authority for additions/removals, explicit tombstones, equal-vector fingerprint behavior, quarantine, schema-version separation, and queued-work refetch/drain. Absence authority is fixture-gated and otherwise non-closing.
-- **H2 — mechanic shared-source reads: closed.** AD-11 prohibits broad mechanic shared-table RLS; AD-18 fixes the task-scoped field allowlist and excluded PII; AD-12 composes task detail through that capability.
-- **H3 — multi-quantity FR-1: safely gated.** AD-5 fixes identity/incarnation/cardinality and prohibits guessing. The unresolved source discriminator is an Open Activation Blocker that stops dependent task-creation decomposition or requires explicit FR-1 re-scope.
-- **H4 — attention payloads: closed.** AD-10 fixes reason codes, note requirements, requester-only override behavior, issue identity, and found-and-fixed semantics.
-- **H5 — FR-3 source conflict: safely gated.** AD-6 fixes one current implementation contract and explicitly requires PRD alignment or an approved enforceable presence lease before affected decomposition.
+**Affected:** AD-2, AD-4, AD-5, AD-16; FR-4, FR-6, FR-15, FR-18, FR-21.
 
-## Second closure-pass verification
+AD-2 says every multi-row Workshop mutation is a named PostgreSQL RPC entered through a `withAuth` action. That cannot govern source-driven task creation/cancellation/replacement/reconfirmation: `apply_canonical_order_graph` is service-role-only, and webhook ingestion has no authenticated staff actor. AD-4 then says to fetch and apply, while AD-5 says that an assignment creates/cancels/replaces a task, but neither decision names the database coordinator that derives those Workshop changes or requires that it share the canonical-apply transaction.
 
-The latest additions prevent new incompatible implementations:
+Independently built live-wiring and task-lifecycle epics could therefore choose incompatible implementations: post-apply application code, an eventual trigger, a separate service action, or a second RPC. Those choices differ on duplicate deliveries, claim races, and whether canonical state can commit while task state does not.
 
-- **Membership concurrency:** AD-5 allows at most one current nonterminal incarnation and performs close/open replacement atomically.
-- **Global event presentation:** AD-8 separates per-task causal sequence from deterministic cross-task ordering.
-- **Default privileges:** AD-11 applies revocation/default-privilege rules to every object-creating owner and forbids API-role membership or `SET ROLE` escalation.
-- **Allowlist evolution:** AD-13 versions classification, requires disabled impact analysis, and prevents removals from silently terminating existing work.
-- **Rollout boundary:** AD-14 uses a completed two-sweep known-order manifest, scopes blocking incidents, and leaves emergency disable/repair unconditional.
-- **Worker convergence:** AD-15 defines receipt-to-intent correlation, lifecycle states, leases, heartbeats, CAS completion, bounded attempts, successor retry lineage, and exact JIT-gated command classes.
-- **Pagination coverage:** AD-15 requires stable sorting, overlap, coverage epochs, and two stable complete sweeps; page absence never deletes.
-- **Derived-context changes:** AD-16 records derivation debt for relevant resource, partner-map, and allowlist changes and consumes it through `order_graph` even when source DML is otherwise a no-op.
-- **Bad-ingestion repair:** AD-14 binds a narrow correction capability that preserves app-authored evidence, provenance, and correction history without weakening ordinary terminal rules.
-- **Read/event seams:** AD-18 versions the field-minimized task-context and Workshop event catalogues across SQL producers, loaders, types, and Activity.
-- **Operational retention:** the conventions preserve nonterminal work and sufficient failure/provenance summaries while centralizing compaction windows.
+**Required disposition:** amend the spine to name one service-only database coordinator/transaction boundary for canonical apply plus Workshop derivation. It must state exactly which canonical apply results may derive state, make task identity uniqueness and close/open transitions atomic, and explicitly exempt source ingestion from the interactive `withAuth` rule while retaining authenticated actor derivation for staff commands.
 
-No new critical or high issue arises from these additions.
+### H2 — Return eligibility does not require releasing the prior assignee atomically
 
-## Good-spine checklist
+**Affected:** AD-6, AD-8, AD-9; FR-18, FR-19.
 
-- **Real feature-altitude divergence points:** **Pass.** Cross-module ownership, source comparison, identity, lifecycle, reads, events, retries, rollout, and repair are fixed or hard-gated.
-- **AD enforceability/prevention:** **Pass.** Rules identify owners, constraints, lock/transaction boundaries, typed states/results, fixture gates, privilege checks, and operational transitions that can be tested.
-- **Deferred safety:** **Pass.** Deferred behavior is prohibited or bounded by one current contract; unresolved capability/source choices are under Open Activation Blockers instead.
-- **Named technology/current fit:** **Pass.** Versions are accurate brownfield inventory, unsupported Next.js is explicitly not endorsed, and runtime/provider uncertainties are activation gates.
-- **Brownfield ratification:** **Pass.** Existing shared data, partner attribution/access, local customers, writers, route conventions, migrations, and CI deployment are preserved through explicit cutover and compatibility contracts.
-- **Source capability coverage:** **Pass with gates.** Requirements are represented; capabilities whose source evidence or upstream decision is unavailable cannot decompose or activate until proved or re-scoped.
+AD-6 says a returned actionable task makes Return Check “the only actionable work,” but it only explicitly clears assignment for cancellation, replacement, force-close, and Done. FR-18 requires a returned task to become claimable through Available Now; that requires clearing any M1/M2 owner and transitioning to unassigned `Needs Return Check`.
+
+Without an explicit transition rule, one implementation can retain the Prep/Re-check owner and move to `In Return Check`, while another releases the task to Available Now. Both can read AD-6 as compliant, but only the latter satisfies the PRD and preserves first-writer-wins Return claim semantics.
+
+**Required disposition:** amend AD-6/AD-8 to require one atomic return transition: clear active assignment, preserve unfinished Prep/Re-check history, create the Return Snapshot, set `Needs Return Check`, emit attributed history, and increment the task revision. State the idempotent behavior for repeated returned refreshes.
+
+### H3 — NFR-7 is only named in a map, not bound as an implementation invariant
+
+**Affected:** NFR-7; AD-9, AD-12, AD-19.
+
+The capability map associates NFR-7 with audit/security ADs, but no AD prohibits offline completion, client-side mutation queues, service-worker replay, or presenting cached task state as writable. AD-19 bans source-recovery infrastructure, not Workshop offline functionality. A queue/UI epic could independently add “resilient offline saves” and violate the approved online-only product boundary while appearing compatible with the current rules.
+
+**Required disposition:** add an enforceable online-only rule: mutations require a live authenticated request and authoritative server confirmation; client storage may retain unsaved input only for the current open session, must not queue/replay commands, and cached/offline task data must not be presented as claimable or completable.
+
+### H4 — AD-14 contradicts the real preview-secret model and omits the webhook execution budget
+
+**Affected:** AD-14; brownfield deployment/operations; FR-21.
+
+AD-14 says preview deployments “receive no Booqable or service-role credentials.” Brownfield reality is deliberately different: previews can inherit project secrets, and `isBooqableIngestionAllowed()` refuses ingestion when `VERCEL_ENV === "preview"` even if secrets are present. The actual security invariant is runtime refusal, not guaranteed credential absence. The same project context makes the Vercel Hobby 10-second function cap a hard webhook design constraint, which AD-14 does not bind.
+
+This is both a brownfield contradiction and an operational seam: a wiring epic could remove the runtime guard because it trusts the spine’s incorrect deployment assertion, or introduce a fetch/retry path that exceeds the webhook budget.
+
+**Required disposition:** replace the credential-presence assertion with the tested runtime invariant—preview ingestion is denied regardless of inherited credentials—and bind the 10-second Vercel limit plus bounded failure behavior for the signal-only webhook. Deployment credential minimization may remain a desired environment policy, but not a claimed enforced fact.
+
+## Medium
+
+### M1 — Source traceability is internally inconsistent about FR-22
+
+The approved PRD contains FR-22 (shared latest-value Notes), and multiple ADs and map rows correctly bind it. However, the spine frontmatter claims only `FR-1..FR-21`; the addendum also says current IDs end at FR-21. This makes the declared source coverage false and leaves downstream reviewers with two incompatible requirement sets.
+
+**Disposition:** align the PRD addendum and spine metadata to `FR-1..FR-22`, or formally retire/renumber FR-22 in the PRD. This is traceability drift rather than a missing Notes architecture decision.
+
+### M2 — AD-4 conflates webhook and claim failure handling
+
+“A failed refresh returns a visible error” is enforceable for a claim action, but not for an asynchronous webhook caller. The webhook needs a specific HTTP/logging contract—currently an error is logged and a 500 is returned so Booqable may redeliver—while the claim needs a discriminated user-visible result. The present wording risks one implementation swallowing a webhook failure or trying to produce user-facing feedback where no user exists.
+
+**Disposition:** split the rule by caller: claim returns `{ ok: false, error }` without claiming; webhook logs with its existing context prefix and returns a retryable failure response. Keep both on the same fetch-and-apply boundary.
+
+### M3 — “Relevant source change” is safely deferred, but lacks an ownership/test seam
+
+The Deferred default (“any task-context-visible change”) is safe and matches PRD question 2, but the spine does not name where the before/after comparison and test fixture live. The likely contenders are the frozen canonical adapter, the source-to-Workshop derivation coordinator, and a task-detail loader; choosing differently changes whether a no-op source apply can set reconfirmation.
+
+**Disposition:** retain the deferred field list, but add a convention that the future explicit predicate is owned and regression-tested at the source-to-Workshop derivation boundary from H1, never recomputed independently in UI loaders.
+
+## Good-spine checklist result
+
+- **Real feature-level divergence points:** **Needs revision.** Source derivation, Return ownership, and online-only behavior remain open divergence points.
+- **AD enforceability and stated prevention:** **Needs revision.** AD-2 cannot literally govern service-role source mutations; AD-6 and the NFR-7 map lack rules that prevent their stated/product divergences.
+- **Deferred safety:** **Pass with M3.** The listed deferred items are bounded non-goals or have a safe default; the relevant-change predicate needs a named future owner.
+- **Brownfield ratification:** **Needs revision.** AD-14’s preview credential assertion conflicts with the existing preview-denial guard and its documented rationale. The rest of the spine appropriately preserves the canonical adapter, `sync.ts`, brownfield readers, local-customer behavior, RLS, and CI-only remote migrations.
+- **Source coverage:** **Substantively covered, traceability needs revision.** FR-1..FR-22 and NFR-1..NFR-6 have material architectural coverage. NFR-7 lacks a binding rule. The PRD/addendum/frontmatter disagree on whether FR-22 exists.
+- **Technology fit:** **Pass.** The stack matches the current project context and the mechanical pin check passes.
+- **Structural breadth, including operations:** **Needs revision.** CI/local verification and rollout/recovery non-goals are decided, but preview ingestion enforcement and the webhook execution-time constraint must be stated as operational invariants.
 - **Inherited parent spine:** **Not applicable.**
-- **Structural breadth:** **Pass.** Stack, boundaries, data, state, mutation, concurrency, security, UX data flow, deployment/environments, infrastructure, operations, monitoring state, retry, reconciliation, retention, recovery, rollback/correction, and testing are covered.
-- **Mechanical integrity:** **Pass.**
 
-## Activation blockers are not rubric findings
+## Review conclusion
 
-The spine correctly retains five hard conditions:
-
-1. prove or re-scope multi-quantity FR-1 identity;
-2. align FR-3 or approve a presence lease;
-3. approve/prove or re-scope classification, Setup Category, and pickup mappings;
-4. prove absence-authority version behavior or keep absence non-closing;
-5. complete the supported framework/runtime, SSR cache, deployment, privilege, and CLI baseline.
-
-Each blocker has one safe fallback and prevents affected decomposition or activation. None permits feature units to diverge.
-
-## Final gate conclusion
-
-The latest spine is a valid feature-altitude convergence contract. No critical or high rubric finding remains. Work may decompose only where the Open Activation Blockers permit it, and production activation remains subject to the stated evidence and technology gates.
+The rewrite removes the rejected enterprise lifecycle, rollout, and source-recovery architecture and successfully centers the MVP on the frozen canonical boundary, manager-assigned bikes, atomic staff workflow changes, task history, and a small lifecycle. It is not yet a safe build substrate for independently implemented Epic 2/3/6/8 work: resolve H1–H4 before decomposing those seams. The deferred list is otherwise appropriate for the approved MVP.

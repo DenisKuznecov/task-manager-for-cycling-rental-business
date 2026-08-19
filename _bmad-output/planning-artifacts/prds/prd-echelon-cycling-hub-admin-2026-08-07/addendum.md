@@ -1,182 +1,93 @@
 # Workshop Tasks PRD Addendum
 
-This addendum preserves technical-discovery assumptions, decision rationale, and alternatives that would distract from the capability-focused PRD.
+This addendum preserves technical-how, rejected-alternative rationale, and the retired FR map. The capability-focused PRD is the product contract. Where this file and `prd.md` disagree, `prd.md` wins.
 
 ## Source Material
 
-- Primary source: `_bmad-output/brainstorming/brainstorm-per-bike-workshop-tasks-2026-08-05/.memlog.md`
-- Full source extract: `discovery-source-workshop.md`
+- Approved scope correction: `_bmad-output/planning-artifacts/sprint-change-proposal-2026-08-18.md`
 - Canonical PRD-session decisions: `.memlog.md`
-- Architecture contract: `_bmad-output/planning-artifacts/architecture/architecture-echelon-cycling-hub-admin-2026-08-10/ARCHITECTURE-SPINE.md`
-- Activation-blocker research and ready amendments: `_bmad-output/planning-artifacts/research/technical-workshop-architecture-open-activation-blockers-research-2026-08-12.md`
+- Prior brainstorming: `_bmad-output/brainstorming/brainstorm-per-bike-workshop-tasks-2026-08-05/.memlog.md`
+- Architecture contract (not yet rewritten for this MVP): `_bmad-output/planning-artifacts/architecture/architecture-echelon-cycling-hub-admin-2026-08-10/ARCHITECTURE-SPINE.md`
 
-## Integration Assumptions Requiring Technical Discovery
+## 2026-08-18 MVP Correction
 
-### Booqable synchronization
+The 2026-08-07/12 autonomous source-identity, freshness-proof, and rollout plan is rejected for the first operating release.
 
-- Booqable order-update notifications only identify which order changed; current order, bike, line-item, and customer data must be refreshed and treated as authoritative.
-- Draft/new/concept orders are believed to be filtered before workshop work becomes actionable.
-- Duplicate and out-of-order updates must converge safely under the product reconciliation rule in FR-47.
-- Selective reopening depends on comparing the last accepted workshop configuration with refreshed current Booqable data.
-- Picked-up/active rental must be distinguishable from reserved and returned; the exact Booqable field/status remains a discovery item.
-- Generic absence from a Booqable response is non-closing in v1, including absence from a transport-complete relationship. Bike removal requires a validated explicit archive/tombstone or another separately fixture-proven explicit removed state returned through the canonical refresh path; absence may update observation metadata or an Integration Incident but must not suspend or terminate workshop history.
+**Current product rule:** create one Bike Task after an exact manager-assigned stock ID; run Prep + independent M2 + Return on that task; reconfirm only during active M1 Prep; let managers resolve attention, reassign, or force-close.
 
-### Source classification tags
-
-Booqable `tag_list` is the category authority. The controlled ProductGroup tags are:
-
-1. `workshop-road-bike`
-2. `workshop-e-road-bike`
-3. `workshop-e-city-bike`
-4. `workshop-gravel-bike`
-5. `workshop-mtb-bike`
-6. `workshop-e-mtb-bike`
-
-Bundles use the corresponding `workshop-*-bike-bundle` tag and must agree with the contained bike ProductGroup. Products inherit ProductGroup tags. The canonical projection persists admitted Product, ProductGroup, and Bundle tag lists as read-only source facts. Exactly one controlled ProductGroup bike tag admits Workshop work; untagged entities create no work, while unknown, multiple, or conflicting Workshop tags create a deduplicated Integration Incident and no task. Tag values classify category but never replace exact StockItem identity.
-
-### Setup Category mapping
-
-The accepted first-release Setup Categories are:
-
-1. Pedals
-2. Saddle
-3. Wheelset
-4. Power meter
-5. Computer mount
-
-The initial behavior for every relevant configuration change is the broad `review_updated_configuration` requirement. Accessory tags are persisted but not interpreted or configured before Epic 6.
-
-Epic 6 may activate category-level selective invalidation only when every active Setup Category has a stable source field, related resource, or accessory-tag identifier covered by redacted fixtures for null, unknown, changed, and removed values. Display labels are not mapping keys. Until that complete mapping version is proven, or whenever the proof is stale, the system remains in broad mode instead of guessing a target category. Missing stable mapping blocks targeted invalidation, not source ingestion, bike classification, or Workshop Task execution.
-
-### Multi-quantity physical-bike identity
-
-A quantity-one bike line may use one provisional `single` discriminator and create a Bike Task in Waiting for Bike ID until its StockItem is known. Once assigned, Booqable's opaque StockItem external ID is the stable physical identity; the human-readable `stock_identifier` remains display and workshop-confirmation data. Multi-quantity lines have a stricter boundary:
-
-- create a Bike Task only for each exact distinct StockItem assignment;
-- never manufacture per-unit identity from planned quantity, array position, title, StockItemPlanning position, or a generated ordinal;
-- when planned quantity exceeds exact assignments, create or update one deduplicated Integration Incident containing expected, identified, and unknown counts;
-- create missing Bike Tasks only when later exact StockItem assignments appear, without recreating existing tasks; and
-- resolve the Integration Incident only when exact assignments cover expected quantity or authoritative explicit source evidence decreases planned quantity.
-
-This is a deliberate fail-closed re-scope. Booqable can report fewer StockItem assignments than planned quantity and does not expose a verified source-backed identity for each unspecified unit.
-
-### Bundled and flat orders
-
-- Bundled orders are expected to expose a stable parent relationship between accessories and a bike.
-- Flat orders do not provide a reliable automatic association. Managers therefore describe per-bike accessories in that bike's `extra_information`.
-- The system must not infer flat-order associations.
-- If bundled parent linkage is unstable, bike-specific accessory display must be re-scoped.
-
-### Provisional bike identity
-
-Reserved quantity-one lines commonly arrive before an exact StockItem assignment or before a manager enters the human-readable `stock_identifier` in Booqable. The first-release product rule is:
-
-- create the Bike Task immediately;
-- keep it visible as Waiting for Bike ID;
-- keep it unclaimable until both the exact StockItem assignment and human-readable identifier arrive;
-- attach the stable StockItem external ID and display `stock_identifier` to the same task when Booqable provides them.
-
-This overrides an earlier brainstorming exclusion that omitted missing-identifier work from the product. Pilot may later prefer claim-before-ID.
-
-### Task stage representation
-
-The user-visible lifecycle is defined in the PRD. Whether the implementation stores stage explicitly, derives it from unresolved required work, or combines both remains an architecture decision. An earlier proposal to always derive the stage from the earliest unresolved Item was explicitly retracted and must not be treated as a product decision.
-
-### Assignment after source suspension
-
-An authoritative current cancellation or explicit validated bike removal always clears active assignment atomically. Valid same-bike reactivation preserves the task's safe prior stage and evidence, reconciles current Booqable intent, and returns the task unassigned for an ordinary claim. Cancellation is a reversible source-availability suspension while authoritative; it is not the irreversible Replaced outcome.
-
-The first release has no presence lease, heartbeat, or other enforceable proof that a mechanic is continuously working. An open screen, session, `In Prep` stage, or recent save must not retain assignment after cancellation or removal. A future presence lease would be a separately approved product and infrastructure capability.
-
-## Accepted Model Rationale
-
-### Living Bike Task
-
-A reserved order creates workshop work immediately. The same Bike Task absorbs relevant Booqable changes while preserving completed history. This avoids a manager-controlled "release to workshop" gate for which no real operational readiness moment exists.
-
-### Always-visible admin-authored Items
-
-Admins own checklist language. Items may link to a bounded Setup Category for grouping, current-value context, and selective invalidation, but links do not control runtime visibility.
-
-This replaced generated accessory checklist Items because generated wording and mappings could not reliably represent real workshop work.
-
-Template activation intentionally does not require linked-Item coverage for every Setup Category. Administrators own coverage quality. A blocking coverage rule was rejected because incomplete configuration should remain visible as an administrative responsibility rather than becoming a new system gate.
-
-### Normal flow for reopened work
-
-Changed work reuses Needs Prep and applicable Re-check on the same Bike Task. There is no separate revalidation task, status, queue, or manager ping. This preserves one mental model for mechanics and one attributable history for the bike within the rental.
-
-### Independent selective verification
-
-M2 makes a fresh attestation on configured Items rather than approving M1's response. This supports the quality goal: a second mechanic checks selected aspects independently and can correct the bike after speaking directly with M1.
-
-### Physical-state authority
-
-Booqable owns rental intent and membership. Workshop Tasks owns derived workshop state and attribution. Mechanics remain the authority on the physical bike's actual condition. Checklist outcomes are attributable attestations; they are not independent sensor evidence of bike condition.
-
-### Durable return changes
-
-Return-relevant physical changes are recorded as Structured Modifications. Shared Notes remain supplementary free text. This avoids relying on a mutable latest-value Notes field as the complete return-change ledger while still rejecting a full Notes revision system.
-
-### Attention independent of Done
-
-Needs Attention must not block mechanical completion. Open flags remain visible in a first-release Manager Attention List. This keeps the mechanic flow unblocked while preventing orphaned exceptions.
-
-## Rejected or Deferred Alternatives
-
-- **Generated accessory checklist Items:** Retired in favor of always-visible admin-authored Items linked to Setup Categories.
-- **Explicit release-to-workshop gate:** Rejected because there is no distinct operational readiness moment after reservation.
-- **Separate changed/revalidation workflow:** Rejected; reopened work uses the normal flow.
-- **Automatic mechanic assignment:** Rejected because the system cannot know real workshop workload and availability.
-- **Manager urgent ping:** Removed; start-date queue priority remains the normal coordination mechanism.
-- **Admin completion without checking:** Rejected because it would undermine independent verification and audit trust.
-- **Separate Prep and Re-check templates:** Superseded by per-Item M1/M2 applicability within one Prep template.
-- **Single overloaded checked outcome:** Superseded by explicit Done and N/A.
-- **M2 second-value entry:** Superseded by M2 pass attestation against M1's target value.
-- **Timestamped Notes entries / Notes revision history:** Rejected; durable physical changes use Structured Modifications instead.
-- **Silent omission of bikes without stock_identifier:** Overridden; provisional Waiting for Bike ID tasks are required.
-- **Claim before bike ID:** Deferred as a possible post-pilot change; first release keeps provisional tasks unclaimable.
-- **Provisional tasks for ambiguous multi-quantity units:** Rejected because no source-backed per-unit identity exists; unknown quantity is represented by a deduplicated Integration Incident.
-- **Retain assignment when the same mechanic appears active after cancellation/removal:** Rejected for v1 because task state and open sessions are not enforceable presence proof.
-- **Local ProductGroup UUID allowlist and Workshop classification screen:** Withdrawn because Booqable `tag_list` is the authoritative category contract; a second approval surface would create drift without classifying live source data.
-- **Label-based Setup Category targeting:** Rejected; targeted invalidation requires stable approved identifiers and fixture-backed normalization, otherwise broad configuration review applies.
-- **Attention blocking Done:** Rejected; attention remains orthogonal to completion.
-- **Resuming a Replaced task after re-add:** Rejected; Replaced is terminal and re-add creates a new task.
-- **Full cross-rental bike identity and usage history:** Deferred as a separate future product capability.
-- **Offline resilience after session loss:** Excluded from the first release; confirmed-save retry while online remains required.
-- **Bike Fit cross-reference:** Parked for a later product decision.
-
-## Loading and Pending Feedback (Implementation Mapping)
-
-NFR-5 is a product requirement for continuous feedback during navigation and mutations, not an API prescription. In this Next.js App Router admin hub, that typically maps to route-level page loaders (e.g. `loading.tsx`) plus pending UI around server-action mutations used for claim, Item save, handoff, and completion. Exact skeleton/spinner/disabled-control patterns remain UX and implementation choices; the acceptance bar stays in the PRD: no blank unexplained waits, obvious in-flight actions, and no double submission while pending.
-
-## Deferred Non-Blockers
-
-These review findings were intentionally not expanded into first-release requirements. Owner: product/PM. Revisit after pilot or during UX design.
-
-| Topic | Revisit when |
-|---|---|
-| Phase-aware queue priority beyond rental start date | Mechanics report Prep/Re-check/Return collisions in Available Now |
-| Mechanic self-release / end-of-shift transfer | Claimed work regularly blocks the next bike without a manager |
-| Written reasons for reset, force-close, override, and reassignment | Audit consumers need rationale beyond actor/time |
-| Exact tablet density acceptance thresholds | UX prototypes exist and pilot observation begins |
-| Optional M2-enabled Item completion edge cases | Checklist authoring reveals optional Re-check Items in practice |
-
-## UX Topics Intentionally Left Open
-
-- Previous `extra_information` must be available on demand after a change, but the exact progressive-disclosure pattern is not prescribed.
-- Setup Categories with an initial value of `No` will remain visible and support N/A in the first release. This is a trial behavior to evaluate with mechanics.
-- Bundle-linked accessories and `extra_information` must appear together with clear source labels, but final visual hierarchy belongs to UX.
-- Waiting for Bike ID presentation and eventual claimability remain pilot-sensitive.
+Shipped work stays: Epic 1 templates and Epic 2 Stories 2.1–2.10.
 
 ## Current Landscape Notes
 
-Current rental, workshop, and fleet products commonly separate asset availability from work-order progress, use reusable per-asset procedures, expose blocker reasons separately from lifecycle stages, and retain attributable service history. Relevant comparables reviewed during discovery include:
+Rental and fleet tools usually separate asset availability from work-order progress and keep blockers orthogonal to completion. Workshop Tasks follows that split: Booqable owns the assigned bike and order lifecycle; the Bike Task owns workshop progress and attribution; Needs Attention is not a Task Outcome.
 
-- [Bike.rent Manager](https://bikerentalmanager.com/maintenance-repair/)
-- [Valet](https://explorevalet.com/bike-fleet-maintenance)
-- [Booqable downtime](https://help.booqable.com/en/articles/12505664-how-to-schedule-downtime-for-your-products)
-- [Hubtiger](https://hubtiger.com/bike-shop-management-for-busy-mechanics/)
-- [Fleetio work orders](https://help.fleetio.com/maintenance/work-order-overview)
+## Retired FR Map (2026-08-12 → 2026-08-18)
 
-The strongest recurring warning is not to conflate asset availability, workshop progress, attention/blocker state, and completion. The PRD therefore keeps Needs Attention orthogonal to the Bike Task lifecycle and leaves the Booqable order lifecycle authoritative.
+New IDs in `prd.md` are FR-1 through FR-22. Downstream architecture and epics must stop targeting the old IDs.
+
+| Old IDs | Disposition | New home |
+|---|---|---|
+| FR-11, FR-12, FR-13, FR-16, FR-17, FR-18 | Kept, compressed | FR-1, FR-2, FR-3, FR-11, FR-12 |
+| FR-1 provisional / multi-quantity / Integration Incident | Non-goal | FR-4, FR-5 |
+| FR-2, FR-3 replacement-chain and auto-reactivation | Non-goal | FR-6 simple cancel/replace |
+| FR-4 long lifecycle including Waiting for Bike ID | Replaced | Glossary Task Outcome + Work Phase |
+| FR-5 manager reset | Non-goal | — |
+| FR-6, FR-7, FR-8, FR-9 | Kept, compressed | FR-7, FR-8, FR-9 |
+| FR-10 Work Cycle ownership | Non-goal | M1/M2 on the Bike Task; no cycle model |
+| FR-14, FR-15 Setup Category visibility / targeting | Non-goal as targeting | Context may still display on the Bike Task via FR-10 |
+| FR-19 built-in confirmation / broad review Item | Non-goal as an engine | FR-15 reconfirmation during `In Prep` |
+| FR-20–FR-24 M2 core | Kept, compressed | FR-13, FR-14 |
+| FR-25, FR-45 same-mechanic override | Non-goal | Hard M2 ≠ M1 |
+| FR-26–FR-33 selective invalidation and reopen-after-complete | Non-goal | FR-15 only |
+| FR-34 Notes | Kept, compressed | FR-22 |
+| FR-35, FR-36 accessory inference | Non-goal | Do not guess flat-order associations |
+| FR-37, FR-41, FR-42 Structured Modifications + acknowledgement | Non-goal | FR-19 history |
+| FR-38, FR-43 attention | Kept, compressed | FR-16 (override reason removed) |
+| FR-39, FR-40 Return | Kept, compressed | FR-18, FR-19 |
+| FR-44 force-close | Kept | FR-17 |
+| FR-46 history | Kept | FR-20 |
+| FR-47, FR-48 sync / stale screen | Compressed | FR-21, NFR-3 |
+
+## Technical-How (Not Product Features)
+
+- Booqable notifications are signal-only. Current authority is a refetch through the canonical adapter, then `apply_canonical_order_graph`.
+- A mechanic claim performs the same current-order refetch before the claim completes.
+- `src/lib/booqable/sync.ts` remains the brownfield writer and is not extended by this MVP.
+- No application-managed retry queue, worker, reconciliation sweep, or missed-webhook repair API.
+- Controlled ProductGroup tags remain `workshop-road-bike`, `workshop-e-road-bike`, `workshop-e-city-bike`, `workshop-gravel-bike`, `workshop-mtb-bike`, and `workshop-e-mtb-bike`. Bundles use the matching `workshop-*-bike-bundle` tag. Tags classify category; they never replace StockItem identity.
+- New `booqable_*` tables stay service-role-only. Migrations stay idempotent and are applied locally; staging/production schema changes go through CI.
+
+## Accepted Model Rationale (Current)
+
+- **Manager-assigned identity:** The manager already reconciles the physical bike with the customer in Booqable. Inventing provisional tasks or quantity expansion duplicates that job and creates work the shop cannot perform.
+- **Living Bike Task after assignment:** Once a stock ID exists, the same Bike Task carries Prep, Re-check, and Return. There is no manager “release to workshop” gate.
+- **Always-visible admin-authored Items:** Admins own checklist language. Generated accessory Items were rejected earlier and stay rejected.
+- **Independent M2:** M2 attests configured Items; M1 cannot self-complete them. A same-mechanic override would collapse the quality goal in a three-person shop that can usually find a second pair of hands.
+- **Active-Prep reconfirmation only:** The practical stale-information cost is a walk to the rack, except while M1 is mid-checklist. That is the only change window that must block handoff.
+- **Attention orthogonal to Done:** Exceptions stay visible without blocking mechanical completion.
+- **Return reuses Prep machinery:** A second checklist engine and per-modification acknowledgement do not earn their complexity for this shop.
+
+## Rejected or Deferred Alternatives
+
+Includes earlier rejections that still hold, plus models reversed on 2026-08-18.
+
+- **Autonomous reserved-order task creation, including Waiting for Bike ID:** Reversed. No Bike Task before an exact stock ID.
+- **Multi-quantity Integration Incident identity:** Reversed. Unassigned quantity creates no workshop work.
+- **Replacement-chain incarnation, overlap guards, correction successors, automatic reactivation:** Reversed. Cancel or replace the task; create a fresh task only for a newly assigned stock ID.
+- **JIT freshness proofs, caller cutover / writer revocation, activation epochs, pilot cohorts, tenancy:** Non-goals. Adoption is an operating note.
+- **Selective Setup Category mapping and accessory-tag interpretation:** Non-goals.
+- **Work Cycle model, manager reset, same-mechanic override, standalone Activity:** Non-goals.
+- **Structured Modifications and individual Return acknowledgement:** Reversed. Observations live in task history.
+- **Generated accessory checklist Items:** Still rejected.
+- **Automatic mechanic assignment:** Still rejected.
+- **Offline after session loss:** Still excluded; confirmed-save retry while online remains required.
+- **Analytics / mechanic performance dashboards:** Deferred; FR-20 is history, not reporting.
+- **Paper-retirement product gate:** Reversed as a feature. Keep paper locally until the team is comfortable.
+
+## Loading and Pending Feedback (Implementation Mapping)
+
+NFR-4 is a product requirement for continuous feedback, not an API prescription. In this Next.js App Router hub that typically means route-level `loading.tsx` plus pending UI on claim, Item save, handoff, and completion. Exact visuals stay with UX.
+
+## UX Topics Left Open
+
+Living UX questions sit in `prd.md` §9. This file does not restate them.

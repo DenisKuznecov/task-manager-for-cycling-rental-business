@@ -2,554 +2,381 @@
 title: Workshop Tasks
 status: final
 created: 2026-08-07
-updated: 2026-08-12
+updated: 2026-08-18
 ---
 
 # PRD: Workshop Tasks
 
 ## 0. Document Purpose
 
-This PRD defines the first release of Workshop Tasks for product, UX, architecture, and implementation planning. It uses Glossary terminology, groups capabilities into features with stable FR IDs, and keeps product behavior separate from technical implementation. It reflects the completed per-bike workshop-task brainstorming session and the decisions from this PRD session. Technical assumptions and rejected models are in `addendum.md`.
+This PRD defines the first operating release of Workshop Tasks for product, UX, architecture, and implementation planning. It uses Glossary terms, groups capabilities into features with stable FR IDs, and keeps product behavior separate from technical implementation. Technical-how and rejected models live in `addendum.md`.
+
+This revision applies the approved Sprint Change Proposal of 2026-08-18. It replaces the prior 48-requirement autonomous-reconciliation plan with a compressed MVP for one three-person workshop. Old FR IDs are retired; the mapping is in the addendum.
 
 ## 1. Vision
 
-Workshop Tasks digitizes the mechanics' paper workflow so every bike's preparation, independent selective re-check, rental-specific changes, and return inspection are visible and attributable. It is a responsive web feature inside the existing admin hub, suitable for workshop tablets and phones as well as desktop management screens.
+Workshop Tasks digitizes the mechanics' paper workflow so every bike's preparation, independent re-check, and return inspection are visible and attributable. It is a responsive web feature inside the existing admin hub, suitable for workshop tablets and phones as well as desktop management screens.
 
 The product's outcome is bike quality, not checklist completion. A mechanic must be able to see available work, claim one bike, perform every required action, hand it to another mechanic for applicable independent checks, resolve the preparation, and move to the next bike without using a paper checklist.
 
-Booqable remains the authority for the rental order lifecycle. Workshop Tasks translates Booqable's current rental intent into actionable physical-bike work and keeps that work synchronized when the order changes.
-
-The system is the record of synchronized Booqable intent, change history, and workshop attribution. Mechanics remain the authority on whether the physical bike actually matches the required state; a digital outcome records their attestation rather than independently proving bike condition.
+Booqable remains the authority for the rental order lifecycle and for which physical bike is assigned. The manager assigns the exact stock ID in Booqable. Workshop Tasks creates work from that assignment, shows current rental context on the Bike Task, and records workshop attribution. Mechanics remain the authority on whether the physical bike matches the required state; a digital outcome records their attestation rather than independently proving bike condition.
 
 ## 2. Target Users and Jobs
 
 ### 2.1 Users
 
-- **Preparation Mechanic (M1):** Claims one Bike Task, prepares the bike, completes required Prep Items, records relevant changes, and hands the work to independent verification.
-- **Re-check Mechanic (M2):** Independently verifies applicable Re-check Items and records any correction made to the bike.
-- **Return-check Mechanic:** Completes the category-specific Return Checklist and acknowledges every Structured Modification from the same rental.
-- **Admin / Manager:** Manages Checklist Templates, assigns or reassigns work, handles Needs Attention flags, and uses explicit overrides when normal work cannot proceed.
-- **Booqable:** An external system actor and the authority for orders, bikes, rental timing, configuration, and lifecycle state.
+- **Preparation Mechanic (M1):** Claims one Bike Task, prepares the bike, completes required Prep Items, and hands the work to independent verification.
+- **Re-check Mechanic (M2):** Independently signs the Items configured for a second mechanic. M2 must be a different person from that task's M1.
+- **Return-check Mechanic:** Completes the category-specific Return Checklist on the same Bike Task after the rental is returned.
+- **Admin / Manager:** Maintains Checklist Templates, assigns stock IDs in Booqable, resolves Needs Attention, reassigns work, and force-closes abandoned Bike Tasks.
+- **Booqable:** External system actor and the authority for orders, assigned stock IDs, rental timing, configuration, and order lifecycle state.
 
 ### 2.2 Jobs To Be Done
 
-- When bikes require preparation, mechanics need to find and claim the next actionable bike without searching through orders or asking a manager.
-- While working at the bike, M1 needs a fast, clear checklist containing the current rental configuration so the tablet supports rather than distracts from physical work.
-- Before a bike is considered prepared, M2 needs to make an independent attestation on the configured subset of checks.
-- When Booqable changes the required bike configuration, mechanics need the affected work to become actionable again without restarting unrelated work.
-- After return, a mechanic needs durable records of rental-specific physical changes and a suitable Return Checklist so temporary changes can be reversed.
-- Managers need trustworthy attribution and intervention controls without becoming a required gate in the normal flow.
+- When a manager has assigned a physical bike, mechanics need to find and claim that work without searching through orders.
+- While working at the bike, M1 needs a fast checklist with current rental context so the tablet supports physical work.
+- Before a bike is considered prepared, M2 needs an independent attestation on the configured subset of checks.
+- If Booqable changes while M1 is still preparing, M1 needs to see that and reconfirm before handoff.
+- After return, a mechanic needs the same checklist machinery with the Return template so temporary setup can be reversed.
+- Managers need to clear exceptions, reassign, or force-close without becoming a gate on ordinary work.
 
-### 2.3 Core Operational Flows
+### 2.3 Key User Journeys
 
-- **UJ-1 — Prepare and verify one bike:** M1 opens Available Now, claims a Bike Task, completes all required Prep Items, records rental-specific changes as Structured Modifications when needed, and hands off. If Re-check Items apply, M2 claims the verification, independently resolves them, and completes Preparation. The next actionable Bike Task is immediately available.
-- **UJ-2 — Absorb a Booqable configuration change:** While M1 is preparing a claimed bike, a workshop-relevant Booqable update changes the required physical configuration. The same Bike Task stays assigned to M1 and opens the broad configuration-review requirement by default. If Epic 6 later proves a complete Setup Category mapping from stable source identifiers and fixtures, only the affected Items invalidate. Prep and any applicable Re-check remain the path to completion.
-- **UJ-3 — Check a returned bike:** When Booqable marks the order returned, the Return Checklist becomes actionable for each currently associated bike. The return-check mechanic reviews Notes and Structured Modifications, performs category-specific checks, acknowledges each Structured Modification, and completes the Bike Task.
-- **UJ-4 — Handle an exception:** A mechanic raises Needs Attention without blocking their own work. For a same-mechanic Re-check exception, M1 raises a request and a manager explicitly Approves or Declines it. A manager also finds and resolves other open flags in the Manager Attention List, reassigns work, resets stale work, or force-closes a genuinely abandoned Bike Task.
+- **UJ-1 — Marc prepares a reserved road bike; Inés re-checks it.**
+  Marc, the morning prep mechanic, opens Available Now on the workshop tablet and claims the Bike Task for stock `RD-14`. He works the Prep Snapshot at the rack, marks required Action Items Done or N/A, enters required values, and hands off only after every required Prep Item is server-confirmed. Inés, a different mechanic, sees the Bike Task in Needs Re-check, signs the M2 Items independently, and the Bike Task enters `Awaiting Return`. It is not in Available Now or My Work. Marc takes the next available bike.
+
+- **UJ-2 — Pedals change while Marc is still in Prep.**
+  While Marc is on `RD-14`, the manager changes the pedal selection in Booqable. The Bike Task stays assigned to Marc and shows that current order context changed. Handoff stays blocked until Marc reviews the current Booqable context and reconfirms the affected preparation. Inés still does M2 afterward; the change does not invent a new workflow.
+
+- **UJ-3 — Tomás checks the returned bike.**
+  Booqable marks the order returned. The Bike Task that was `Awaiting Return` becomes unassigned `Needs Return Check`. Tomás claims it, works the Return Snapshot with the same checklist controls, records observations in task history, and closes the Bike Task as Done.
+
+- **UJ-4 — Den clears a stuck bike.**
+  Den, the shop manager, opens the Manager Attention List and sees a Bike Task still assigned to a mechanic who left mid-shift, with reason and owner. He reassigns it or force-closes it as abandoned. The intervention records who acted, when, why, and the resulting status. Ordinary completion by a mechanic does not wait on that resolution.
 
 ## 3. Glossary
 
-- **Bike Task** — The persistent workshop record for one physical bike within one rental order. Stable physical identity uses Booqable's opaque StockItem external ID; the human-readable `stock_identifier` is display and workshop-confirmation data. A quantity-one bike line may provisionally lack both values and later attach them without recreating the task; a multi-quantity line produces Bike Tasks only for exact distinct StockItem assignments.
-- **Waiting for Bike ID** — A visible non-claimable Bike Task state used until a quantity-one provisional task has an exact StockItem assignment and Booqable provides its human-readable `stock_identifier`.
-- **Integration Incident** — A deduplicated operational record of Booqable source uncertainty or an unsafe mapping. It is visible for resolution but is not claimable workshop work and must not fabricate a Bike Task.
-- **Work Cycle** — One Prep pass plus any applicable independent Re-check caused by initial preparation or selectively reopened work.
-- **M1** — The Preparation Mechanic for the current Work Cycle. When multiple mechanics contribute Prep through reassignment, the current assignee who hands off is M1 for independence purposes.
-- **M2** — The independent Re-check Mechanic for the current Work Cycle.
-- **Prep Item** — An Action Item or Value Item completed by M1.
-- **Re-check Item** — An Item configured for independent M2 verification; M2-enabled requires M1-enabled.
-- **Return Item** — An Item in a category-specific Return Checklist.
+- **Bike Task** — The persistent workshop record for one physical bike within one rental order. It exists only after a manager has assigned an exact Booqable StockItem. Identity is that StockItem's opaque external ID; the human-readable `stock_identifier` is display and confirmation data only.
+- **M1** — The Preparation Mechanic who performs accepted Prep handoff on a Bike Task.
+- **M2** — The independent Re-check Mechanic for that Bike Task. M2 must differ from M1. There is no override.
+- **Prep Item** — An Action Item or Value Item completed by M1 from the Prep Snapshot.
+- **Re-check Item** — A Prep Item configured as requiring a second mechanic. M2-enabled implies M1-enabled.
+- **Return Item** — An Item in the Return Snapshot.
 - **Action Item** — An Item resolved as Done or N/A.
 - **Value Item** — An Item resolved by entering a value; it has no N/A outcome.
-- **Checklist Template** — An admin-authored, versioned definition for a bike category and phase.
+- **Checklist Template** — An admin-authored, versioned definition for a bike category and phase (Prep or Return).
 - **Prep Snapshot** — The immutable Prep Checklist Template version copied into a Bike Task when the task is created.
-- **Return Snapshot** — The immutable Return Checklist Template version selected when the Bike Task enters Needs Return Check.
-- **Setup Category** — A bounded Booqable configuration group used for context and grouping, and by Epic 6 for selective invalidation only after a complete source-backed mapping is proven. The initial set is Pedals, Saddle, Wheelset, Power meter, and Computer mount.
-- **Available Now** — The default queue of unassigned, claimable Bike Tasks ordered by rental start date.
-- **My Work** — The mechanic's currently assigned Bike Tasks so work can be resumed after interruption.
-- **Preparation Resolved** — The state reached when all required Prep Items and applicable Re-check Items for the current Work Cycle are resolved.
-- **Needs Attention** — A non-blocking flag indicating a system mismatch or a manager judgment call. It is orthogonal to lifecycle completion.
-- **Manager Attention List** — The first-release list of unresolved Needs Attention flags for managers.
-- **Notes** — One shared, latest-value free-text field for supplementary rental context and M2 corrections.
-- **Structured Modification** — A durable, attributable record of a physical change made to the bike during the rental. It is the authoritative return-acknowledgement unit.
+- **Return Snapshot** — The immutable Return Checklist Template version copied into a Bike Task when Return Check becomes actionable.
+- **Available Now** — The queue of unassigned, claimable Bike Tasks.
+- **My Work** — The mechanic's currently assigned Bike Tasks.
+- **Needs Attention** — A non-blocking flag that a Bike Task needs manager judgment. It is not a Task Outcome.
+- **Manager Attention List** — The list of Bike Tasks with unresolved Needs Attention.
+- **Notes** — One shared, latest-value free-text field for supplementary rental context.
+- **Task Outcome** — The Bike Task's durable result: `Actionable`, `Cancelled`, `Replaced`, `Force-closed`, or `Done`.
+- **Work Phase** — The mechanic-visible phase while the Task Outcome is `Actionable`: `Needs Prep`, `In Prep`, `Needs Re-check`, `In Re-check`, `Awaiting Return`, `Needs Return Check`, or `In Return Check`. Re-check phases are skipped when the Prep Snapshot has no Re-check Items.
+- **Awaiting Return** — The non-claimable Actionable Work Phase after preparation is complete and before Booqable marks the rental returned. It is not shown in Available Now or My Work. Only a returned authoritative rental moves the Bike Task to unassigned `Needs Return Check`.
 
-## 4. Features and Functional Requirements
+## 4. Features
 
-### 4.1 Booqable-driven Bike Task lifecycle
+### 4.1 Category-specific checklist standards
 
-**Description:** Workshop Tasks creates and maintains one Bike Task per independently identified physical bike in a Booqable rental. The task follows relevant Booqable lifecycle changes while preserving workshop history. Realizes UJ-1, UJ-2, and UJ-3.
+**Description:** Managers already maintain versioned Prep and Return templates per bike category, including which Items require a second mechanic. Bike Tasks copy an immutable snapshot rather than a live template. Realizes UJ-1 and UJ-3. This capability is shipped (Epic 1).
 
-#### FR-1: Create per-bike work from reserved orders
+#### FR-1: Maintain Prep and Return templates
 
-When a Booqable order becomes reserved, the system must reconcile independently addressable Bike Tasks for the physical bikes that Booqable identifies on each bike line. A quantity-one bike line may create one provisional Bike Task in Waiting for Bike ID before its StockItem is known. A multi-quantity line creates one Bike Task per exact distinct StockItem assignment; the system must not create indistinguishable provisional per-unit tasks from quantity, array position, title, or a generated ordinal. When planned quantity exceeds exact assignments, the system must expose one deduplicated Integration Incident with expected, identified, and unknown counts. Later exact assignments create the missing Bike Tasks without recreating existing tasks. The incident resolves only when exact assignments cover the expected quantity or authoritative explicit source evidence decreases the planned quantity.
+An Admin / Manager can create, activate, supersede, and reactivate separate Prep and Return Checklist Templates for e-city, e-road, road, gravel, MTB, and E-MTB.
 
-**Testable consequences:**
-- Draft, new, or concept orders do not make workshop work actionable.
-- During the one-time initial Booqable import/materialization, an order with Booqable status `canceled`, `stopped`, or `archived` creates no Workshop Tasks when no Workshop Bike Task already exists. This rule does not affect live task lifecycle, cancellation/reactivation, or later Return Check.
-- Repeated reconciliation of the same current order state does not create duplicate Bike Tasks for an exact StockItem or duplicate Integration Incidents for the same unknown shortfall.
-- A multi-bike order creates independently addressable Bike Tasks only for exact StockItem assignments on multi-quantity lines.
-- A reserved quantity-one bike line without an exact StockItem assignment or human-readable `stock_identifier` still creates a Bike Task in Waiting for Bike ID. The task is visible but not claimable until Booqable provides both; the same task then becomes claimable without recreation.
-- An unknown multi-unit shortfall is visible through its Integration Incident but is not claimable workshop work.
-- Replacement, removal, and re-add preserve the physical-bike incarnation and history rules in FR-2 and FR-3.
-- ProductGroup `tag_list` is authoritative for category admission: exactly one controlled Workshop bike tag classifies the bike. Runtime Bike Task identity remains the exact StockItem external ID and must not depend on line title, ProductGroup label, or tag value.
-- The controlled ProductGroup tags are `workshop-road-bike`, `workshop-e-road-bike`, `workshop-e-city-bike`, `workshop-gravel-bike`, `workshop-mtb-bike`, and `workshop-e-mtb-bike`. Untagged entities create no Workshop work; unknown, multiple, or conflicting Workshop tags create an Integration Incident and no task.
-- Waiting for Bike ID is a trial first-release behavior and may be revisited if mechanics need to start work before the identifier arrives.
+**Consequences (testable):**
+- Prep and Return are separate template families per category.
+- Activating a new version does not rewrite snapshots already copied onto Bike Tasks.
 
-#### FR-2: Preserve physical-bike identity
+#### FR-2: Configure Item type and second-mechanic requirement
 
-Once Booqable provides an exact StockItem assignment, the Bike Task must associate with that stable opaque external ID so workshop history cannot move silently between physical bikes. The human-readable `stock_identifier` must be displayed for workshop confirmation but must not replace the StockItem external ID as task identity.
+For each admin-authored Item, an Admin / Manager can define whether it is an Action Item or Value Item, whether it is required, whether M1 performs it, and whether M2 independently verifies it.
 
-**Testable consequences:**
-- Replacing bike A with bike B closes A's Bike Task as Replaced and creates a fresh Bike Task for B.
-- Replaced is terminal for that task instance. If bike A is later re-added to the same order, the system creates a new Bike Task rather than reopening the Replaced task.
-- Explicit validated removal of a bike with no replacement makes that Bike Task read-only. Generic absence is non-closing. If the same StockItem external ID returns to the same reserved order, the system resumes the prior non-Replaced task unassigned after reconciling current Booqable intent, as defined by FR-3.
-- Actionable Bike Tasks must show the human-readable `stock_identifier` so the mechanic can verify they are working on the correct bike.
+**Consequences (testable):**
+- M2-enabled requires M1-enabled.
+- Required Action Items accept Done or N/A.
+- Required Value Items require a value and do not offer N/A.
 
-#### FR-3: Handle cancellation and reactivation
+#### FR-3: Snapshot the active template onto the Bike Task
 
-When an order is authoritatively cancelled, the system must make each of its Bike Tasks read-only, preserve history, and atomically clear active assignment. When explicit validated source evidence shows that a bike was removed without replacement, only that bike's task becomes read-only, and its active assignment must also be cleared atomically. Generic absence from a refresh must not establish removal.
+Each Bike Task receives a Prep Snapshot at creation. It receives a Return Snapshot when Return Check becomes actionable, using the then-active Return template for the bike's current category.
 
-**Testable consequences:**
-- Order cancellation uses copy explaining that the order was cancelled in Booqable and no further work is needed.
-- Bike removal without replacement uses copy explaining that the bike was removed from the order.
-- Replacement uses Replaced outcome and copy identifying the replacement.
-- If the same order and eligible physical bike returns to an actionable source state, the system preserves the Bike Task's safe prior stage and evidence, reconciles current Booqable intent, selectively reopens changed required work, and returns the task unassigned for an ordinary claim.
-- The first release must not infer mechanic presence from an open screen, session, lifecycle stage, or recent save. Retaining assignment after cancellation or removal would require a separately approved presence-lease capability.
-- Stale reserved updates must not regress a Cancelled, Returned, Done, or Replaced outcome.
+**Consequences (testable):**
+- Later template edits do not change in-progress or historical Item outcomes.
 
-#### FR-4: Expose a predictable lifecycle
+### 4.2 Tasks from manager-assigned bikes
 
-The user-visible lifecycle must be:
+**Description:** The manager assigns the physical bike in Booqable. Workshop Tasks creates one Bike Task only after that exact stock ID exists, and chooses the Prep Snapshot from the source category tag. Realizes UJ-1.
 
-`Waiting for Bike ID → Needs Prep → In Prep → Needs Re-check → In Re-check → Preparation Resolved → Needs Return Check → In Return Check → Done`
+#### FR-4: Create a Bike Task only after an exact stock ID
 
-The Re-check states must be skipped when the current Work Cycle contains no M2-enabled Items. Cancelled, Replaced, and Force-closed are read-only outcomes. Needs Attention is not a lifecycle state.
+A Bike Task is created only when a manager has assigned an exact Booqable StockItem to the rental. The system does not create work for unassigned, ambiguous, or quantity-only bike lines.
 
-#### FR-5: Allow a manager reset
+**Consequences (testable):**
+- Draft, new, or concept orders create no Bike Task.
+- A reserved order with no assigned StockItem creates no Bike Task.
+- Repeated refresh of the same assigned StockItem does not create a second Bike Task.
 
-An Admin / Manager must be able to reset stale workshop work while preserving the pre-reset audit history. Reset returns the Bike Task to Needs Prep unassigned, preserves historical outcomes as audit, and invalidates unresolved current-cycle work so preparation can restart cleanly.
+#### FR-5: Select the template from the source category tag
 
-### 4.2 Queue, claiming, and ownership
+The Bike Task's category, and therefore its Prep Snapshot, comes from the controlled ProductGroup Workshop bike tag on the assigned source bike.
 
-**Description:** Mechanics work bike by bike. The system exposes actionable work, supports self-claiming and manager assignment, and prevents conflicting ownership. Realizes UJ-1.
+**Consequences (testable):**
+- Exactly one of `workshop-road-bike`, `workshop-e-road-bike`, `workshop-e-city-bike`, `workshop-gravel-bike`, `workshop-mtb-bike`, or `workshop-e-mtb-bike` selects the category.
+- Untagged, unknown, multiple, or conflicting Workshop tags create no Bike Task.
 
-#### FR-6: Provide Available Now and My Work
+#### FR-6: Replace or cancel assigned work simply
 
-The default mechanic queue must show unassigned, claimable Bike Tasks in Needs Prep, Needs Re-check, or Needs Return Check, ordered by rental start date, earliest first. Waiting for Bike ID tasks are visible but not claimable.
+When the assigned stock ID changes or the rental is cancelled, the existing Bike Task is no longer actionable. A fresh Bike Task is created only for a newly assigned replacement stock ID. History stays on the original Bike Task.
 
-Every mechanic must also be able to open My Work and resume any Bike Task currently assigned to them at the authoritative unresolved point.
+**Consequences (testable):**
+- Cancellation sets Task Outcome to `Cancelled`, preserves history, and clears assignment.
+- A changed stock ID sets the prior Bike Task to `Replaced` and, if a new exact stock ID is assigned, creates a new Bike Task.
+- The same physical bike returning later does not automatically reopen a `Cancelled` or `Replaced` Bike Task.
 
-#### FR-7: Keep bikes independently actionable
+### 4.3 Queue, claim, and resume
 
-Mechanics must claim one Bike Task at a time as the unit of work. Bikes from the same order may be prepared in parallel by different mechanics, and each bike must enter Re-check as soon as its own Prep work is complete.
+**Description:** Mechanics see manager-created work, claim one Bike Task, and resume assigned work. One owner at a time. Realizes UJ-1 and UJ-3.
 
-#### FR-8: Support self-claim and manager assignment
+#### FR-7: Show Available Now and My Work
 
-A mechanic must be able to claim an available Bike Task, and an Admin / Manager must be able to assign or reassign it explicitly. The system must not assign mechanics automatically.
+Mechanics can see unassigned claimable Bike Tasks in Available Now and their assigned Bike Tasks in My Work.
 
-Reassignment must preserve resolved Item outcomes and their attribution unless an explicit reset or Booqable-driven invalidation rule applies. The receiving mechanic must see current unresolved work, retained confirmed outcomes, invalidated outcomes, and current-cycle ownership.
+**Consequences (testable):**
+- Available Now includes `Needs Prep`, `Needs Re-check`, and `Needs Return Check` Bike Tasks only.
+- My Work includes only the mechanic's currently assigned Bike Tasks and lets the assignee resume at the current unresolved Item. `Awaiting Return` is not in My Work.
 
-#### FR-9: Resolve concurrent claims safely
+#### FR-8: Claim with one owner
 
-Concurrent claims must use first-writer-wins behavior. The first valid claim succeeds; later claimants are informed that the Bike Task already has an assignee.
+A mechanic can claim an available Bike Task. Concurrent claims use first-writer-wins. The system does not auto-assign mechanics.
 
-#### FR-10: Preserve per-cycle ownership
+**Consequences (testable):**
+- Exactly one valid claim succeeds; later claimants see the current owner. First-writer-wins applies to `Needs Prep`, `Needs Re-check`, and `Needs Return Check`.
+- Claiming `Needs Prep` moves Work Phase to `In Prep`; claiming `Needs Re-check` moves it to `In Re-check`; claiming `Needs Return Check` moves it to `In Return Check`.
 
-M1 and M2 identities apply to the current Work Cycle rather than permanently to the Bike Task. A new Work Cycle starts when Prep becomes actionable after initial creation, after selective reopening of completed preparation, or after a change returns active Re-check to Prep.
+#### FR-9: Keep bikes independently actionable
 
-A mechanic who performs reopened Prep becomes M1 for that cycle. M2 must differ from the current Work Cycle's M1 unless a manager override is recorded.
+Each Bike Task is claimed and progressed on its own. Bikes on the same order may be prepared in parallel by different mechanics.
 
-### 4.3 Versioned checklist definition and execution
+**Consequences (testable):**
+- Claiming or completing one Bike Task never changes a sibling Bike Task's Work Phase, Task Outcome, or owner.
+- Two bikes on the same order can be `In Prep` at the same time for different mechanics.
 
-**Description:** Admin-authored Checklist Templates define stable work language. Each Bike Task uses immutable phase snapshots while Setup Category links provide current Booqable context. Broad configuration review is the initial change mode; Epic 6 may enable targeted invalidation only from complete source-backed mapping evidence. Realizes UJ-1 and UJ-2.
+### 4.4 M1 preparation and handoff
 
-#### FR-11: Manage category-specific templates
+**Description:** M1 works the Prep Snapshot at the bike with current Booqable context visible. Handoff uses only server-confirmed required outcomes. Realizes UJ-1 and UJ-2.
 
-An Admin / Manager must be able to create, activate, supersede, and reactivate separate Prep and Return Checklist Templates for e-city, e-road, road, gravel, MTB, and E-MTB bikes.
+#### FR-10: Show current rental context on the Bike Task
 
-Template activation must not require every Setup Category to have a linked Item. Administrators own checklist coverage quality; incomplete coverage is not a blocking validation rule.
+The Bike Task shows the human-readable `stock_identifier`, current category, and current Booqable rental context the mechanic needs to prepare that bike, including manager-authored `extra_information` when present.
 
-#### FR-12: Snapshot templates by phase
+**Consequences (testable):**
+- M1 can confirm they are on the correct physical bike without opening Booqable as the primary work surface.
+- The Bike Task does not treat a webhook payload as current context; context comes from the last successful current-order refresh.
 
-Each Bike Task must receive a Prep Snapshot when the task is created. It must receive a Return Snapshot when it enters Needs Return Check, using the then-active Return template for the bike's current category. Later template edits apply only to future snapshots and must not alter existing progress or history.
+#### FR-11: Record required Prep work
 
-#### FR-13: Configure item type and applicability
+M1 records server-confirmed outcomes for required Prep Items: Action Items as Done or N/A, Value Items as a value.
 
-For each admin-authored Item, an Admin / Manager must be able to define:
-- whether it is an Action Item or Value Item;
-- whether it is required;
-- whether M1 performs it;
-- whether M2 independently verifies it; and
-- an optional Setup Category link.
+**Consequences (testable):**
+- Optional Items may remain unresolved.
+- Done and N/A remain distinguishable in history.
 
-M2-enabled must require M1-enabled. The same validity rule applies to built-in confirmation Items.
+#### FR-12: Hand off only when required Prep is complete
 
-#### FR-14: Keep admin-authored Items visible
+M1 cannot hand off while any required Prep Item is unresolved. Handoff uses only server-confirmed outcomes.
 
-All admin-authored Items must remain visible regardless of the current Booqable selection. A Setup Category link controls grouping, context, and selective invalidation, not visibility.
+**Consequences (testable):**
+- After a valid handoff, Work Phase is `Needs Re-check` if any Re-check Item exists; otherwise Work Phase is `Awaiting Return` and the Bike Task is unassigned.
+- Failed saves never appear as recorded handoff.
 
-For the first release, a Setup Category whose current value is `No` must remain visible, show that value, and allow non-applicable Action Items to resolve as N/A. This behavior is explicitly subject to post-pilot review.
+### 4.5 Independent M2 sign-off
 
-#### FR-15: Show current configuration context
+**Description:** Configured Re-check Items are a second-person attestation. M1 cannot complete them. Realizes UJ-1.
 
-A linked Item group must display the current Booqable Setup Category value. When that value changed during active work, it must also identify the prior value until the affected work is resolved.
+#### FR-13: Route Re-check Items to a different mechanic
 
-#### FR-16: Resolve Action Items honestly
+After handoff, Re-check Items appear for M2. M2 must be a different authenticated mechanic from that Bike Task's M1.
 
-An Action Item must be resolved as Done or N/A. Either outcome satisfies completion, but the recorded outcome must remain distinguishable in history.
+**Consequences (testable):**
+- M1 cannot claim or complete Re-check Items on a Bike Task they handed off.
+- There is no same-mechanic override.
 
-#### FR-17: Resolve Value Items with a value
+#### FR-14: Record a separate M2 attestation
 
-A Value Item must require a value when configured as required and must not offer N/A. Optional Value Items may remain blank.
+M2 independently resolves applicable Re-check Action Items as Done or N/A and attests applicable Value Items. M1 outcomes do not satisfy M2 work.
 
-#### FR-18: Block incomplete handoff
+**Consequences (testable):**
+- M2 can see who M1 was.
+- For an M2-enabled Value Item, M2 attests verification against M1's value and does not enter a second value.
+- After required Re-check work is complete, Work Phase is `Awaiting Return` and the Bike Task is unassigned.
 
-M1 must not hand off a Work Cycle while any required Prep Item is unresolved. Optional Items may remain unresolved. Handoff and completion must use only server-confirmed outcomes and must leave the resulting ownership and lifecycle state unambiguous.
+### 4.6 Reconfirm during active preparation
 
-#### FR-19: Include built-in confirmation Items
+**Description:** The only first-release source-change behavior is visible reconfirmation while M1 still owns Prep. Realizes UJ-2.
 
-The system must include Booqable `extra_information` as a built-in required M1/M2 confirmation Item for both bundled and flat orders. Changes to `extra_information` must reopen that Item through the normal selective flow.
+#### FR-15: Flag relevant current-order change during In Prep
 
-When `extra_information` changes, the current text and a clear change indicator must be visible; the previous text must be available on demand. The exact interaction design is deferred to UX.
+If a current-order refresh detects a relevant change while Work Phase is `In Prep`, the Bike Task stays assigned to M1 and is visibly flagged for reconfirmation. Handoff stays blocked until M1 reviews current Booqable context and reconfirms the affected preparation.
 
-The system must also include a built-in required "Review updated bike configuration" confirmation Item for relevant but ambiguous Booqable changes. That Item must state the known changed source, affected scope, current authoritative configuration, prior accepted configuration when available, and why selective classification failed.
+**Consequences (testable):**
+- The flag is visible on the open Bike Task, not only in a separate inbox.
+- Reconfirm is an explicit acknowledge on that Bike Task. It persists actor and time, clears the flag, and does not rewrite or invalidate existing Item outcomes.
+- If M1 must change an Item because of the new context, they use the ordinary FR-11 save path before or after acknowledging.
+- After reconfirmation, ordinary handoff and M2 rules still apply.
+- This FR does not reopen work after handoff, after Re-check, or after Work Phase is `Awaiting Return`.
 
-### 4.4 Independent selective Re-check
+### 4.7 Manager attention and intervention
 
-**Description:** M2 independently attests that configured aspects of the physical bike match the required state. M2 does not approve M1's answers; M2 completes a fresh check. Realizes UJ-1 and UJ-2.
+**Description:** Managers handle exceptions without blocking valid mechanic completion. Realizes UJ-4.
 
-#### FR-20: Start Re-check per bike
+#### FR-16: Raise, show, and resolve attention
 
-When M1 completes all required Prep Items, the Bike Task must immediately enter Needs Re-check if at least one M2-enabled Item applies to the current Work Cycle.
+An assigned mechanic or an Admin / Manager can raise Needs Attention on a Bike Task. Managers see those Bike Tasks in the Manager Attention List with the reason and current owner. Resolving attention does not block valid mechanic completion, and an open flag does not prevent `Done` when mechanical work is complete.
 
-#### FR-21: Require independent resolution
+**Consequences (testable):**
+- Raise is allowed from any Actionable Work Phase. The raiser must pick `missing_or_unclear_bike_order_information` or `manager_decision_needed`.
+- A manager can also flag a Bike Task with one of those reasons from the Manager Attention List.
+- Raising or resolving Needs Attention does not change Task Outcome by itself.
 
-M2 must independently resolve each applicable Re-check Action Item as Done or N/A and attest each applicable Value Item passed verification. M1 outcomes must not satisfy M2 work.
+#### FR-17: Reassign or force-close
 
-#### FR-22: Show M1 identity to M2
+An Admin / Manager can reassign an active Bike Task or force-close abandoned work. Every intervention records actor, time, reason, and resulting status.
 
-M2 must be able to see the identity of the current Work Cycle's M1 to support direct workshop communication.
+**Consequences (testable):**
+- Reassignment preserves confirmed Item outcomes and attribution.
+- `Force-closed` is a terminal Task Outcome distinct from `Done` and `Cancelled`.
 
-#### FR-23: Record corrections without rejecting M1
+### 4.8 Return Check
 
-When M2 finds and corrects a discrepancy, M2 must finish the independent verification and record the correction. Durable physical corrections that must later be reversed use Structured Modifications; supplementary explanation may go in Notes. The workflow must not use approve/reject semantics against M1's recorded response.
+**Description:** A returned rental reuses the same Bike Task, queue, claim, and checklist machinery with the Return Snapshot. Realizes UJ-3.
 
-#### FR-24: Verify target values without duplicate entry
+#### FR-18: Make returned work claimable
 
-For an M2-enabled Value Item, M1 records the target value. M2 physically verifies and adjusts the bike if needed, then records that verification passed. The system must not require M2 to enter a second value or record whether an adjustment was needed.
+When Booqable marks the rental returned, each associated Actionable Bike Task becomes unassigned `Needs Return Check` and is claimable using Available Now, My Work, and the same ownership rules.
 
-#### FR-25: Enforce two-person verification
+**Consequences (testable):**
+- `Cancelled`, `Replaced`, and `Force-closed` Bike Tasks are not return-eligible.
+- A Bike Task in `Awaiting Return` enters unassigned `Needs Return Check` only when Booqable marks that rental returned.
+- If the Bike Task is still in Prep or Re-check when the rental returns, Return Check becomes the only actionable work; unresolved Prep/Re-check history remains visible.
 
-M2 must differ from the current Work Cycle's M1 unless an Admin / Manager explicitly approves the per-task override request defined in FR-45.
+#### FR-19: Complete the Return Checklist and close Done
 
-### 4.5 Selective reopening after Booqable changes
+One mechanic completes the Return Snapshot with the same Item controls as Prep. Completing required Return Items sets Task Outcome to `Done` with actor and timestamp. Return observations belong in task history.
 
-**Description:** A Bike Task is living workshop work while the order remains reserved and not yet picked up. Relevant configuration changes invalidate only affected work and reuse the normal Prep and Re-check flow. Realizes UJ-2.
+**Consequences (testable):**
+- Return Check has no M2 stage.
+- Completion does not require per-item modification acknowledgement.
 
-#### FR-26: Classify update outcomes
+### 4.9 Attributable history and current-order refresh
 
-The system must handle Booqable updates through three outcomes:
-- a relevant change advances the built-in broad `review_updated_configuration` confirmation in the initial mode;
-- after Epic 6 proves and activates a complete stable Setup Category mapping, a recognized relevant change may invalidate only Items linked to the changed Setup Category; and
-- a non-workshop-relevant change refreshes data silently.
+**Description:** Trust comes from who did what, and from refreshing current Booqable authority rather than trusting a notification payload. Cross-cuts UJ-1 through UJ-4.
 
-Product, ProductGroup, and Bundle `tag_list` values are persisted as read-only Booqable source facts, but v1 does not interpret or configure accessory tags before Epic 6. Category-level selective invalidation may activate only when every active Setup Category has a stable source field, relation, or accessory-tag identifier covered by redacted fixtures for null, unknown, changed, and removed values. Display labels are not mapping keys. Missing or stale proof keeps broad mode active rather than blocking all Workshop Task execution.
+#### FR-20: Persist workshop history
 
-Invalidation is evaluated against the last physically attested Booqable intent for the Bike Task. Multiple unresolved changes converge to the latest current intent without duplicating Work Cycles or resets.
+The system persists claim, preparation, re-check, return, attention, reassignment, force-close, Task Outcome, actor, time, and checklist results.
 
-#### FR-27: Refresh silently before work starts
+**Consequences (testable):**
+- Staff can answer who prepared, re-checked, returned, or intervened on a Bike Task, and when.
+- This FR does not require an analytics dashboard.
 
-Before a Bike Task is first claimed, Booqable updates must refresh task details without persistent change alerts.
+#### FR-21: Refresh current order on signal and on claim
 
-#### FR-28: Keep active M1 work assigned
+A Booqable update notification identifies which order changed. A mechanic claim refreshes that order before the claim completes. In both cases the system applies current Booqable authority and does not treat the notification payload as current truth.
 
-If a relevant change arrives while M1 is working, the Bike Task must remain assigned to M1, identify the change, invalidate affected Items, and block handoff until affected required work is resolved again.
+**Consequences (testable):**
+- Duplicate or delayed notifications do not create duplicate Bike Tasks.
+- A claim that cannot refresh current order authority does not silently claim on stale context.
 
-#### FR-29: Return active M2 or unassigned Re-check work to Prep
+#### FR-22: Keep one shared Notes field
 
-If a relevant change arrives while the Bike Task is in Needs Re-check or In Re-check, the same Bike Task must return to Needs Prep unassigned and re-enter the ordinary queue.
+Any mechanic assigned to a Bike Task, and any Admin / Manager, can edit one shared Notes field. The latest value overwrites the previous value and is visible on Prep and Return.
 
-#### FR-30: Reopen completed preparation safely
+**Consequences (testable):**
+- Notes are not the Bike Task identity and are not required to hand off or complete.
+- There is no Notes revision history.
 
-If a relevant change arrives after Preparation Resolved but while the order remains reserved and not yet picked up, the same Bike Task must return unassigned to Needs Prep with only affected work reopened.
+## 5. Scope
 
-#### FR-31: Preserve independent verification on reopened work
+### 5.1 In scope
 
-Every reopened Work Cycle must repeat M2 verification for any invalidated M2-enabled Items. If the former M2 claims reopened Prep, another mechanic must verify it unless a manager override is recorded.
+- Shipped category-specific Prep and Return templates with per-Item M2 configuration
+- Bike Tasks created only from manager-assigned exact stock IDs, categorized by source tag
+- Simple cancel / replace handling that preserves history
+- Available Now, My Work, claim, resume, and first-writer-wins ownership
+- M1 Prep, blocked handoff, and independent M2 sign-off with no override
+- Visible reconfirmation when current order changes during `In Prep`
+- One latest-value Notes field on the Bike Task
+- Manager Attention List, including mechanic- or manager-raised attention, reassignment, and force-close
+- `Awaiting Return` as the non-claimable wait after Prep until Booqable marks the rental returned
+- Return Check on the same Bike Task and checklist machinery
+- Attributable history and current-order refresh on webhook signal and claim
+- Tablet-practical mechanic UI with server-confirmed saves
 
-#### FR-32: Limit reopening by rental progress
+### 5.2 Out of scope
 
-Configuration changes after customer pickup must not reopen completed preparation work. Pickup/active rental is the Booqable condition after reserved and before returned.
+This release will not:
 
-During Needs Return Check or In Return Check, configuration refreshes may update displayed context but must not reopen Prep/Re-check or restart Return work automatically.
+- create provisional or quantity-derived Bike Tasks, Waiting for Bike ID work, or multi-quantity identity/incident models;
+- implement replacement-chain algebra, overlap guards, correction successors, or automatic reactivation;
+- issue JIT freshness proofs, revoke legacy writers, or add retry workers, reconciliation sweeps, or a rollout/activation control plane;
+- interpret accessory tags, configure Setup Category mapping, or selectively invalidate individual Items;
+- introduce a Work Cycle model, manager reset, or same-mechanic M2 override;
+- build Structured Modifications or an individual Return-acknowledgement engine;
+- add tenancy, shop scope, pilot cohorts, or a paper-retirement workflow;
+- replace Booqable's rental lifecycle, auto-assign mechanics, or work offline;
+- generate checklist Items from accessories, maintain Notes revision history, or integrate Bike Fit;
+- provide manager analytics, performance dashboards, or franchise-readiness reporting.
 
-#### FR-33: Make changed work self-clearing
+Adoption stays an operating practice: run the feature in the current shop, keep paper as a local fallback until the team is comfortable, and capture evidence before any franchise claim. That practice is not a product feature.
 
-Changed Items must be visibly highlighted. Resolving the affected Item must clear its highlight without requiring a separate acknowledgement action. Each accepted relevant change must leave an attributable history entry with prior/current values when known, affected Items, and resulting Work Cycle effect.
+## 6. Success Metrics
 
-### 4.6 Notes, accessories, modifications, and attention
+**Primary**
 
-**Description:** The Bike Task contains the rental-specific context mechanics need without guessing ambiguous Booqable associations. Exceptions remain visible without blocking physical work. Realizes UJ-1, UJ-3, and UJ-4.
+- **SM-1 — Paperless preparation:** Mechanics can routinely discover, claim, prepare, hand off, and independently re-check a Bike Task on a tablet without a paper checklist. Validates FR-7 through FR-14.
+- **SM-2 — Assigned-bike fidelity:** A Bike Task appears only after an exact stock ID assignment, uses the tag-selected template, and does not duplicate on repeated refresh. Validates FR-4, FR-5, FR-6, and FR-21.
 
-#### FR-34: Maintain shared rental Notes
+**Secondary**
 
-Each Bike Task must provide one shared Notes field containing its latest value as supplementary context. Notes must follow the same rental into Return Check but must not automatically carry into a later rental and must not be the sole durable record of return-relevant physical changes.
+- **SM-3 — Paperless Return Check:** Mechanics can complete Return Check on the tablet using the same task/checklist machinery. Validates FR-18 and FR-19.
+- **SM-4 — Traceable work:** Staff can see who claimed, prepared, re-checked, returned, reassigned, or force-closed each Bike Task and when. Validates FR-16, FR-17, and FR-20.
 
-#### FR-35: Show bike-focused accessory context
+**Counter-metrics**
 
-The Bike Task must present bundle-linked accessories and manager-authored `extra_information` in one bike-focused area with clear source labels.
+- **SM-C1 — Preparation speed:** The tablet flow must not materially slow preparation versus paper.
+- **SM-C2 — Preparation quality:** Paperless work must not increase missed required checks.
+- **SM-C3 — Mechanic focus:** The tablet must not become the job; physical-bike work stays primary.
 
-#### FR-36: Never guess flat-order associations
+## 7. Cross-Cutting Non-Functional Requirements
 
-For flat orders, the system must rely on manager-authored `extra_information` for each bike. If it is missing, a mechanic can raise Needs Attention and contact the manager; the mechanic may still hand off the Bike Task.
+- **NFR-1 Workshop usability:** The Prep and Re-check flow is practical on a workshop tablet without a parallel paper checklist. Frequent actions are tap-friendly.
+- **NFR-2 Form factor:** Mechanic flows support phones and tablets; manager flows also support desktop.
+- **NFR-3 Confirmed saves:** Every save, claim, handoff, or outcome transition leaves server-confirmed versus unsaved state unambiguous. Failed saves identify the action, retain typed input while the Bike Task stays open, and never present failed work as recorded.
+- **NFR-4 Pending feedback:** Route waits and in-flight mutations show obvious pending state and prevent double submit. Exact visuals are left to UX.
+- **NFR-5 Audit integrity:** Attribution remains trustworthy after reassignment, cancellation, replacement, force-close, and attention resolution.
+- **NFR-6 Authorized access:** Only authenticated staff; mechanic versus Admin / Manager operations follow existing roles and server-side access rules.
+- **NFR-7 Online-only:** No offline mode. NFR-3 covers transient failures while the session remains open.
 
-#### FR-37: Record structured modifications
+## 8. Integration and Dependencies
 
-A mechanic must be able to record a defined physical change as a Structured Modification on the Bike Task. Structured Modifications are durable, attributable, and cannot be silently overwritten by Notes edits.
+- **Booqable owns:** order lifecycle, assigned StockItem identity, `stock_identifier`, Product/ProductGroup/Bundle tags, rental timing, configuration, and `extra_information`.
+- **Workshop Tasks owns:** Bike Tasks, snapshots, Item outcomes, assignment, Needs Attention, Notes, Task Outcome, Work Phase, and audit history.
+- The manager assigns the physical bike in Booqable. Workshop Tasks does not invent that assignment.
+- Update notifications identify the order only. Current context comes from a refetch of current Booqable authority, including on claim.
+- Existing admin authentication and staff roles are the access boundary.
 
-The system must include a read-only "last touched" lookup for the same `stock_identifier`; that lookup must not imply a complete cross-rental bike history.
+`[ASSUMPTION]` Managers continue to assign the exact stock ID in Booqable as the operating practice before workshop work should exist.
+`[ASSUMPTION]` Webhooks identify the changed order well enough to refetch it.
+`[ASSUMPTION]` Draft, new, and concept orders stay filtered before workshop work is considered.
+`[ASSUMPTION]` Workshop devices normally have a usable network connection.
 
-#### FR-38: Distinguish attention signals
+## 9. Open Questions
 
-The system must distinguish:
-- system-raised Needs Attention for order or synchronization mismatch;
-- mechanic-recorded "found and fixed" history that requires no action; and
-- mechanic-raised Needs Attention requiring manager judgment.
+1. What should UX show when a reserved order has bikes but no assigned stock ID — nothing, or a manager-facing “unassigned in Booqable” hint that still creates no Bike Task?
+2. Which Booqable field changes count as “relevant” for FR-15 beyond an obvious bike/configuration/`extra_information` change?
+3. If Return Check starts while Prep was incomplete, how much unfinished Prep context does Tomás need on the Return surface versus history only?
 
-Needs Attention must not block a mechanic from completing their own work or from transitioning a Bike Task to Done. Open flags remain independently visible in the Manager Attention List until resolved.
-
-First-release mechanic-raised Needs Attention uses exactly these reasons:
-- `same_mechanic_recheck_override`;
-- `missing_or_unclear_bike_order_information`; and
-- `manager_decision_needed`.
-
-Missing/unclear information and manager-decision reasons require a short creation explanation. A same-mechanic Re-check override request requires no explanation. The override request does not block another eligible mechanic from claiming Re-check; it preserves the ordinary independence rule for the requesting M1 until a manager explicitly approves the exception.
-
-### 4.7 Return Check
-
-**Description:** Return work is a simpler one-mechanic flow triggered by Booqable and informed by preparation history from the same rental. Realizes UJ-3.
-
-#### FR-39: Trigger Return Check
-
-When Booqable marks an order returned, each Bike Task currently associated with that returned order must enter Needs Return Check and expose its Return Snapshot. Cancelled and Replaced historical tasks are not return-eligible.
-
-If the Bike Task is still in Prep or Re-check when the order returns, the system must force Needs Return Check, clear active assignment, preserve unresolved Prep/Re-check history as visible context, and make return work the only actionable work.
-
-Repeated return reconciliation is idempotent. Stale reserved updates must not pull a task out of Needs Return Check, In Return Check, or Done.
-
-#### FR-40: Use a single return-check mechanic
-
-One return-check mechanic must complete the Return Checklist. Return Check does not require an M2 stage.
-
-#### FR-41: Carry same-rental context into Return Check
-
-The return-check mechanic must see the Bike Task's Notes and Structured Modifications from the same rental, including unfinished Prep/Re-check history when present.
-
-#### FR-42: Require Structured Modification acknowledgement
-
-Return Check must not complete until the mechanic acknowledges each open Structured Modification for the rental. Notes remain available as supplementary context and do not replace per-modification acknowledgement.
-
-### 4.8 Manager controls and audit history
-
-**Description:** Manager actions solve exceptional cases while normal work remains mechanic-driven. Attribution makes the digital workflow more trustworthy than paper. Realizes UJ-4.
-
-#### FR-43: Resolve Needs Attention
-
-An Admin / Manager must be able to discover unresolved Needs Attention flags in the Manager Attention List and resolve them. Missing/unclear information and manager-decision reasons require a short manager resolution note. Resolving a flag clears only that flag; it is not required to complete the Bike Task, and an open flag must not prevent Done when mechanical work is complete. Same-mechanic Re-check override requests are resolved through FR-45.
-
-#### FR-44: Force-close abandoned work
-
-An Admin / Manager must have a distinct force-close action for genuinely stuck or abandoned Bike Tasks. Force-close is a read-only terminal outcome distinct from Done, Cancelled, and ordinary attention resolution.
-
-#### FR-45: Request, approve, or decline same-mechanic Re-check
-
-When no second mechanic is available, the system must take no automatic action. M1 may raise a same-mechanic Re-check override request for the current Bike Task and Work Cycle without an explanation. An Admin / Manager must explicitly Approve or Decline that request.
-
-Approval authorizes assignment of that Work Cycle's Re-check to M1 or the approving Admin / Manager for that Bike Task only. It must never authorize another Bike Task or later Work Cycle. Decline resolves the request without changing ordinary two-person eligibility. No written request explanation or manager resolution note is required in the first release.
-
-The audit history must record the requester, decision, deciding Admin / Manager, time, Bike Task, Work Cycle, M1, and resulting assignment when applicable.
-
-#### FR-46: Preserve attributable history
-
-The system must preserve the actor and time for claims, assignments, reassignments, Item outcomes, handoffs, verification completion, Structured Modifications, attention changes, overrides, resets, cancellation, replacement, configuration-driven invalidations, and force-close.
-
-FR-47 and FR-48 are cross-cutting (Booqable reconciliation and stale open-screen concurrency). They are kept at the end of this section for contiguous FR numbering.
-
-#### FR-47: Reconcile against current Booqable state
-
-Update notifications only trigger reconciliation against Booqable's latest retrievable current order state. That current state is authoritative.
-
-**Testable consequences:**
-- A semantic state or configuration already accepted by Workshop Tasks is a no-op.
-- Duplicate delivery cannot create a Bike Task, Work Cycle, invalidation, assignment change, or audit event twice.
-- Stale updates cannot regress accepted lifecycle or configuration.
-- Accepted Booqable precedence is reserved → picked up/active rental → returned. An authoritative current cancellation suspends further prep work and clears assignment; a later authoritative same-bike reactivation may resume under FR-3, but stale reserved updates must not clear the cancellation.
-
-#### FR-48: Reject stale open-screen actions
-
-If ownership or lifecycle changes while a Bike Task is open on a device, the system must surface the new authoritative state, reject stale saves and transitions, and preserve typed input long enough for the mechanic to understand or retry appropriately.
-
-## 5. Cross-Cutting Non-Functional Requirements
-
-### NFR-1: Workshop usability
-
-The complete Prep and Re-check flow must be practical on a workshop tablet without a parallel paper checklist. Frequent actions must be tap-friendly and readable at tablet size. Mechanics must be able to identify the next required physical action and current target configuration without leaving the Bike Task for Booqable.
-
-### NFR-2: Responsive form factor
-
-Mechanic workflows must support workshop phones and tablets; manager workflows must also support desktop screens.
-
-### NFR-3: Predictable synchronization
-
-The same current Booqable state must converge to the same correct Bike Task state regardless of duplicate or out-of-order update delivery. The system must not lose or duplicate Bike Tasks.
-
-### NFR-4: Confirmed save and failure visibility
-
-Every save, claim, handoff, or lifecycle transition must leave server-confirmed versus unsaved state unambiguous. A failed save must identify the affected action, retain typed input for retry while the Bike Task remains open, and never present failed work as successfully recorded. Handoff and completion may use only confirmed outcomes. Reopening a Bike Task must show the authoritative persisted state.
-
-### NFR-5: Clear loading and pending feedback
-
-Page and route transitions must show clear loading feedback so mechanics never face a blank or unexplained wait on workshop tablets. In-flight actions—claim, Item save, handoff, completion, and similar mutations—must show an obvious pending state, remain distinguishable from confirmed outcomes (NFR-4), and must prevent double submission while pending. Exact visual treatment is left to UX; the acceptance bar is continuous, unambiguous feedback during every wait that affects workshop work.
-
-### NFR-6: Audit integrity
-
-Attribution and historical outcomes must remain trustworthy after reassignment, reopening, reset, cancellation, replacement, and manager intervention.
-
-### NFR-7: Authorized access
-
-Only authenticated staff may access Workshop Tasks. Mechanic operations and Admin / Manager controls must follow the existing staff-role boundaries and server-side data-access policies.
-
-### NFR-8: Online-only operation
-
-The first release may require a live network connection and does not promise offline operation. It does require the confirmed-save and retry behavior in NFR-4 for transient failures while the session remains open.
-
-## 6. Integration and Dependencies
-
-### Source-of-truth partition
-
-- **Booqable owns:** order lifecycle, current order-bike membership, stable opaque StockItem external identity, human-readable `stock_identifier`, Product/ProductGroup/Bundle `tag_list`, rental timing, bike category/configuration, accessories, and `extra_information`.
-- **Workshop Tasks owns:** derived workshop lifecycle, assignments, Work Cycles, Item outcomes, Notes, Structured Modifications, Needs Attention, overrides, and audit history.
-- Synchronized Booqable values are displayed snapshots and are not locally editable as Booqable intent.
-
-### Dependencies and assumptions
-
-- Booqable order-update delivery triggers synchronous authoritative refetch and application of current order state.
-- Exactly one controlled ProductGroup Workshop bike tag classifies category; corresponding Bundles use the matching `workshop-*-bike-bundle` tag and must agree with their contained bike ProductGroup.
-- Admitted Product, ProductGroup, and Bundle tags are persisted as source facts. Untagged entities create no Workshop work; unknown, multiple, or conflicting Workshop tags fail closed with an Integration Incident.
-- Bundled-order accessory-to-bike association depends on Booqable parent linkage.
-- Broad configuration review is the initial mode. Targeted Setup Category invalidation belongs to Epic 6 and depends on a mapping version in which all five active Setup Categories use stable source identifiers and fixture-backed normalized values.
-- In v1, generic absence from a Booqable response never establishes bike removal or closes a source child, membership, or Bike Task. Removal requires a validated explicit archive/tombstone or another separately fixture-proven explicit removed state from the canonical refresh path.
-- The existing admin authentication and staff roles provide the access boundary.
-- `[ASSUMPTION]` Booqable webhooks provide enough information to identify the changed order and refresh current order data.
-- `[ASSUMPTION]` Draft, new, and concept orders are filtered before workshop work becomes actionable.
-- `[ASSUMPTION]` Bundled accessory parent linkage is stable enough to display accessories against the correct bike.
-- `[ASSUMPTION]` Workshop devices normally have a usable network connection.
-- `[ASSUMPTION]` Selective reopening can compare last accepted workshop configuration with refreshed current Booqable data.
-- `[ASSUMPTION]` Booqable exposes a distinguishable picked-up/active-rental condition between reserved and returned.
-
-Until Epic 6 proves all five active Setup Categories through a stable mapping version, targeted invalidation remains disabled and broad configuration review applies to all relevant changes. Accessory tags remain persisted but uninterpreted until that work. If bundled parent linkage fails technical discovery, bike-specific accessory display must be re-scoped before implementation commits to that behavior.
-
-## 7. Non-Goals
-
-The first release will not:
-
-- replace Booqable's full rental order lifecycle;
-- build complete cross-rental physical-bike history, usage frequency, or analytics;
-- support offline work or recovery of unsaved local changes after the session is lost;
-- assign mechanics automatically;
-- generate runtime checklist Items from Booqable accessories;
-- provide a Workshop classification-approval screen or a second local category authority;
-- interpret or configure accessory tags before Epic 6;
-- maintain Notes revision history;
-- integrate Bike Fit reports into checklist Items;
-- create separate revalidation tasks, statuses, queues, or manager pings;
-- infer flat-order accessory-to-bike associations;
-- require manager approval before ordinary work enters the queue;
-- provide manager dashboards, mechanic performance views, changed-work filters, or broader workshop analytics beyond the Manager Attention List;
-- allow claiming work before `stock_identifier` arrives, unless later pilot evidence changes that trial rule; or
-- provide an application-managed retry queue, background webhook worker, or missed-webhook reconciliation sweep.
-
-## 8. First-Release Scope
-
-### 8.1 In Scope
-
-- Booqable-driven per-physical-bike Bike Tasks and lifecycle synchronization, including quantity-one Waiting for Bike ID and Integration Incidents for ambiguous multi-quantity shortfalls
-- Available Now, My Work, claiming, assignment, reassignment, and concurrency handling
-- Versioned category-specific Prep and Return Checklist Templates with phase-specific snapshots
-- Always-visible admin-authored Items with optional Setup Category links
-- Action Item Done/N/A outcomes and Value Item entry
-- Attributed M1 preparation and selective independent M2 verification
-- Broad configuration review after relevant reserved-order changes, with targeted reopening available only after Epic 6 proves a complete stable mapping
-- Same-rental Notes, durable Structured Modifications, and accessory context
-- Needs Attention, Manager Attention List, manager interventions, and attributable audit history
-- One-mechanic Return Check with per-Structured-Modification acknowledgement
-- Confirmed-save / retry behavior for transient online failures
-- Clear page/route loading and in-flight action pending feedback
-- Responsive tablet/phone mechanic experience and desktop manager support
-
-### 8.2 Follow-up Capabilities
-
-The following remain valuable but will be reconsidered after the first release is operating predictably:
-
-- manager date-range summaries and status tiles;
-- manager Tomorrow/Upcoming filters and corresponding status counts beyond the Manager Attention List;
-- mechanic performance views using M1/M2 attribution;
-- changed-work visibility through queue filtering;
-- broader workshop analytics based on trusted usage data; and
-- possibly allowing claim before bike ID arrives, if Waiting for Bike ID creates operational friction.
-
-## 9. Success Metrics
-
-### Primary
-
-- **SM-1 — Paperless preparation completion:** During rollout observation, mechanics can routinely discover, claim, prepare, hand off, independently re-check, resolve, and move to the next Bike Task using a tablet without a manual paper checklist. Validates FR-6 through FR-25.
-- **SM-2 — Predictable Booqable convergence:** Booqable updates successfully received and processed produce no duplicate or missing exact-StockItem Bike Tasks; source tags classify all six categories without a second local authority; untagged entities produce no work; ambiguous identity or unknown/multiple/conflicting Workshop tags produce deduplicated Integration Incidents rather than guessed work; the queue reflects current order state; relevant changes open broad review until any complete Epic 6 mapping safely targets affected work; irrelevant changes do not interrupt mechanics; and repeated updates converge to the same correct state. Validates FR-1 through FR-5, FR-26 through FR-33, FR-47, and FR-48.
-
-### Secondary
-
-- **SM-3 — Paperless Return Check:** Mechanics can complete post-rental Return Check, including Structured Modification acknowledgement, without a paper checklist. Validates FR-37 and FR-39 through FR-42.
-- **SM-4 — Traceable workshop activity:** Staff can determine who prepared, verified, corrected, reassigned, overrode, or resolved each Bike Task and when. Validates FR-20 through FR-25 and FR-43 through FR-46.
-
-### Counter-metrics
-
-- **SM-C1 — Preparation speed:** Tablet-based work must not materially slow bike preparation relative to the paper baseline.
-- **SM-C2 — Preparation quality:** The paperless rollout must not increase missed required checks, unresolved configuration mismatches, or avoidable Re-check discrepancies.
-- **SM-C3 — Mechanic focus:** Mechanics must not experience the tablet workflow as cumbersome or distracting from physical-bike work.
-
-### Paper-retirement gate
-
-Paper may be retired only after a pilot that covers at least one full peak prep cycle plus return checks across the usual bike categories, and only when:
-
-1. mechanics report they can work comfortably without paper;
-2. observers see no material slowdown, missed required checks, or unpredictable Booqable sync issues; and
-3. no rollback trigger has occurred.
-
-Rollback to paper if sync creates missing or duplicate Bike Tasks, or if save/handoff failures leave mechanics unsure what was recorded.
-
-## 10. Rollout and Change Management
-
-1. Configure and review initial category-specific Checklist Templates.
-2. Run Workshop Tasks alongside the current paper process for a short baseline and controlled pilot covering peak prep and return work.
-3. Observe complete Prep/Re-check cycles across all six bike categories, Waiting for Bike ID → claim transitions, untagged and conflicting-tag exclusion/incidents, ambiguous multi-quantity incidents, broad-review and any fixture-proven targeted Booqable changes, cancellation, explicit removal, replacement, same-bike reactivation with preserved safe stage/evidence and cleared assignment, save retries, and Return Checks.
-4. Collect direct mechanic feedback on comfort, speed, clarity, and focus.
-5. Retire the paper preparation checklist only when the paper-retirement gate in §9 is met.
-6. Revisit Waiting for Bike ID claimability, always-visible `No` display, and deferred manager/reporting capabilities using pilot evidence.
-
-## 11. Open Questions
-
-1. Which stable source identifiers—including any future accessory tags—and fixture-backed normalized values complete one mapping version for all five initial Setup Categories? This is Epic 6 discovery; broad review remains active until all five meet that proof.
-2. Is bundled-order parent linkage stable for every supported order configuration?
-3. What exact progressive-disclosure interaction should UX use for previous `extra_information`?
-4. Does the always-visible `No` behavior remain comfortable after mechanics use it on real tasks?
-5. Does Waiting for Bike ID create enough friction that claim-before-ID should be reconsidered?
-6. What exact Booqable field or status maps to picked-up/active rental for FR-32?
-
-Questions 1, 2, and 6 are technical-discovery dependencies that can re-scope selective invalidation, accessory display, or reopening boundaries. Question 1 does not block source ingestion, tag-based bike classification, or broad configuration review. Questions 3–5 are UX/pilot questions and do not block architecture.
-
-## 12. Assumptions Index
-
-- Booqable update delivery can identify an order and support refreshing its current state (§6).
-- Draft, new, and concept orders are filtered before workshop work becomes actionable (§6).
-- Bundled accessory parent linkage reliably associates accessories with bikes (§6).
-- Workshop devices normally have a usable network connection (§6).
-- Selective reopening can compare last accepted workshop configuration with refreshed current Booqable data (§6).
-- Booqable exposes a distinguishable picked-up/active-rental condition between reserved and returned (§6).
+None of these block architecture or the next epic rewrite. Question 2 can default to “any current-order change visible on the Bike Task” until UX and implementation name a tighter list.
