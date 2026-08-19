@@ -1,58 +1,54 @@
-# Epic 2 Context: Secure Canonical Booqable Operations
+# Epic 2 Context: Current-order refresh on signal and claim
 
-<!-- Compiled from planning artifacts. Edit freely. Regenerate with compile-epic-context if planning docs change. -->
+<!-- Generated from planning artifacts. Regenerate with compile-epic-context if planning docs change. -->
 
 ## Goal
 
-Give application operators one contained, versioned canonical Booqable ingestion path that preserves existing consumers, atomically converges successfully processed duplicate, delayed, or out-of-order updates, and cannot be bypassed by legacy callers. Webhook and just-in-time (JIT) callers synchronously refetch Booqable authority; v1 does not recover failed or missed signals automatically. This epic establishes the trusted integration foundation on which later Workshop membership and task derivation depend.
+The shop works from current Booqable authority, not from a notification body or stale local source. Stories 2.1–2.10 already shipped a frozen canonical projection; the remaining work wires webhook signals and mechanic claims through one fetch-and-apply path so later Bike Task work never treats a payload as truth and never claims on stale context.
 
 ## Stories
 
-- Story 2.1: Contain Existing Integration Security Risks
-- Story 2.2: Upgrade to a Supported Application Runtime
-- Story 2.3: Pin the Node and Database Toolchain
-- Story 2.4: Define Versioned Source Envelopes and Result Semantics
-- Story 2.5: Expand the Canonical Booqable Projection
-- Story 2.6: Preserve Brownfield Projection Consumers
-- Story 2.9: Apply Canonical Source State Atomically
-- Story 2.10: Seed and Validate Workshop Source Data
-- Story 2.11: Issue Exact JIT Freshness Proofs
-- Story 2.12: Cut Over Every Booqable Writer
-- Story 2.13: Revoke Legacy Source Writers
-- Story 2.14: Establish the Workshop Rollout Control Plane
+- Story 2.1: Contain existing integration security risks
+- Story 2.2: Upgrade to a supported application runtime
+- Story 2.3: Pin the node and database toolchain
+- Story 2.4: Define versioned source envelopes and result semantics
+- Story 2.5: Expand the canonical Booqable projection
+- Story 2.6: Preserve brownfield projection consumers
+- Story 2.9: Apply canonical source state atomically
+- Story 2.10: Seed and validate workshop source data
+- Story 2.11: Wire authoritative source refresh to the webhook and task claim
 
 ## Requirements & Constraints
 
-- Webhook notifications identify work to synchronously refetch; their payload is never replay truth. Booqable’s latest validated current state is authoritative. Successfully processed duplicate, delayed, and out-of-order signals must converge, accepted semantic state must no-op, and stale state must not regress the projection. A failed or missed webhook has no automatic v1 recovery guarantee.
-- Generic absence never closes source state, memberships, or future tasks. Closure requires explicit, fixture-proven archive, tombstone, or removed evidence from the canonical refresh path; omission may create an incident but must preserve accepted history.
-- Bike category admission uses exactly one controlled ProductGroup tag: `workshop-road-bike`, `workshop-e-road-bike`, `workshop-e-city-bike`, `workshop-gravel-bike`, `workshop-mtb-bike`, or `workshop-e-mtb-bike`. Bundles use and must agree with the corresponding `workshop-*-bike-bundle` tag. Persist complete admitted Product, ProductGroup, and Bundle tag lists as read-only source facts.
-- Untagged entities create no Workshop work. Unknown, multiple, conflicting, or bundle-disagreeing Workshop tags fail closed with a deduplicated Integration Incident. Labels and titles never classify, and tags never replace exact StockItem identity.
-- Broad `review_updated_configuration` remains the initial configuration-change mode. Accessory tags are retained but uninterpreted until Epic 6 proves complete stable mappings; this epic must not introduce a second classification authority or approval workflow.
-- Authentication containment must prevent secret or payload-PII disclosure, refetch only after webhook authentication, remove or least-privilege the sandbox service-role path, propagate private no-store session-refresh headers, and keep Booqable and service-role credentials out of preview/branch deployments.
-- Move the application onto a supported Next.js compatibility baseline; pin Node 24.x and one locally proven Supabase CLI consistently in source and CI. Own required PostgreSQL extensions through an idempotent migration manifest. Database changes are proven locally and deployed remotely only through CI.
-- Preserve shipped bookings, order, customer, partner, and reporting behavior throughout projection expansion and writer cutover. Task derivation remains outside this epic.
-- Before pilot activation, one operator-triggered pre-pilot validation performs the approved one-time initial Booqable import/materialization. During that initial materialization only, skip an authoritative order whose status is exactly `canceled`, `stopped`, or `archived` only when no Workshop task already exists. Existing Workshop tasks continue under the normal live lifecycle and Return Check rules; this rule adds no other status interpretation.
+- A Booqable notification identifies which order changed. It is never current-order truth. Webhook handling and mechanic claim both refetch current authority and apply it before any Workshop mutation.
+- Draft, new, and concept orders stay filtered; they create no workshop work.
+- Duplicate, delayed, or out-of-order signals must apply idempotently and must not create a second Bike Task for the same rental plus StockItem.
+- A failed fetch, normalize, or apply must not write a partial Workshop task mutation. The webhook logs with a contextual prefix and returns a retryable failure. A claim that cannot refresh returns a failed result and does not claim. A source transition during refresh is returned explicitly and is never silently rebased or redirected.
+- Preview ingestion stays denied even if preview deployments inherit credentials.
+- Before activating live wiring, record the actual Vercel execution model and bind a total route deadline. Fetch, bounded retry, normalize, and apply must fail fast inside that deadline.
+- This release does not issue freshness proofs, cut over or revoke legacy writers, or add a retry worker, queue, sweep, new repair API, or rollout/activation control plane. Adoption is an operating practice, not a product feature.
+- Existing bookings, order, customer, partner, and reporting consumers stay compatible. Task derivation from assigned stock IDs belongs to later epics; this epic only supplies the live source feed they will consume.
 
 ## Technical Decisions
 
-- Keep a transactional modular monolith: Next.js owns authenticated adapters, while PostgreSQL atomically applies canonical state. Only the Booqable integration boundary fetches, validates, and normalizes API v4; Workshop code consumes local contracts and never parses Booqable responses.
-- Expand the shared projection additively rather than creating a Workshop copy or raw-payload mirror. Admit only the contracted bike/rental graph, immutable membership roots, source-version state, and incidents. Retain referenced history with restrictive deletes.
-- One repository-owned contract package defines `order_graph` and `resource_batch` envelopes, producer/profile/schema versions, complete or partial scopes, `known | unknown | removed` values, source vectors, semantic fingerprints, and the fixed results `applied | no_op | derivation_disabled | quarantined | rejected_retryable | rejected_terminal`. TypeScript and PostgreSQL representations must remain drift-checked.
-- Merge accepted carried-forward state before comparing vectors and fingerprints. Equal vector plus equal fingerprint is `no_op`; conflicting, older, incomparable, or unauthoritative state quarantines without mutation. Source vectors and exact JIT proofs establish freshness.
-- The coordinator is the sole canonical-source writer. It applies each accepted graph atomically and preserves derivation debt when rollout disables domain work. No webhook, service-role caller, or operator may directly patch authoritative source tables.
-- Webhook and JIT callers share the canonical adapter and ingestion coordinator. They synchronously refetch authority, submit versioned envelopes, and record deduplicated Integration Incidents on failure without canonical or domain mutation. Do not introduce a durable inbox, receipts, intents, attempts, leases, retries, worker, Cron dispatcher, reconciliation sweep/checkpoint/watermark, or new manual recovery API. The existing secret-protected, preview-denied `GET /api/sandbox/booqable/sync-orders` is a temporary legacy exception: it refetches Booqable authority through the existing sync path and does not directly edit source or task tables. It is not a new per-order/manual recovery API, retry queue, worker, Cron job, or reconciliation system; retire or further contain it only through a future explicitly approved replacement-or-removal decision.
-- Consequence-bearing callers require a current database-issued JIT freshness proof from that exact call, bound to root identity, JIT demand generation, contract versions, source vector/fingerprint, derivation marker, rollout epoch, and expiry. A superseded or stale proof rejects without mutation; ordinary Item, Notes, attention, modification, and template saves remain local-only.
-- A migration-owned field-authority manifest gives every projected field one origin, writer, backfill rule, and disposition. Local and Booqable customers remain separate; partner attribution is recomputed from accepted source facts within the coordinator transaction.
-- Cut over every registered caller before revoking legacy DML. API roles, including service role, retain no direct authoritative-source write path after contraction.
-- Rollout is database-owned and attributable: `disabled | shadow | pilot | enabled | emergency_disabled`. Deployment flags cannot activate it. Disabled and shadow continue source observation; shadow permits only pre-pilot validation/proof data, and emergency disable stops JIT, derivation, reads, context capabilities, enrollment, and mutations while retaining webhook-triggered authoritative refetch and incident recording.
-- Local proof must cover source tags, envelopes, comparator and omission branches, transaction rollback, privileges, overlapping ingestion, exact JIT freshness, and incidents before staged disabled/shadow proof, the one-time pre-pilot validation, and explicit pilot approval.
+- Next.js owns presentation and authenticated adapters; PostgreSQL owns atomic apply and durable attribution. Only the Booqable module fetches, validates, normalizes, and applies. Workshop code consumes local task/context contracts and never parses webhook or API shapes.
+- After live wiring, the shipped canonical projection and `apply_canonical_order_graph` are the sole Workshop source boundary. Until that story is verified, the production webhook's documented legacy path remains `sync.ts`.
+- Webhook and claim share one fetch-and-apply path: identify the order, refetch through the canonical adapter, apply. Bounded synchronous transport retries and an explicit user resubmission of the original claim are allowed inside the route budget. No durable queue, worker, sweep, hidden retry loop, or new repair API.
+- The live-wiring story invokes the frozen contracts, tag vocabulary, nested fetch profile, and apply result contract. It does not extend `sync.ts`, change canonical source schemas, add code generation, or introduce a new adapter protocol.
+- `sync.ts` and named brownfield readers remain unchanged. The sandbox `sync-orders` route stays a documented exception that refetches through `sync.ts` and never directly repairs source or task rows.
+- Canonical apply is the one service-only exception to staff `withAuth` mutations: it invokes internal task derivation in the same transaction. `booqable_*` tables stay service-role-only.
+- Workshop is online-only. Migrations are idempotent, proven locally, and reach staging/production only through CI.
+- Bike category admission remains the controlled ProductGroup tag set (`workshop-*-bike`, with matching bundle tags). Tags classify category; they never replace exact StockItem identity.
 
 ## UX & Interaction Patterns
 
-- Do not add a Workshop classification or tag-approval screen. Bike category is read-only Booqable context; untagged or conflicting source data surfaces through Integration Incident handling. Accessory-tag interpretation has no UI before Epic 6.
+- Claims show pending in place, block double submit, and report success only from the confirmed server result. A failed refresh surfaces as a failed claim, not as ownership.
+- First-writer-wins: a losing claimant sees the current owner and returns to a refreshed queue; no optimistic ownership remains.
+- If the refresh reports that the displayed task transitioned, became unavailable, or is unauthorized, the UI must show that explicit result rather than claiming or silently switching to another task.
 
 ## Cross-Story Dependencies
 
-- Sequence work as containment and toolchain → versioned contracts → additive projection and brownfield proof → atomic synchronous application → source-data validation → JIT proofs → caller cutover → legacy-write revocation → rollout control.
-- Epic 3 owns exact membership and Bike Task derivation and may depend only on this coordinator’s accepted contracts. Epic 6 owns accessory-tag interpretation and targeted configuration mapping.
-- Existing bookings, order detail, customer, partner, reporting, and local-customer consumers must remain compatible through expand, switch, and contract.
+- Stories 2.1–2.6, 2.9, and 2.10 are frozen and done. Do not rebuild them. Old Stories 2.11–2.14 (freshness proofs, writer cutover, writer revocation, rollout control plane) are retired.
+- Story 2.11 is the remaining live-wiring story and must land before Epic 3 task creation and Epic 5 mechanic claim flows.
+- Epic 3 and later consume the applied canonical graph; they do not add a second source writer or parse webhook payloads.
+- Delivery order: Epic 1 (done) → Epic 2 → Epic 3 → Epic 5 → Epic 4 → Epic 8.
