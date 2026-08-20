@@ -4,7 +4,7 @@ Replace one paper checklist per physical bike with one touch-friendly digital ta
 
 ## Intended Workflow
 
-1. When a Booqable order is reserved, create one independent task for each bike with a specific physical bike ID. Create identified bikes immediately even if other bikes on the order remain unidentified.
+1. When `order.updated` is received or staff run **Sync latest data from Booqable**, fetch the current order data and create one independent task for each bike with a specific physical bike ID. Create tasks for currently identified bikes even if other bikes on the order remain unidentified.
 2. Select a locally owned preparation checklist using the bike product's Booqable workshop type tag. Booqable provides only the tag, not checklist content.
 3. A mechanic opens the bike task from a dashboard filtered by Today, Tomorrow, or Next 7 days and presses **Start preparation**: `To Prepare` → `Being Prepared`. This does not assign or lock the task.
 4. Any mechanic may continue the M1 checklist. Required items must be complete before **Complete preparation and send to re-check** atomically records the current authenticated user and time as the M1 signer and advances the task to `Needs Re-check`.
@@ -27,6 +27,7 @@ Replace one paper checklist per physical bike with one touch-friendly digital ta
 - Manual pickup, return, storage-start, and storage-completion transitions.
 - One shared Prepare for Storage checklist for all bike types, covering damage inspection, cleaning, removal or swapping of rental-installed parts, and return to storage.
 - Essential Booqable synchronization:
+  - the existing `order.updated` webhook and the manual **Sync latest data from Booqable** action both fetch authoritative order data and run the same task reconciliation;
   - rental date changes update task timing and dashboard urgency;
   - current bikes and add-ons stay synchronized;
   - order cancellation or bike removal moves affected tasks to terminal `Cancelled`, hidden from normal work queues;
@@ -50,6 +51,7 @@ Replace one paper checklist per physical bike with one touch-friendly digital ta
 - QR codes, scanning, or another physical/digital handoff mechanism.
 - Manager approval for same-mechanic M1/M2 completion.
 - Automatic pickup or return transitions from Booqable status or dates.
+- Automatic periodic polling for physical-bike assignment changes.
 - Automatic reopening after late add-on changes.
 - Hard deletion of invalidated task history.
 - Type-specific post-rental/storage checklists.
@@ -58,7 +60,12 @@ Replace one paper checklist per physical bike with one touch-friendly digital ta
 
 Add-on changes after a task reaches `Ready for Pickup` update the displayed add-ons but do not change status or reopen preparation. Reopening requires reliable relevant-diff detection and reviewed-state tracking and is deferred until real frequency and impact are known.
 
-## Unresolved Research and Inputs
+## Resolved Booqable Synchronization Decision
 
-- Run a focused Booqable API spike to find the smallest reliable way to detect assignment of a specific bike ID, because the existing order-update webhook does not emit that change.
+- Keep the existing `order.updated` webhook as a signal and continue fetching the complete order instead of parsing its payload.
+- Add a staff-triggered **Sync latest data from Booqable** action that reconciles relevant upcoming reserved orders. This replaces automatic periodic polling for MVP.
+- Task creation may wait until `order.updated` occurs or staff run the manual sync. The UI must show the last successful sync time and surface sync failures clearly.
+
+## Remaining Input
+
 - Before implementation, define the launch checklists: collect each bike type/tag, ordered item labels, action versus tyre-pressure type, required status, and whether M2 verifies each item. Start from the shared base list and capture explicit differences per bike type.
