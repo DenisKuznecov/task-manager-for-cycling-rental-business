@@ -1,0 +1,72 @@
+{
+  "generation_hash": "b1a16ae7807c5e9c277e",
+  "inputs": {
+    "project_root": "/Users/denyskuznetsov/Documents/echelon-cycling-hub-admin/echelon-cycling-hub-admin",
+    "renderer_sha256": "8496d0d8b449d64c21b42a9aab3b13fc8a813a430c0695ffd84ad75bb1da7942",
+    "resolved_values": {
+      "config.core.communication_language": "English",
+      "config.core.document_output_language": "English",
+      "config.modules.bmm.implementation_artifacts": "/Users/denyskuznetsov/Documents/echelon-cycling-hub-admin/echelon-cycling-hub-admin/_bmad-output/implementation-artifacts",
+      "config.modules.bmm.planning_artifacts": "/Users/denyskuznetsov/Documents/echelon-cycling-hub-admin/echelon-cycling-hub-admin/_bmad-output/planning-artifacts",
+      "config.modules.bmm.user_skill_level": "beginner",
+      "customization.workflow.activation_steps_append": [],
+      "customization.workflow.activation_steps_prepend": [],
+      "customization.workflow.implementation_handoff": "Launch a subagent with no prior conversation context, with this prompt:\n\n> Read {spec_file} fully and implement it — the spec is the sole source of truth. Load every file listed in its frontmatter `context:` before you start.\n>\n> When done, report what you changed, how you verified it, and anything left incomplete or risky.\n",
+      "customization.workflow.on_complete": "",
+      "customization.workflow.persistent_facts": [
+        "file:{project-root}/**/project-context.md"
+      ],
+      "customization.workflow.review_layers": [
+        {
+          "id": "blind-hunter",
+          "instruction": "Launch a context-free subagent with this prompt:\n\nConduct a review of CONTENT.\nLook for what's missing, not only what's wrong.\nFind at least ten issues to fix or improve.\nOutput a Markdown list of findings only — no severity, priority, or ranking.\nIf the content is empty, stop and say so.\nIf you have zero findings, re-check and keep thinking; do not stop with an empty list.\n\nCONTENT:\n{diff_output}\n\nDo not invoke any skill. Return only the review result.\n\n",
+          "name": "Blind Hunter"
+        },
+        {
+          "id": "edge-case-hunter",
+          "instruction": "Launch a context-free subagent with this prompt:\n\nRead `{skill-root}/review-prompts/edge-case-hunter.md` completely and follow it as your review instructions.\n\nReview content:\n\n{diff_output}\n\nDo not invoke any skill. If the instruction file is unreadable, report that exact failure and stop. Return only the review result.\n\n",
+          "name": "Edge Case Hunter"
+        },
+        {
+          "id": "verification-gap",
+          "instruction": "Launch a context-free subagent with this prompt:\n\nRead `{skill-root}/review-prompts/verification-gap.md` completely and follow it as your review instructions.\n\nReview content:\n\n{diff_output}\n\nDo not invoke any skill. If the instruction file is unreadable, report that exact failure and stop. Return only the review result.\n\n",
+          "name": "Verification Gap Reviewer"
+        },
+        {
+          "id": "intent-alignment",
+          "instruction": "Launch a subagent with this prompt:\n\nYou are an intent-alignment auditor. You have no other context about how this change was produced. Here is the verbatim intent this work started from:\n\n{verbatim_intent}\n\nHere is the diff:\n\n{diff_output}\n\nYour task is strictly descriptive — do not prescribe additional work. Report: (1) the defensible readings of the intent, enumerated; (2) which reading this diff implements; (3) where the readings and the diff diverge — specifically, which surface the intent's expectations live at versus which surface the diff's changes and its tests exercise.\n",
+          "name": "Intent Alignment Auditor"
+        }
+      ]
+    },
+    "source_sha256": {
+      "compile-epic-context.md": "64d13b41974cfa0dfc1de64b6fbd8365e9b99f91c7c98f0ee1a9fbd018f324ca",
+      "references/deletion-check.md": "0f1f124e4e957147e89164a272b10bedc694ad0d9ad2618c8610ac74ee9cb0da",
+      "review-prompts/edge-case-hunter.md": "4ccb3599ed1b8cc54876b304dc567d1b4e3e0ec5c1add34df9a2445224ac77af",
+      "review-prompts/verification-gap.md": "11b6bbbd4e3426a25cca81229c98971e5f20ce99638940c47c9c1484011b457a",
+      "spec-template.md": "5fccfa92dd632d4be646ab40f2882452189aba49db57fe3fa00fcc1806666d74",
+      "step-01-clarify-and-route.md": "7480db7720720212bd045793fddcb91f06091fe512e53b38127f6440c3fd96e2",
+      "step-02-plan.md": "a08e303c10f88dbfce88c55044757ec5059afe338793eb414e1ddb0b7c324625",
+      "step-03-implement.md": "f3e427c6033a26adcc327e4367db38c619527858a1175b148ec5a6f53d1bb408",
+      "step-04-review.md": "8e9ff909192e1d5d50f9fc071c4b5eb8830cc921200d423904a30dadca58c3e9",
+      "workflow.md": "f5f538a647b2a09406b11337244d1bd74fe97e7fa85b58a990184fcb480bfd90"
+    }
+  },
+  "outputs": {
+    "compile-epic-context.md": "64d13b41974cfa0dfc1de64b6fbd8365e9b99f91c7c98f0ee1a9fbd018f324ca",
+    "references/deletion-check.md": "0f1f124e4e957147e89164a272b10bedc694ad0d9ad2618c8610ac74ee9cb0da",
+    "review-prompts/edge-case-hunter.md": "4ccb3599ed1b8cc54876b304dc567d1b4e3e0ec5c1add34df9a2445224ac77af",
+    "review-prompts/verification-gap.md": "11b6bbbd4e3426a25cca81229c98971e5f20ce99638940c47c9c1484011b457a",
+    "spec-template.md": "5fccfa92dd632d4be646ab40f2882452189aba49db57fe3fa00fcc1806666d74",
+    "step-01-clarify-and-route.md": "67bb28fc2dc721d7ce01ba2ef5fd6a21e9532345ef81f61d8303405ef83900be",
+    "step-02-plan.md": "f4faf4de59e35743fe21295cdb04f8fff78abfb92bea94f9719eae3b106ce6ef",
+    "step-03-implement.md": "1a4f7879c9ddc8fc6a72c6402ec29343e0dee024b530125eca790b0e0ed65292",
+    "step-04-review.md": "a159024c37fc34fc18a73bca439167c0165ce56a522014e5e85f5b1541ba7d94",
+    "workflow.md": "8ebb294e6f196a81564826ecc35785f95ba66fdb1e23c2d44acf6a24d3e694bb"
+  },
+  "project_root": "/Users/denyskuznetsov/Documents/echelon-cycling-hub-admin/echelon-cycling-hub-admin",
+  "project_slug": "echelon-cycling-hub-admin",
+  "root_hash": "9b9259cfce87",
+  "schema_version": 1,
+  "skill": "bmad-build-auto"
+}
