@@ -1,71 +1,50 @@
-# MVP Intent
+# Brainstorming Intent: Automating Mechanics' Daily Work
 
-Replace one paper checklist per physical bike with one touch-friendly digital task. The task must guide M1 preparation and M2 re-check, prevent incomplete stage advancement, record explicit authenticated attestations, and continue through post-rental storage completion. This is checklist execution and accountability, not workforce management: work remains transferable and unassigned.
+## Intent
 
-## Intended Workflow
+Replace one paper checklist per physical bike with one touch-friendly digital task that guides M1 preparation, M2 re-check, and post-rental storage preparation. The MVP digitizes checklist execution and final accountability—not workforce management—so work remains transferable and unassigned.
 
-1. When `order.updated` is received or staff run **Sync latest data from Booqable**, fetch the current order data and create one independent task for each bike with a specific physical bike ID. Create tasks for currently identified bikes even if other bikes on the order remain unidentified.
-2. Select a locally owned preparation checklist using the bike product's Booqable workshop type tag. Booqable provides only the tag, not checklist content.
-3. A mechanic opens the bike task from a dashboard filtered by Today, Tomorrow, or Next 7 days and presses **Start preparation**: `To Prepare` → `Being Prepared`. This does not assign or lock the task.
-4. Any mechanic may continue the M1 checklist. Required items must be complete before **Complete preparation and send to re-check** atomically records the current authenticated user and time as the M1 signer and advances the task to `Needs Re-check`.
-5. M2 verifies only designated items. **Complete re-check and mark ready** records the current authenticated user and time and advances the task to `Ready for Pickup`. If the M2 signer is also the recorded M1 signer, require an explicit same-mechanic confirmation and visibly retain that fact; no manager approval is required.
-6. Current order add-ons remain visible throughout the task. Before readiness, the mechanic must confirm that preparation still matches them.
-7. Any authenticated staff member except a partner-role user may manually perform `Ready for Pickup` → `In Rental` with **Mark as picked up**, and `In Rental` → `Returned` with **Mark as returned**.
-8. A mechanic presses **Start storage preparation**: `Returned` → `Prepare for Storage`, completes one shared post-rental checklist, then uses **Mark task completed**. One authenticated mechanic signs this stage; no M2 re-check follows. The terminal state is `Completed`.
+## MVP Workflow
 
-## MVP Scope
+1. Create an independent task for each specifically identified bike on a reserved Booqable order, without waiting for every bike in the order to receive an ID.
+2. Select a preconfigured local preparation checklist using the product's Booqable workshop bike-type tag. Booqable supplies the tag, not checklist content.
+3. Show tasks through Today, Tomorrow, and Next 7 days dashboard filters. Opening a task exposes its exact checklist and a reusable parent-order details view.
+4. `To Prepare` → `Being Prepared` occurs through **Start preparation** and does not assign or lock the task.
+5. Any mechanic may continue M1 work. **Complete preparation and send to re-check** is gated by required outcomes and atomically records the authenticated mechanic and time as the M1 signer.
+6. In `Needs Re-check`, M2 verifies designated items. **Complete re-check and mark ready** records the authenticated M2 signer and advances to `Ready for Pickup`. If M1 and M2 are the same person, require an explicit final confirmation and visibly record the exception.
+7. Non-partner authenticated staff manually advance `Ready for Pickup` → `In Rental` and `In Rental` → `Returned`.
+8. A mechanic starts `Prepare for Storage`, completes one shared checklist for damage inspection, cleaning, rental-part removal or swapping, and storage return, then signs **Mark task completed**. No M2 stage follows; the terminal state is `Completed`.
 
-- Per-physical-bike tasks derived from reserved, specifically identified Booqable bikes.
-- Touch-first, linear checklist UI for stand-mounted tablets, with large tappable rows and minimal actions.
-- Preconfigured local preparation checklists selected by bike-type tags.
-- Two checklist item interactions only:
-  - tap-to-complete action items;
-  - tyre-pressure entry as a numeric PSI value.
-- For M2-enabled tyre-pressure items, M1 records the PSI value and M2 confirms that value rather than entering another measurement.
-- Required-item gates, explicit stage actions, immutable authenticated-user attribution, displayed mechanic first and last name, and timestamps.
-- Separate M1 preparation and M2 re-check statuses.
-- Manual pickup, return, storage-start, and storage-completion transitions.
-- One shared Prepare for Storage checklist for all bike types, covering damage inspection, cleaning, removal or swapping of rental-installed parts, and return to storage.
-- Essential Booqable synchronization:
-  - the existing `order.updated` webhook and the manual **Sync latest data from Booqable** action both fetch authoritative order data and run the same task reconciliation;
-  - rental date changes update task timing and dashboard urgency;
-  - current bikes and add-ons stay synchronized;
-  - order cancellation or bike removal moves affected tasks to terminal `Cancelled`, hidden from normal work queues;
-  - a changed bike ID cancels the old task and creates a fresh `To Prepare` task for the replacement, carrying no checklist work forward;
-  - an actively viewed invalidated task shows a clear abandon-work state.
+## Checklist Contract
 
-## Critical Rules and Discoveries
+- Touch-first, linear presentation with large tappable rows and minimal actions.
+- Locally defined launch templates; no admin template editor in MVP.
+- Supported item types are action items and numeric tyre-pressure entry in PSI.
+- Required items block stage completion until they have a valid outcome.
+- Configured action items may allow the explicit outcome `Not applicable`; leaving the item incomplete never satisfies it.
+- If an M2-designated item is `Not applicable`, M2 must confirm that outcome.
+- Initial road items allowing `Not applicable`: front derailleur shifting, main battery, shifters battery, power-meter battery, charger/lube, and bikefit applied.
+- `Not applicable` is a constrained outcome only on explicitly configured action items, not a general value type or free-text field.
+- For M2-enabled tyre pressure, M1 records PSI and M2 confirms that value rather than entering a second measurement.
 
-- Work history belongs to one physical bike task and never transfers to a different bike.
-- A stage signature means final responsibility for the completed checklist, not authorship of every checkbox.
-- The automation boundary follows source certainty: Booqable supplies bike identity, dates, add-ons, and invalidation; staff explicitly confirm physical preparation, pickup, return, and storage completion.
-- Checklist definitions belong entirely to this application; runtime inheritance between bike-type checklists is unnecessary for MVP.
+## Source Synchronization Rules
 
-## Explicit Non-Goals and Deferred Items
+- Booqable supplies bike identity, dates, add-ons, and invalidation; people explicitly confirm physical work and lifecycle transitions.
+- Preserve the existing `order.updated` webhook as a signal, then fetch the complete authoritative order rather than parsing assignment details from the webhook payload.
+- Add a staff-triggered **Sync latest data from Booqable** action for relevant upcoming reserved orders. Webhook and manual sync use the same reconciliation path; manual sync is the recovery path and replaces periodic polling in MVP.
+- Task creation may wait for `order.updated` or manual sync. Show the last successful sync time and surface synchronization failures clearly.
+- Date changes update task timing. Current add-ons remain visible, and the mechanic confirms alignment with them before readiness.
+- Cancellation or bike removal moves the task to terminal `Cancelled`, hidden from normal queues; an open invalidated task shows a clear abandon-work state.
+- A changed bike ID represents a different physical bike: cancel the old task and create a fresh `To Prepare` task with no carried-over checklist work.
+- Add-on changes after `Ready for Pickup` update displayed data but do not reopen or change task status.
 
-- Task assignment, reassignment, or locking.
-- Per-checkbox authorship.
-- Staff-profile dropdown signatures; attribution must come from the authenticated user.
-- Admin checklist-template editor.
-- Generalized form-builder behavior, arbitrary value types, or free-text checklist values.
-- QR codes, scanning, or another physical/digital handoff mechanism.
-- Manager approval for same-mechanic M1/M2 completion.
-- Automatic pickup or return transitions from Booqable status or dates.
-- Automatic periodic polling for physical-bike assignment changes.
-- Automatic reopening after late add-on changes.
-- Hard deletion of invalidated task history.
-- Type-specific post-rental/storage checklists.
+## Critical Boundary
 
-## Accepted Limitation
+- A stage signature records final responsibility for the completed checklist, not authorship of each item.
+- Work history belongs to one physical-bike task and never transfers to another bike.
+- Deferred: task assignment/reassignment, per-item authorship, profile-dropdown signatures, generalized form building, arbitrary value types, free text, QR/scanning, manager approval for same-mechanic re-check, periodic polling, automatic late-add-on reopening, automatic pickup/return, hard deletion, and type-specific storage checklists.
 
-Add-on changes after a task reaches `Ready for Pickup` update the displayed add-ons but do not change status or reopen preparation. Reopening requires reliable relevant-diff detection and reviewed-state tracking and is deferred until real frequency and impact are known.
+## Required Pre-Implementation Inputs
 
-## Resolved Booqable Synchronization Decision
-
-- Keep the existing `order.updated` webhook as a signal and continue fetching the complete order instead of parsing its payload.
-- Add a staff-triggered **Sync latest data from Booqable** action that reconciles relevant upcoming reserved orders. This replaces automatic periodic polling for MVP.
-- Task creation may wait until `order.updated` occurs or staff run the manual sync. The UI must show the last successful sync time and surface sync failures clearly.
-
-## Remaining Input
-
-- Before implementation, define the launch checklists: collect each bike type/tag, ordered item labels, action versus tyre-pressure type, required status, and whether M2 verifies each item. Start from the shared base list and capture explicit differences per bike type.
+- Define launch checklists from a shared base plus explicit bike-type differences: Booqable tag, ordered labels, action versus tyre-pressure type, required status, `Not applicable` allowance, and M2-verification designation.
+- Run a focused Booqable API spike to verify relationship paths and webhook delivery behavior for the resolved `order.updated` plus manual-sync design.
