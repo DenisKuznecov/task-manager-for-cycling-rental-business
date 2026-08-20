@@ -5,6 +5,7 @@ companions:
   - checklist-contract.md
   - launch-checklists.md
   - booqable-reconciliation.md
+  - ../../planning-artifacts/architecture/architecture-echelon-cycling-hub-admin-2026-08-20/ARCHITECTURE-SPINE.md
 sources:
   - ../../brainstorming/brainstorm-automating-mechanics-daily-work-2026-08-20/brainstorm-intent.md
   - ../../research/technical-booqable-physical-bike-id-assignment-det-2026-08-20/research.md
@@ -70,6 +71,7 @@ Mechanics currently rely on one paper checklist per physical bike, leaving stage
 - Invalidated tasks remain as terminal `Cancelled` history and are hidden from normal work queues.
 - Add-on changes after `Ready for Pickup` update the display but do not reopen or change task status.
 - Every bike type uses the same six-item Prepare for Storage checklist in MVP.
+- Architecture spine AD-1 through AD-13 bind implementation HOW; diagrams stay in that companion.
 - Detailed workflow, checklist, integration, recovery, and validation constraints in the companion files are binding.
 
 ## Non-goals
