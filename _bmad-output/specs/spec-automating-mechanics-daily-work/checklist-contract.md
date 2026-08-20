@@ -22,7 +22,7 @@ Each launch definition must specify:
 - whether M2 must verify the item;
 - whether the item allows an explicit `not_applicable` outcome.
 
-The ordered items for the remaining tags and the shared storage checklist are required before implementation. A shared base list plus explicit differences per tag is sufficient. MVP has no template editor, runtime inheritance, arbitrary field types, or free-text values.
+The ordered items for the remaining preparation tags are required before implementation. A shared base list plus explicit differences per tag is sufficient. MVP has no template editor, runtime inheritance, arbitrary field types, or free-text values.
 
 An identified bike always receives a visible task. A missing or unrecognized workshop tag shows a Booqable product-configuration warning; it does not invalidate or hide the task. Block **Start preparation** until the tag is corrected in Booqable and synchronization selects the checklist.
 
@@ -54,11 +54,13 @@ An identified bike always receives a visible task. A missing or unrecognized wor
 
 ## Storage Checklist
 
-Use one shared post-rental checklist for every bike type. Its launch definition must cover:
+Use one shared post-rental checklist for every bike type:
 
-- damage inspection;
-- cleaning;
-- removal or swapping of rental-installed parts;
-- return of the bike to storage.
+- check bike for damage;
+- check saddle bag contents;
+- check charger;
+- restore customized parts and settings to the bike's default setup;
+- clean the bike;
+- return the bike to storage.
 
-The storage stage uses the same `action` and `tyre_pressure_psi` type boundary, although the final launch definition determines which types are present. Every required item gates `Completed`. One authenticated mechanic signs the stage; no M2 re-check follows.
+All six are required action items. Saddle bag, charger, and customized-setup restoration allow an explicit `not_applicable` outcome; the other items do not. Every item must have a valid outcome before `Completed`. One authenticated mechanic signs the stage; no M2 re-check follows.

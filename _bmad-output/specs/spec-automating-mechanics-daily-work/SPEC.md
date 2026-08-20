@@ -43,7 +43,7 @@ Mechanics currently rely on one paper checklist per physical bike, leaving stage
   - **success:** Any non-partner staff member can move `Ready for Pickup` to `In Rental` and `In Rental` to `Returned`; partner-role users cannot.
 - **CAP-8**
   - **intent:** A mechanic can perform and attest one shared post-rental storage checklist.
-  - **success:** `Returned` moves through `Prepare for Storage` to terminal `Completed` only after required storage work is complete, with one authenticated signer and no M2 stage.
+  - **success:** `Returned` moves through `Prepare for Storage` to terminal `Completed` only after all six required storage items have a valid completion or allowed N/A outcome, with one authenticated signer and no M2 stage.
 - **CAP-9**
   - **intent:** The system invalidates tasks whose physical-bike assignment disappears or changes.
   - **success:** Removal or order cancellation terminally cancels affected work; replacement creates a fresh `To Prepare` task with no transferred history; an open invalidated task becomes non-actionable and clearly directs the mechanic to abandon it.
@@ -69,6 +69,7 @@ Mechanics currently rely on one paper checklist per physical bike, leaving stage
 - Booqable `stock_items.id` is the physical identity key; the editable human identifier is display metadata, without asserting contractual UUID permanence.
 - Invalidated tasks remain as terminal `Cancelled` history and are hidden from normal work queues.
 - Add-on changes after `Ready for Pickup` update the display but do not reopen or change task status.
+- Every bike type uses the same six-item Prepare for Storage checklist in MVP.
 - Detailed workflow, checklist, integration, recovery, and validation constraints in the companion files are binding.
 
 ## Non-goals
@@ -88,5 +89,5 @@ Mechanics currently rely on one paper checklist per physical bike, leaving stage
 
 ## Open Questions
 
-- What are the ordered launch items for the four remaining bike tags and the shared storage checklist?
+- What are the ordered launch items for the four remaining preparation tags?
 - What v4 relationship/include request, read-after-write delay, debounce window, webhook delivery behavior, and authentication behavior are confirmed by the controlled tenant spike?

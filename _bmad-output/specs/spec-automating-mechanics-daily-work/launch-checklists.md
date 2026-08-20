@@ -38,10 +38,24 @@ For a required item that allows N/A, an explicit N/A selection satisfies M1 only
 
 The task already supplies the bike ID and order ID. Mechanic 1 and Mechanic 2 paper signature rows become the authenticated M1 and M2 stage attestations, not checklist items.
 
+## Shared Prepare for Storage
+
+Used for every bike type in MVP.
+
+| Order | ID | Item | Type | Required | M2 verifies | N/A allowed |
+|---:|---|---|---|---|---|---|
+| 1 | `STORAGE-01` | Check bike for damage | Action | Yes | No | No |
+| 2 | `STORAGE-02` | Check saddle bag contents | Action | Yes | No | Yes |
+| 3 | `STORAGE-03` | Check charger | Action | Yes | No | Yes |
+| 4 | `STORAGE-04` | Restore customized parts and settings to the bike's default setup | Action | Yes | No | Yes |
+| 5 | `STORAGE-05` | Clean the bike | Action | Yes | No | No |
+| 6 | `STORAGE-06` | Return the bike to storage | Action | Yes | No | No |
+
+An explicit N/A selection satisfies an allowed item when the bike has no saddle bag, charger, or customized setup to restore. One authenticated mechanic completes and signs the stage; no M2 verification follows.
+
 ## Checklists Still Required
 
 - `workshop-e-city-bike`
 - `workshop-e-mtb-bike`
 - `workshop-gravel-bike`
 - `workshop-e-road-bike`
-- shared Prepare for Storage checklist

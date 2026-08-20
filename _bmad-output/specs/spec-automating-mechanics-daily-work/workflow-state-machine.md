@@ -33,7 +33,7 @@ stateDiagram-v2
 | `Ready for Pickup` | Mark as picked up | Authenticated staff member whose role is not partner | `In Rental` |
 | `In Rental` | Mark as returned | Authenticated staff member whose role is not partner | `Returned` |
 | `Returned` | Start storage preparation | Any mechanic; no assignment or lock | `Prepare for Storage` |
-| `Prepare for Storage` | Mark task completed | Every required storage item complete; atomically record authenticated storage signer and time | `Completed` |
+| `Prepare for Storage` | Mark task completed | All six storage items complete or explicitly N/A where allowed; atomically record authenticated storage signer and time | `Completed` |
 | Any nonterminal state | Source invalidation | Order cancelled or physical bike removed/replaced; retain history and reject further work | `Cancelled` |
 
 ## Attestation Rules
