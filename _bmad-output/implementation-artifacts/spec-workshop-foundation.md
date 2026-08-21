@@ -2,8 +2,10 @@
 title: 'Workshop foundation'
 type: 'feature'
 created: '2026-08-21'
-status: 'ready-for-dev'
+status: 'done'
+baseline_revision: '52c56dc608c0e17375acd6e4bee41af3b221535e'
 review_loop_iteration: 0
+followup_review_recommended: true
 context:
   - '{project-root}/_bmad-output/specs/spec-automating-mechanics-daily-work/SPEC.md'
   - '{project-root}/_bmad-output/specs/spec-automating-mechanics-daily-work/workflow-state-machine.md'
@@ -81,12 +83,12 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `.github/workflows/deploy-staging.yml` + `deploy-production.yml` -- Pin `supabase/setup-cli` to `2.115.0` -- AD-12 before feature migrations
-- [ ] `package.json` -- Add `test:db`: `supabase test db --local` -- AD-13
-- [ ] `supabase/migrations/20260821120000_workshop_foundation.sql` -- Schema, grants/RLS, commands, seeds, view, detail RPC, realtime -- AD-3–AD-9
-- [ ] `supabase/tests/database/workshop_foundation.test.sql` -- Cover every I/O matrix row as mechanic vs partner -- AD-13
-- [ ] `src/lib/workshop/**` -- Domain types, `withAuth` RPC actions, read loaders -- AD-1 / error-handling (`workshop:` log prefix)
-- [ ] Apply locally (`supabase migration up` or `db reset`) -- never remote
+- [x] `.github/workflows/deploy-staging.yml` + `deploy-production.yml` -- Pin `supabase/setup-cli` to `2.115.0` -- AD-12 before feature migrations
+- [x] `package.json` -- Add `test:db`: `supabase test db --local` -- AD-13
+- [x] `supabase/migrations/20260821120000_workshop_foundation.sql` -- Schema, grants/RLS, commands, seeds, view, detail RPC, realtime -- AD-3–AD-9
+- [x] `supabase/tests/database/workshop_foundation.test.sql` -- Cover every I/O matrix row as mechanic vs partner -- AD-13
+- [x] `src/lib/workshop/**` -- Domain types, `withAuth` RPC actions, read loaders -- AD-1 / error-handling (`workshop:` log prefix)
+- [x] Apply locally (`supabase migration up` or `db reset`) -- never remote
 
 **Acceptance Criteria:**
 - Given a local reset, when `npm run test:db` runs, then every I/O matrix row passes and ROAD/STORAGE seeds match `launch-checklists.md`.
@@ -97,9 +99,62 @@ context:
 
 ## Spec Change Log
 
+- 2026-08-21: Implemented the foundation as specified (CLI pin, `test:db`, migration, pgTAP, `src/lib/workshop`). No intent or boundary changes.
+- 2026-08-21: Review patches — seed flag assertions, mechanic `SET ROLE authenticated`, PSI/N/A and M2-incomplete coverage, history DELETE, partner detail null, mapping/storage guards, default privileges, loader page/search/`asNumber` fixes. Intent contract unchanged.
+
 ## Verification
 
 **Commands:**
 - `supabase test db --local` -- expected: pgTAP pass
-- `npm run test:db` -- expected: same
+- `npm run test:db` -- expected: same (78 tests, PASS)
 - `git diff src/app/workshop src/lib/booqable src/components/Kanban*` -- expected: empty
+
+## Review Triage Log
+
+### 2026-08-21 — Review pass
+- intent_gap: 0
+- bad_spec: 0
+- patch: 12: (high 4, medium 5, low 3)
+- defer: 0
+- reject: 13
+- addressed_findings:
+  - `[high]` `[patch]` Seed pgTAP now asserts `item_type`, `required`, `m2_verifies`, and `na_allowed` for ROAD/STORAGE
+  - `[high]` `[patch]` Mechanic RPCs and `workshop_tasks_view` SELECTs run under `SET ROLE authenticated`
+  - `[high]` `[patch]` `workshop_complete_m2` before M2 confirms now expects `INCOMPLETE_CHECKLIST`
+  - `[high]` `[patch]` Partner `workshop_task_detail` is NULL; mechanic detail after M1 includes items and attestation
+  - `[medium]` `[patch]` History tables reject DELETE (`23001`) as well as UPDATE
+  - `[medium]` `[patch]` Completed PSI must be `> 0`; N/A allowed/disallowed paths covered including M2 confirm of N/A
+  - `[medium]` `[patch]` Start preparation is `CONFIGURATION_BLOCKED` when `selected_definition_id` does not match the mapping
+  - `[medium]` `[patch]` `ALTER DEFAULT PRIVILEGES` revokes tables/sequences/functions from `PUBLIC`/`anon`/`authenticated`
+  - `[medium]` `[patch]` Detail mapper `asNumber` coerces finite numeric strings from jsonb
+  - `[low]` `[patch]` Start storage is `CONFIGURATION_BLOCKED` when no storage items were copied
+  - `[low]` `[patch]` Queue page uses only integer `> 0`
+  - `[low]` `[patch]` Search escapes ILIKE wildcards and skips an empty remainder
+
+## Auto Run Result
+
+Status: done
+
+Summary: Landed the PostgreSQL workshop core (schema, ROAD/STORAGE seeds, staff commands, RLS, realtime) plus thin `withAuth` RPC wrappers and read loaders. Tasks are created only via test fixtures. Review patches tightened grants/RLS tests, seed flags, PSI/N/A, and loader parsing.
+
+Files changed:
+- `../../.github/workflows/deploy-staging.yml` and `../../.github/workflows/deploy-production.yml` — pin Supabase CLI to `2.115.0`
+- `../../package.json` — add `test:db`
+- `../../supabase/migrations/20260821120000_workshop_foundation.sql` — workshop schema, commands, seeds, view, detail RPC, RLS, realtime
+- `../../supabase/tests/database/workshop_foundation.test.sql` — pgTAP for the I/O matrix plus review-patch coverage (78 tests)
+- `../../src/lib/workshop/` — domain types, `withAuth` actions, view/detail loaders
+- `spec-workshop-foundation.md` — run status, triage, and result
+
+Review findings breakdown: 12 patches applied, 0 deferred, 13 rejected (INVOKER private `USAGE`, admin/manager duplicate actors, SQL-side AD-9 date predicates vs loader filters, unused `SYNC_IN_PROGRESS`, apply/fingerprint computation, Vitest/`withAuth` session tests, CI pgTAP job, and similar).
+
+Follow-up review recommendation: `true` (patched high 4, medium 5, low 3; score `3 × 5 + 1 × 3 = 18`).
+
+Verification performed:
+- `npm run test:db` — 78 tests, PASS
+- `git diff src/app/workshop src/lib/booqable src/components/Kanban*` — empty
+
+Residual risks:
+- Local Supabase CLI is still `2.105.0`; CI is pinned to `2.115.0`
+- Apply, leases, webhook, and workshop UI remain out of scope; queue date filters live in the TypeScript loader on SQL `madrid_start_date`
+- Four unsupplied preparation tags stay disabled
+- Client RPC transport failures map to `SOURCE_UNAVAILABLE`

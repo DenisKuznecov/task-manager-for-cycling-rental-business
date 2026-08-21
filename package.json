@@ -11,7 +11,8 @@
     "start": "next start",
     "email": "email dev",
     "lint": "eslint .",
-    "test:upgrade-gate": "node --test src/upgrade-gate.test.mts"
+    "test:upgrade-gate": "node --test src/upgrade-gate.test.mts",
+    "test:db": "supabase test db --local"
   },
   "dependencies": {
     "@blocknote/core": "^0.52.1",
