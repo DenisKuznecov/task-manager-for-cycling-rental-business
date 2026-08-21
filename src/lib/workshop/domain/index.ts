@@ -42,3 +42,19 @@ export type {
   WorkshopTaskListQuery,
   WorkshopTaskListRow,
 } from "./dtos";
+
+export {
+  SOURCE_ORDER_SNAPSHOT_SCHEMA_VERSION,
+  SourceAssignmentV1Schema,
+  SourceCouponV1Schema,
+  SourceCustomerV1Schema,
+  SourceLineV1Schema,
+  SourceOrderSnapshotV1Schema,
+  SourceOrderV1Schema,
+  type SourceAssignmentV1,
+  type SourceCouponV1,
+  type SourceCustomerV1,
+  type SourceLineV1,
+  type SourceOrderSnapshotV1,
+  type SourceOrderV1,
+} from "./source-snapshot";

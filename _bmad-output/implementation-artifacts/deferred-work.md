@@ -25,9 +25,5 @@
   evidence: Split from the mechanics daily-work intent because live-tenant measurement is research, not foundation schema work, and apply/sync must not invent those values.
 
 - source_spec: none
-  summary: Implement complete-snapshot source apply, assignment instances, one task per identified bike, and invalidation (CAP-1, CAP-9).
-  evidence: Split from the mechanics daily-work intent because apply depends on a frozen SourceOrderSnapshotV1 contract after the tenant spike.
-
-- source_spec: none
   summary: Implement webhook and leased manual sync plus workshop sync-health UI (CAP-10).
   evidence: Split from the mechanics daily-work intent because live sync is gated on spike numbers, staging/preview isolation, and the apply command existing first.
