@@ -15,3 +15,19 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-upgrade-nextjs-16.md`
   summary: Guard `requireAnonymous` `fallbackNext` so it only accepts same-origin relative paths.
   evidence: `fallbackNext.trim()` is used as a redirect target with no `startsWith("/")` check; that open-redirect shape predates the upgrade.
+
+- source_spec: none
+  summary: Replace the mock Kanban with workshop work queues and a dedicated `/workshop/[taskId]` page for the guarded lifecycle (M1, M2, add-ons, pickup/return, storage).
+  evidence: Split from the mechanics daily-work intent so this run can land schema, RLS, commands, and seeds without UI cut-over.
+
+- source_spec: none
+  summary: Run the controlled Booqable tenant spike and amend AD-2 / AD-10 with the verified include path, workshop-tag field, terminal statuses, debounce, webhook behavior, and sync numbers.
+  evidence: Split from the mechanics daily-work intent because live-tenant measurement is research, not foundation schema work, and apply/sync must not invent those values.
+
+- source_spec: none
+  summary: Implement complete-snapshot source apply, assignment instances, one task per identified bike, and invalidation (CAP-1, CAP-9).
+  evidence: Split from the mechanics daily-work intent because apply depends on a frozen SourceOrderSnapshotV1 contract after the tenant spike.
+
+- source_spec: none
+  summary: Implement webhook and leased manual sync plus workshop sync-health UI (CAP-10).
+  evidence: Split from the mechanics daily-work intent because live sync is gated on spike numbers, staging/preview isolation, and the apply command existing first.
