@@ -68,7 +68,7 @@ export function getReportAssetDataUrl(filename: ReportAssetFilename): string {
   const filePath = ASSET_PATHS[filename];
 
   try {
-    const bytes = fs.readFileSync(filePath);
+    const bytes = fs.readFileSync(/*turbopackIgnore: true*/ filePath);
     const dataUrl = `data:${mimeForFilename(filename)};base64,${bytes.toString("base64")}`;
     dataUrlCache.set(filename, dataUrl);
     return dataUrl;
