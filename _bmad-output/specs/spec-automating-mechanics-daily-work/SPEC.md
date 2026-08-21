@@ -92,4 +92,13 @@ Mechanics currently rely on one paper checklist per physical bike, leaving stage
 ## Open Questions
 
 - What are the ordered launch items for the four remaining preparation tags?
-- What v4 relationship/include request, read-after-write delay, debounce window, webhook delivery behavior, and authentication behavior are confirmed by the controlled tenant spike?
+
+## Tenant spike 2026-08-21
+
+Resolved against live order 344. Evidence: `_bmad-output/implementation-artifacts/booqable-spike-evidence.md`. AD-2/AD-10 amended the same day.
+
+- Include: `customer,coupon,lines,lines.planning,lines.planning.stock_item_plannings,lines.planning.stock_item_plannings.stock_item,lines.item` (HTTP 200).
+- Workshop tag: `products.attributes.tag_list` (ignore `*-bundle` on the bundle line).
+- Statuses: `reserved` / `started` (picked up) / `stopped` (returned) / `canceled`. Cancel from `stopped` was not possible in the UI.
+- Read-after-write: first GET after each human report already matched; no debounce ms claimed.
+- Still **not observed** (do not invent): webhook copies, debounce window, `429`/`Retry-After`, same-product A→B→C, cross-page drift check.

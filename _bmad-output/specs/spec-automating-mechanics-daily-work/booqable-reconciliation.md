@@ -42,12 +42,13 @@ The candidate request is:
 
 ```text
 GET /api/4/orders/{order_id}
-  ?include=lines,lines.planning,
+  ?include=customer,coupon,lines,lines.planning,
            lines.planning.stock_item_plannings,
-           lines.planning.stock_item_plannings.stock_item
+           lines.planning.stock_item_plannings.stock_item,
+           lines.item
 ```
 
-The complete dotted `include` value is not yet verified against a live tenant order. Legacy v1 material corroborates the model but must not determine v4 compatibility.
+**Verified 2026-08-21** on live order 344 (HTTP 200), including the combined string with `customer,coupon`. `lines.item` sideloads `products` (workshop `tag_list`) and `bundles`. `lines.item.product_group` did not sideload `product_groups`. Evidence: `_bmad-output/implementation-artifacts/booqable-spike-evidence.md`.
 
 ## Controlled Tenant Spike
 
@@ -73,11 +74,19 @@ The spike must produce:
 
 Acceptance requires webhook and manual sync to call the same idempotent reconciler and converge after every tested mutation. Missing webhook delivery remains recoverable through manual sync.
 
+### Spike results 2026-08-21
+
+Live order 344. Evidence: `_bmad-output/implementation-artifacts/booqable-spike-evidence.md`. AD-2/AD-10 amended the same day.
+
+Observed: include path above; unidentified = empty `stock_item_plannings`; `stock_items.id` + display `identifier`; workshop tag on `products.tag_list`; new SIP id on same-bike re-add; date change keeps SIP id; bundle add-ons grouped by `parent_line_id`; flat add-ons have null parent (order-level display only); UI reserved/`started`/`stopped`/`canceled`; list `page[size]=50` in 304ms.
+
+Not observed: webhook copies (no second webhook), debounce ms, HTTP `429`/`Retry-After`, same-product `{A}→{B}` or rapid A→B→C, `order_fulfillments/specify`, receiver 500 retries. Missing webhook remains recoverable via manual sync.
+
 ## Evidence and Revalidation
 
 Official sources establish generic reservation followed by later physical assignment, nested order/planning relationships, editable human identifiers, employee-scoped access methods, pagination, single-use signed requests, and HTTP `429`. They do not establish assignment-event coverage, delivery guarantees, payload semantics, retry/order behavior, event IDs, receiver authentication, read-after-write lag, or numeric quotas. The official Zapier “Updated Order” trigger does not prove public-webhook behavior.
 
-Recheck v4 relationship/includes, webhook documentation, identity fields, authentication, pagination, and rate-limit guidance by **2026-09-20**. Refresh immediately when the tenant spike replaces unverified claims with observed evidence.
+Recheck v4 relationship/includes, webhook documentation, identity fields, authentication, pagination, and rate-limit guidance by **2026-09-20**. Tenant spike 2026-08-21 replaced the unverified include claim with a live HTTP 200; remaining `not observed` items stay unverified until re-measured.
 
 Primary references:
 

@@ -83,12 +83,13 @@ A candidate request is:
 
 ```text
 GET /api/4/orders/{order_id}
-  ?include=lines,lines.planning,
+  ?include=customer,coupon,lines,lines.planning,
            lines.planning.stock_item_plannings,
-           lines.planning.stock_item_plannings.stock_item
+           lines.planning.stock_item_plannings.stock_item,
+           lines.item
 ```
 
-The complete dotted `include` parameter value has **not yet been verified** against a live order. Legacy v1 documentation independently confirms the planning and stock-item-planning model, but it should not guide new v4 request compatibility [7].
+The complete dotted `include` parameter value was **verified HTTP 200** against live order 344 on **2026-08-21**, including `lines.item` for product `tag_list`. Evidence: `_bmad-output/implementation-artifacts/booqable-spike-evidence.md`. Legacy v1 documentation independently confirms the planning and stock-item-planning model, but it should not guide new v4 request compatibility [7].
 
 Booqable also makes the human-readable stock identifier adjustable [5]. Store `stock_items.id` as the safer physical-bike identity key and the human-readable stock identifier as mutable display metadata. This evidence does not prove a contractual permanence guarantee for the resource UUID.
 
@@ -106,7 +107,7 @@ The retrieved v4 page documents Bearer authentication, employee-scoped access me
 
 | Ref | Claim or finding supported | Publisher | Publication date | Accessed | Confidence |
 |---|---|---|---|---|---|
-| [1] | v4 order/planning/stock-item relationship hierarchy and nested includes | [Booqable API v4 documentation](https://developers.booqable.com/v4.html) | n.d. | 2026-08-20 | High for hierarchy; complete include string unverified |
+| [1] | v4 order/planning/stock-item relationship hierarchy and nested includes | [Booqable API v4 documentation](https://developers.booqable.com/v4.html) | n.d. | 2026-08-20 | High for hierarchy; include string verified live 2026-08-21 on order 344 |
 | [2] | An initial pass recorded `order.updated`, but fresh verification did not find it on the retrieved v4 page; retrieved official sources do not establish an assignment-trigger contract | [Booqable API v4 documentation](https://developers.booqable.com/v4.html) | n.d. | 2026-08-20 | Low for topic availability; medium for documentation silence |
 | [3] | Official Zapier integration lists Updated, Reserved, Started, and Stopped Order triggers | [Booqable help](https://help.booqable.com/en/articles/1202508-how-to-connect-booqable-to-other-applications-through-zapier) | n.d. | 2026-08-20 | High for trigger names; low for raw-webhook mapping |
 | [4] | Trackable products can be reserved generically and assigned specific physical items later | [Booqable help](https://help.booqable.com/en/articles/99552-how-to-add-products-to-an-order) | 2026-08-19 | 2026-08-20 | High |
@@ -124,4 +125,4 @@ The technical pack's one-month compatibility window was applied using the live-d
 - Re-check stock-item identity fields and identifier editability by **2026-09-20**.
 - Re-check authentication, pagination, and rate-limit guidance by **2026-09-20**.
 
-No tracked claim is stale as of 2026-08-20. Earliest re-check: **2026-09-20**. A completed tenant test should trigger an immediate refresh because it can replace the principal unverified claim with observed evidence.
+No tracked claim is stale as of 2026-08-21. Earliest re-check: **2026-09-20**. Tenant spike 2026-08-21 verified the include path on order 344; webhook delivery, debounce, and `429` remain `not observed`.
