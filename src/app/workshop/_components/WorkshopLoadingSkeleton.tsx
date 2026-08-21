@@ -1,73 +1,64 @@
 import React from "react";
 import { SkeletonText } from "@/ui/components/SkeletonText";
-import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 
-const KANBAN_COLUMNS = [
-  { title: "New", cardCount: 3 },
-  { title: "Ready for rent", cardCount: 3 },
-  { title: "Out for a ride", cardCount: 2 },
-  { title: "Returned", cardCount: 1 },
-  { title: "Done", cardCount: 2 },
-] as const;
+const TABLE_ROW_COUNT = 8;
 
-function KanbanCardSkeleton() {
+export function WorkshopLoadingSkeleton() {
   return (
-    <div className="flex w-full flex-col items-start gap-4 rounded-md bg-default-background px-4 py-4 shadow-sm">
-      <SkeletonText size="default" className="h-8 w-full" />
-      <SkeletonText size="default" className="h-12 w-full" />
-      <div className="flex w-full items-center gap-2">
-        <SkeletonText size="label" className="max-w-20" />
-        <SkeletonText size="label" className="max-w-24" />
+    <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12">
+      <div className="flex w-full flex-col items-start gap-2">
+        <SkeletonText size="section-header" className="max-w-64" />
+        <SkeletonText size="default" className="max-w-96" />
       </div>
-      <SkeletonText size="default" className="max-w-16" />
+
+      <div className="flex w-full items-center gap-4 border-b border-solid border-neutral-border">
+        <SkeletonText size="default" className="h-10 w-20" />
+        <SkeletonText size="default" className="h-10 w-24" />
+        <SkeletonText size="default" className="h-10 w-28" />
+        <SkeletonText size="default" className="h-10 w-16" />
+      </div>
+
+      <SkeletonText size="default" className="h-10 max-w-md" />
+
+      <div className="flex w-full flex-col items-start gap-4 rounded-md border border-solid border-neutral-border bg-default-background p-4">
+        <div className="flex w-full items-center gap-3 border-b border-solid border-neutral-border pb-3">
+          <SkeletonText size="default" className="max-w-28" />
+          <SkeletonText size="default" className="max-w-20" />
+          <SkeletonText size="default" className="max-w-24" />
+          <SkeletonText size="default" className="max-w-24" />
+          <SkeletonText size="default" className="max-w-20" />
+          <SkeletonText size="default" className="max-w-16" />
+        </div>
+        {Array.from({ length: TABLE_ROW_COUNT }).map((_, rowIndex) => (
+          <div
+            key={rowIndex}
+            className="flex w-full items-center gap-3 border-t border-solid border-neutral-border pt-3 first:border-t-0 first:pt-0"
+          >
+            <SkeletonText size="default" className="max-w-40" />
+            <SkeletonText size="default" className="max-w-16" />
+            <SkeletonText size="default" className="max-w-24" />
+            <SkeletonText size="default" className="max-w-28" />
+            <SkeletonText size="default" className="max-w-16" />
+            <SkeletonText size="default" className="max-w-16" />
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
-export function WorkshopLoadingSkeleton() {
+export function WorkshopTaskLoadingSkeleton() {
   return (
-    <DefaultPageLayout>
-      <div className="flex min-h-full w-full flex-1 flex-col items-start bg-default-background">
-        <div className="flex w-full flex-wrap items-center gap-2 px-6 pt-6 pb-2">
-          <div className="flex grow shrink-0 basis-0 items-center gap-2">
-            <SkeletonText size="section-header" className="h-8 w-8 flex-none" />
-            <SkeletonText size="section-header" className="max-w-36" />
-            <SkeletonText size="label" className="h-6 w-16 rounded-full" />
-          </div>
-          <SkeletonText size="default" className="h-9 w-32" />
-        </div>
-
-        <div className="flex w-full flex-wrap items-center gap-6 border-b border-solid border-neutral-border px-6 py-2">
-          <div className="flex grow shrink-0 basis-0 items-center gap-6">
-            <SkeletonText size="default" className="h-9 max-w-md grow" />
-          </div>
-          <div className="flex flex-wrap items-start gap-1">
-            <SkeletonText size="default" className="h-9 w-20" />
-            <SkeletonText size="default" className="h-9 w-16" />
-            <SkeletonText size="default" className="h-9 w-24" />
-            <SkeletonText size="default" className="h-9 w-24" />
-            <SkeletonText size="default" className="h-9 w-24" />
-          </div>
-        </div>
-
-        <div className="flex w-full grow shrink-0 basis-0 items-start gap-4 bg-default-background px-6 py-6 overflow-auto">
-          {KANBAN_COLUMNS.map((column) => (
-            <div
-              key={column.title}
-              className="flex w-72 flex-none flex-col items-start rounded-md bg-neutral-100"
-            >
-              <div className="flex w-full items-center gap-2 px-6 py-4">
-                <SkeletonText size="section-header" className="max-w-32" />
-              </div>
-              <div className="flex w-full flex-col items-start gap-4 px-6 pb-6">
-                {Array.from({ length: column.cardCount }).map((_, index) => (
-                  <KanbanCardSkeleton key={index} />
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
+    <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12">
+      <SkeletonText size="default" className="max-w-64" />
+      <div className="flex w-full items-center justify-between gap-4">
+        <SkeletonText size="section-header" className="max-w-80" />
+        <SkeletonText size="default" className="h-10 w-32" />
       </div>
-    </DefaultPageLayout>
+      <SkeletonText size="default" className="max-w-48" />
+      {Array.from({ length: 6 }).map((_, index) => (
+        <SkeletonText key={index} size="default" className="h-12 w-full" />
+      ))}
+    </div>
   );
 }

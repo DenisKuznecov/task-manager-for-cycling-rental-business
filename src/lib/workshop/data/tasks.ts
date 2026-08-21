@@ -98,6 +98,10 @@ export async function loadWorkshopTasks(
     .select("*", { count: "exact" })
     .neq("status", "cancelled");
 
+  if (filter !== "all") {
+    builder = builder.neq("status", "completed");
+  }
+
   if (bounds.eq) builder = builder.eq("madrid_start_date", bounds.eq);
   if (bounds.gte) builder = builder.gte("madrid_start_date", bounds.gte);
   if (bounds.lt) builder = builder.lt("madrid_start_date", bounds.lt);

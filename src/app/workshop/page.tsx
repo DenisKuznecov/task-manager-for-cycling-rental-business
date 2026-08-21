@@ -1,163 +1,64 @@
-"use client";
+import React from "react";
+import { DataLoadError } from "@/src/components/DataLoadError";
+import { workshopData, workshopDomain } from "@/src/lib/workshop";
+import { WorkshopQueue } from "./_components/WorkshopQueue";
+import { shouldRenderWorkshopQueue } from "./_components/workshop-ui";
 
-import React, { useState } from "react";
-import { Badge } from "@/ui/components/Badge";
-import { Button } from "@/ui/components/Button";
-import { DropdownMenu } from "@/ui/components/DropdownMenu";
-import { TextField } from "@/ui/components/TextField";
-import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
-import { FeatherChevronDown } from "@subframe/core";
-import { FeatherCircleDot } from "@subframe/core";
-import { FeatherDollarSign } from "@subframe/core";
-import { FeatherDownload } from "@subframe/core";
-import { FeatherKanbanSquare } from "@subframe/core";
-import { FeatherPlus } from "@subframe/core";
-import { FeatherSearch } from "@subframe/core";
-import { FeatherSettings2 } from "@subframe/core";
-import { FeatherUser } from "@subframe/core";
-import * as SubframeCore from "@subframe/core";
-import { KanbanBoard } from "@/src/components/KanbanBoard";
+export default async function WorkshopPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    filter?: string;
+    query?: string;
+    page?: string;
+  }>;
+}) {
+  const {
+    filter: filterParam,
+    query: queryParam,
+    page: pageParam,
+  } = await searchParams;
 
-function WorkshopPage() {
-  const [search, setSearch] = useState("");
+  const filter = workshopDomain.resolveWorkshopQueueFilter(filterParam);
+  const query = queryParam ?? "";
+  const parsedPage = Number(pageParam);
+  const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
+  const { tasks, count, error } = await workshopData.loadWorkshopTasks({
+    filter,
+    query,
+    page,
+  });
+  const totalPages = Math.max(
+    1,
+    Math.ceil(count / workshopData.WORKSHOP_PAGE_SIZE),
+  );
 
   return (
-    <DefaultPageLayout>
-      <div className="flex min-h-full w-full flex-1 flex-col items-start bg-default-background">
-        <div className="flex w-full flex-wrap items-center gap-2 px-6 pt-6 pb-2">
-          <div className="flex grow shrink-0 basis-0 items-center gap-2">
-            <FeatherKanbanSquare className="text-heading-2 font-heading-2 text-default-font" />
-            <span className="text-heading-2 font-heading-2 text-default-font">
-              Echelon Tasks
-            </span>
-            <Badge>Active</Badge>
-          </div>
-          <Button
-            variant="neutral-primary"
-            onClick={() => {}}
-          >
-            Add new task
-          </Button>
-        </div>
-        <div className="flex w-full flex-wrap items-center gap-6 border-b border-solid border-neutral-border px-6 py-2">
-          <div className="flex grow shrink-0 basis-0 items-center gap-6">
-            <TextField
-              variant="filled"
-              label=""
-              helpText=""
-              icon={<FeatherSearch />}
-            >
-              <TextField.Input
-                placeholder="Search"
-                value={search}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                  setSearch(event.target.value)
-                }
-              />
-            </TextField>
-          </div>
-          <div className="flex flex-wrap items-start gap-1">
-            <SubframeCore.DropdownMenu.Root>
-              <SubframeCore.DropdownMenu.Trigger asChild={true}>
-                <Button
-                  variant="neutral-tertiary"
-                  iconRight={<FeatherChevronDown />}
-                  onClick={() => {}}
-                >
-                  Filter
-                </Button>
-              </SubframeCore.DropdownMenu.Trigger>
-              <SubframeCore.DropdownMenu.Portal>
-                <SubframeCore.DropdownMenu.Content
-                  side="bottom"
-                  align="start"
-                  sideOffset={4}
-                  asChild={true}
-                >
-                  <DropdownMenu>
-                    <DropdownMenu.DropdownItem icon={<FeatherPlus />}>
-                      Add filter
-                    </DropdownMenu.DropdownItem>
-                  </DropdownMenu>
-                </SubframeCore.DropdownMenu.Content>
-              </SubframeCore.DropdownMenu.Portal>
-            </SubframeCore.DropdownMenu.Root>
-            <SubframeCore.DropdownMenu.Root>
-              <SubframeCore.DropdownMenu.Trigger asChild={true}>
-                <Button
-                  variant="neutral-tertiary"
-                  iconRight={<FeatherChevronDown />}
-                  onClick={() => {}}
-                >
-                  Sort
-                </Button>
-              </SubframeCore.DropdownMenu.Trigger>
-              <SubframeCore.DropdownMenu.Portal>
-                <SubframeCore.DropdownMenu.Content
-                  side="bottom"
-                  align="start"
-                  sideOffset={4}
-                  asChild={true}
-                >
-                  <DropdownMenu>
-                    <DropdownMenu.DropdownItem icon={<FeatherPlus />}>
-                      Add sort
-                    </DropdownMenu.DropdownItem>
-                  </DropdownMenu>
-                </SubframeCore.DropdownMenu.Content>
-              </SubframeCore.DropdownMenu.Portal>
-            </SubframeCore.DropdownMenu.Root>
-            <SubframeCore.DropdownMenu.Root>
-              <SubframeCore.DropdownMenu.Trigger asChild={true}>
-                <Button
-                  variant="neutral-tertiary"
-                  iconRight={<FeatherChevronDown />}
-                  onClick={() => {}}
-                >
-                  Group by
-                </Button>
-              </SubframeCore.DropdownMenu.Trigger>
-              <SubframeCore.DropdownMenu.Portal>
-                <SubframeCore.DropdownMenu.Content
-                  side="bottom"
-                  align="start"
-                  sideOffset={4}
-                  asChild={true}
-                >
-                  <DropdownMenu>
-                    <DropdownMenu.DropdownItem icon={<FeatherCircleDot />}>
-                      Status
-                    </DropdownMenu.DropdownItem>
-                    <DropdownMenu.DropdownItem icon={<FeatherUser />}>
-                      Owner
-                    </DropdownMenu.DropdownItem>
-                    <DropdownMenu.DropdownItem icon={<FeatherDollarSign />}>
-                      Amount
-                    </DropdownMenu.DropdownItem>
-                  </DropdownMenu>
-                </SubframeCore.DropdownMenu.Content>
-              </SubframeCore.DropdownMenu.Portal>
-            </SubframeCore.DropdownMenu.Root>
-            <Button
-              variant="neutral-tertiary"
-              icon={<FeatherSettings2 />}
-              onClick={() => {}}
-            >
-              Customize
-            </Button>
-            <Button
-              variant="neutral-tertiary"
-              icon={<FeatherDownload />}
-              onClick={() => {}}
-            >
-              Download
-            </Button>
-          </div>
-        </div>
-        <KanbanBoard />
+    <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12">
+      <div className="flex w-full flex-col items-start gap-2">
+        <span className="text-heading-1 font-heading-1 text-default-font">
+          Task Management
+        </span>
+        <span className="text-body font-body text-subtext-color">
+          Bike preparation, pickup, return, and storage.
+        </span>
       </div>
-    </DefaultPageLayout>
+
+      {shouldRenderWorkshopQueue(error) ? (
+        <WorkshopQueue
+          tasks={tasks}
+          currentPage={page}
+          totalPages={totalPages}
+          query={query}
+          filter={filter}
+        />
+      ) : (
+        <DataLoadError
+          title="Couldn't load workshop tasks"
+          message={error ?? "Couldn't load workshop tasks"}
+        />
+      )}
+    </div>
   );
 }
-
-export default WorkshopPage;

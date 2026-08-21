@@ -1090,5 +1090,127 @@ SELECT is(
 );
 RESET ROLE;
 
+-- Mechanic SELECT on parent order (and nested customer/partner/items);
+-- deny an order that has no bike_tasks row.
+INSERT INTO public.customers (id, name, email)
+VALUES
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Task Customer', 'task-cust@test.local'),
+  ('bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb', 'Orphan Customer', 'orphan-cust@test.local');
+
+INSERT INTO public.partners (id, name, slug)
+VALUES
+  ('cccccccc-cccc-4ccc-8ccc-cccccccccccc', 'Task Partner', 'ws-task-partner'),
+  ('dddddddd-dddd-4ddd-8ddd-dddddddddddd', 'Orphan Partner', 'ws-orphan-partner');
+
+UPDATE public.orders o
+SET customer_id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    partner_id = 'cccccccc-cccc-4ccc-8ccc-cccccccccccc'
+FROM public.bike_tasks t
+WHERE t.id = (SELECT road_task FROM ws_ids)
+  AND o.id = t.order_id;
+
+INSERT INTO public.order_items (order_id, booqable_line_id, title, position)
+SELECT t.order_id, 'line-task-' || t.order_id::text, 'Helmet', 1
+FROM public.bike_tasks t
+WHERE t.id = (SELECT road_task FROM ws_ids);
+
+INSERT INTO public.orders (
+  id, booqable_order_id, order_number, customer_id, partner_id
+) VALUES (
+  'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+  'bq-orphan-no-task',
+  8001,
+  'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+);
+
+INSERT INTO public.order_items (order_id, booqable_line_id, title, position)
+VALUES (
+  'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
+  'line-orphan-no-task',
+  'Lock',
+  1
+);
+
+CREATE TEMP TABLE ws_order_select AS
+SELECT
+  t.order_id AS task_order_id,
+  'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'::uuid AS orphan_order_id,
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'::uuid AS task_customer_id,
+  'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'::uuid AS orphan_customer_id,
+  'cccccccc-cccc-4ccc-8ccc-cccccccccccc'::uuid AS task_partner_id,
+  'dddddddd-dddd-4ddd-8ddd-dddddddddddd'::uuid AS orphan_partner_id
+FROM public.bike_tasks t
+WHERE t.id = (SELECT road_task FROM ws_ids);
+
+GRANT SELECT ON ws_order_select TO authenticated;
+
+SELECT pg_temp.become((SELECT mechanic FROM ws_ids));
+SET ROLE authenticated;
+
+SELECT is(
+  (SELECT count(*)::integer FROM public.orders
+    WHERE id = (SELECT task_order_id FROM ws_order_select)),
+  1,
+  'mechanic can SELECT parent order of a bike task'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.orders
+    WHERE id = (SELECT orphan_order_id FROM ws_order_select)),
+  0,
+  'mechanic cannot SELECT an order with no bike task'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.customers
+    WHERE id = (SELECT task_customer_id FROM ws_order_select)),
+  1,
+  'mechanic can SELECT customer on a task order'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.customers
+    WHERE id = (SELECT orphan_customer_id FROM ws_order_select)),
+  0,
+  'mechanic cannot SELECT customer on an order with no bike task'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.partners
+    WHERE id = (SELECT task_partner_id FROM ws_order_select)),
+  1,
+  'mechanic can SELECT partner on a task order'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.partners
+    WHERE id = (SELECT orphan_partner_id FROM ws_order_select)),
+  0,
+  'mechanic cannot SELECT partner on an order with no bike task'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.order_items
+    WHERE order_id = (SELECT task_order_id FROM ws_order_select)),
+  1,
+  'mechanic can SELECT items on a task order'
+);
+SELECT is(
+  (SELECT count(*)::integer FROM public.order_items
+    WHERE order_id = (SELECT orphan_order_id FROM ws_order_select)),
+  0,
+  'mechanic cannot SELECT items on an order with no bike task'
+);
+UPDATE public.orders
+SET partner_promo = 'x'
+WHERE id = (SELECT task_order_id FROM ws_order_select);
+
+SELECT is(
+  (
+    SELECT o.partner_promo
+    FROM public.orders o
+    WHERE o.id = (SELECT task_order_id FROM ws_order_select)
+  ),
+  NULL,
+  'mechanic cannot UPDATE a parent order'
+);
+
+RESET ROLE;
+
 SELECT * FROM finish();
 ROLLBACK;
