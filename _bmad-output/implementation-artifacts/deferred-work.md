@@ -24,13 +24,8 @@
   summary: Run the controlled Booqable tenant spike and amend AD-2 / AD-10 with the verified include path, workshop-tag field, terminal statuses, debounce, webhook behavior, and sync numbers.
   evidence: Split from the mechanics daily-work intent because live-tenant measurement is research, not foundation schema work, and apply/sync must not invent those values.
 
-- source_spec: none
-  summary: Implement webhook and leased manual sync plus workshop sync-health UI (CAP-10).
-  evidence: Split from the mechanics daily-work intent because live sync is gated on spike numbers, staging/preview isolation, and the apply command existing first.
-
 ## Deferred from: code review of spec-booqable-source-apply.md (2026-08-22)
 
 - Live `SET ROLE authenticated` call of apply/acquire still not executed; local Postgres closed the connection on that path, so staff-JWT denial remains `has_function_privilege` plus an empty `bq-authz` count.
-- Parser envelope is not round-tripped into `booqable_apply_source_snapshot_v1` in CI; `verify:workshop` / adapter→apply remains an AD-13 CAP-10 seam (prior review also rejected adding CI wiring in this slice).
-- `booqable_release_order_lease` / renew are not in this commit; apply never consumes the lease, so a real acquire→apply→acquire loop waits until `expires_at` (CAP-10).
+- Parser envelope is not round-tripped into `booqable_apply_source_snapshot_v1` in CI; `verify:workshop` / adapter→apply remains an AD-13 seam (prior review also rejected adding CI wiring in this slice).
 - Bike `identifier` / title changes do not update workshop display fields when source and add-on fingerprints are otherwise unchanged; accepted for now (rename in Booqable need not refresh the task row).

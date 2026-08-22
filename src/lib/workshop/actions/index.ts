@@ -9,3 +9,9 @@ export {
   startPreparation,
   startStorage,
 } from "./task-actions";
+
+export {
+  resumeManualSync,
+  startManualSync,
+  syncOrderFromBooqable,
+} from "./sync-actions";

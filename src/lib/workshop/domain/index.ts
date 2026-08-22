@@ -19,18 +19,33 @@ export {
 } from "./statuses";
 
 export {
+  MANUAL_SYNC_SCOPES,
   WORKSHOP_ERROR_CODES,
   WORKSHOP_STAFF_COMMANDS,
+  WORKSHOP_SYNC_RUN_STATES,
+  isManualSyncScope,
   isWorkshopErrorCode,
+  isWorkshopSyncRunState,
+  decodeSyncCursor,
+  encodeSyncCursor,
+  isEligibleManualSyncOrder,
+  skipReason,
+  type ManualSyncScope,
+  type SyncCursorV1,
   type WorkshopErrorCode,
   type WorkshopStaffCommand,
+  type WorkshopSyncRunState,
 } from "./commands";
 
 export {
   parseWorkshopCommandResult,
+  parseWorkshopSyncResult,
   type WorkshopCommandFailure,
   type WorkshopCommandResult,
   type WorkshopCommandSuccess,
+  type WorkshopSyncCounts,
+  type WorkshopSyncResult,
+  type WorkshopSyncSuccess,
 } from "./results";
 
 export type {

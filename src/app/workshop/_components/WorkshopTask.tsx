@@ -22,6 +22,7 @@ import type {
   WorkshopAttestation,
   WorkshopCommandResult,
   WorkshopErrorCode,
+  WorkshopSyncResult,
   WorkshopTaskDetail,
   WorkshopTaskItem,
   WorkshopTaskListRow,
@@ -39,7 +40,8 @@ type WorkshopNamedAction =
   | "markPickedUp"
   | "markReturned"
   | "startStorage"
-  | "completeStorage";
+  | "completeStorage"
+  | "syncOrder";
 
 interface WorkshopTaskProps {
   detail: WorkshopTaskDetail;
@@ -126,7 +128,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
   const isTombstone = task.status === "cancelled";
 
   const runCommand = (
-    fn: () => Promise<WorkshopCommandResult>,
+    fn: () => Promise<WorkshopCommandResult | WorkshopSyncResult>,
     namedAction?: WorkshopNamedAction,
   ) => {
     if (isPending) return;
@@ -207,6 +209,23 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
     </Button>
   );
 
+  const syncButton = (
+    <Button
+      size="large"
+      variant="neutral-secondary"
+      disabled={isPending}
+      loading={isNamedPending("syncOrder")}
+      onClick={() =>
+        runCommand(
+          () => workshopActions.syncOrderFromBooqable(task.taskId),
+          "syncOrder",
+        )
+      }
+    >
+      Sync order from Booqable
+    </Button>
+  );
+
   return (
     <div className="flex w-full flex-col items-start gap-6">
       <Breadcrumbs>
@@ -232,7 +251,10 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
             Starts {formatStart(task.startsAt, task.madridStartDate)}
           </span>
         </div>
-        {orderButton}
+        <div className="flex flex-wrap items-center gap-2">
+          {orderButton}
+          {syncButton}
+        </div>
       </div>
 
       {task.hasConfigurationWarning ? (

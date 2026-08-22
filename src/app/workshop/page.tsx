@@ -29,6 +29,8 @@ export default async function WorkshopPage({
     query,
     page,
   });
+  const { health, error: healthError } =
+    await workshopData.loadWorkshopSyncHealth();
   const totalPages = Math.max(
     1,
     Math.ceil(count / workshopData.WORKSHOP_PAGE_SIZE),
@@ -45,6 +47,13 @@ export default async function WorkshopPage({
         </span>
       </div>
 
+      {healthError ? (
+        <DataLoadError
+          title="Couldn't load sync status"
+          message={healthError}
+        />
+      ) : null}
+
       {shouldRenderWorkshopQueue(error) ? (
         <WorkshopQueue
           tasks={tasks}
@@ -52,6 +61,7 @@ export default async function WorkshopPage({
           totalPages={totalPages}
           query={query}
           filter={filter}
+          health={health}
         />
       ) : (
         <DataLoadError
