@@ -244,7 +244,7 @@ function parseAssignments(
 
 /**
  * JSON:API order document → `SourceOrderSnapshotV1`. Does not fetch or write.
- * Rejects a partial document (`links.next` present).
+ * Rejects a partial document (`links.next` present, or `relationships.lines` omitted).
  */
 export function parseSourceOrderSnapshot(
   payload: unknown,
@@ -283,17 +283,17 @@ export function parseSourceOrderSnapshot(
       ? rawPropertyPromo
       : null;
 
-  const lines = hasRelationship(order, "lines")
-    ? relationshipRefs(order, "lines").map((ref) => {
-        const resource = byId.get(resourceKey(ref.type, ref.id));
-        if (!resource) {
-          throw new InvalidSourceSnapshotError("INVALID_SNAPSHOT");
-        }
-        return resource;
-      })
-    : included
-        .map(asResource)
-        .filter((resource): resource is JsonApiResource => resource?.type === "lines");
+  if (!hasRelationship(order, "lines")) {
+    throw new InvalidSourceSnapshotError("INVALID_SNAPSHOT");
+  }
+
+  const lines = relationshipRefs(order, "lines").map((ref) => {
+    const resource = byId.get(resourceKey(ref.type, ref.id));
+    if (!resource) {
+      throw new InvalidSourceSnapshotError("INVALID_SNAPSHOT");
+    }
+    return resource;
+  });
 
   const envelope = {
     schemaVersion: SOURCE_ORDER_SNAPSHOT_SCHEMA_VERSION,

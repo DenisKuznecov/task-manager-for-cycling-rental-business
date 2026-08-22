@@ -165,6 +165,16 @@ test("string false relevant is INVALID_SNAPSHOT", () => {
   );
 });
 
+test("omitted order.relationships.lines is INVALID_SNAPSHOT", () => {
+  const payload = cloneFixture();
+  assert.ok(payload.data.relationships);
+  delete payload.data.relationships.lines;
+  assert.throws(
+    () => parseSourceOrderSnapshot(payload, "2026-08-21T14:00:00.000Z"),
+    InvalidSourceSnapshotError,
+  );
+});
+
 test("extra included line not in relationships.lines is ignored", () => {
   const payload = cloneFixture();
   payload.included.push({

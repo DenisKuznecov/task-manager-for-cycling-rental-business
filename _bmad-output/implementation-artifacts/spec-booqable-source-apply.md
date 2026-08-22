@@ -2,7 +2,7 @@
 title: 'Booqable source apply'
 type: 'feature'
 created: '2026-08-21'
-status: 'done'
+status: 'in-progress'
 baseline_revision: '22d19cbb9a6109bcd0e306181bf6d95210032c34'
 review_loop_iteration: 0
 followup_review_recommended: true
@@ -165,5 +165,31 @@ Verification:
 
 Residual risks:
 - Apply is not called from app code; queues stay empty until CAP-10 webhook/manual-sync wiring.
+- Identifier-only Booqable renames do not refresh `bike_display_id` / title on open tasks.
 - Staff JWT “call fails” is proven by missing EXECUTE, not by a live `SET ROLE authenticated` invocation (that path crashed local Postgres).
 - No production lease TTL, debounce, or `429`/`Retry-After` contract was invented.
+
+### Review Findings
+
+- [x] [Review][Patch] Missing `order.relationships.lines` is treated as “use every included line,” so a truncated JSON:API document can mint extra assignments or apply an empty set and cancel open work [src/lib/booqable/parse-source-snapshot.ts:286]
+- [x] [Review][Defer] Bike display id/title changes never reach retained tasks — deferred; identifier rename need not update workshop rows [supabase/migrations/20260821160000_workshop_source_apply.sql:888]
+- [ ] [Review][Patch] Parser also fail-opens on `included` as a non-array, `links` as a non-object, malformed relationship refs, duplicate includes, and multi-member planning/stock relationships [src/lib/booqable/parse-source-snapshot.ts:101]
+- [ ] [Review][Patch] A line with no `planning` relationship is skipped; spike/fixture every line has planning, so a truncated bike line silently drops out of `C` and can cancel work [src/lib/booqable/parse-source-snapshot.ts:200]
+- [ ] [Review][Patch] Source fingerprint hashes filtered `workshopTags`, not `products.tag_list` [supabase/migrations/20260821160000_workshop_source_apply.sql:129]
+- [ ] [Review][Patch] Non-array `workshopTags` / numeric overflow can RAISE instead of `INVALID_SNAPSHOT` because fingerprinting runs outside the inner exception handler [supabase/migrations/20260821160000_workshop_source_apply.sql:682]
+- [ ] [Review][Patch] Snapshot validation misses line ids, unique `sipId`, customer id, empty coupon object (clears `partner_id`), and SQL `"false"` for `relevant` [supabase/migrations/20260821160000_workshop_source_apply.sql:233]
+- [ ] [Review][Patch] `booqable_acquire_order_lease` does not reject null or already-past `expires_at` [supabase/migrations/20260821160000_workshop_source_apply.sql:569]
+- [ ] [Review][Patch] `DROP TYPE IF EXISTS private.booqable_tag_resolution CASCADE` can drop later dependents on re-run [supabase/migrations/20260821160000_workshop_source_apply.sql:23]
+- [ ] [Review][Patch] No pgTAP that a second acquire on an unexpired lease returns `SYNC_IN_PROGRESS` [supabase/tests/database/workshop_source_apply.test.sql:183]
+- [ ] [Review][Patch] No pgTAP that apply with the current token and a wrong fence returns `STALE_LEASE` [supabase/tests/database/workshop_source_apply.test.sql:1234]
+- [ ] [Review][Patch] Staff JWT tests never assert `authenticated` lacks EXECUTE on the `private` apply/acquire functions [supabase/tests/database/workshop_source_apply.test.sql:1267]
+- [ ] [Review][Patch] After `workshop_record_event` grew `p_source`, no test pins staff events as `staff_command` [supabase/migrations/20260821160000_workshop_source_apply.sql:48]
+- [ ] [Review][Patch] pgTAP misses two identified bikes on one order, replace-does-not-copy-work, and tag-drift leaving version/events unchanged [supabase/tests/database/workshop_source_apply.test.sql:1]
+- [ ] [Review][Patch] `deferred-work.md` still has the umbrella “CAP-1 through CAP-10” item after this slice retired CAP-1/CAP-9 [_bmad-output/implementation-artifacts/deferred-work.md:3]
+- [ ] [Review][Patch] Parser `Number()` / `toIntOrNull` coerce arrays, booleans, and floats instead of `INVALID_SNAPSHOT` [src/lib/booqable/parse-source-snapshot.ts:62]
+- [ ] [Review][Patch] `booqable_stock_item_planning_id` is nullable with no index [supabase/migrations/20260821160000_workshop_source_apply.sql:8]
+- [ ] [Review][Patch] `*-bundle` tag filtering is only asserted on the bundle product, not an identified bike [src/booqable-source-apply.test.mts:85]
+- [ ] [Review][Patch] Domain import-graph regex misses dynamic `import("next")` / `import("@supabase/...")` [src/booqable-source-apply.test.mts:58]
+- [x] [Review][Defer] Live `SET ROLE authenticated` apply invoke — deferred, pre-existing [supabase/tests/database/workshop_source_apply.test.sql:1287]
+- [x] [Review][Defer] Adapter→apply round-trip and `verify:workshop` CI job — deferred, pre-existing [package.json:16]
+- [x] [Review][Defer] Lease release/renew RPCs — deferred, pre-existing [supabase/migrations/20260821160000_workshop_source_apply.sql:556]
