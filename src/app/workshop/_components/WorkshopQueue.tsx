@@ -20,7 +20,7 @@ import type {
   WorkshopTaskListRow,
 } from "@/src/lib/workshop/domain";
 import { createClient } from "@/src/utils/supabase/client";
-import { statusBadgeVariant } from "./workshop-ui";
+import { formatMadridDateTime, statusBadgeVariant } from "./workshop-ui";
 
 interface WorkshopQueueProps {
   tasks: WorkshopTaskListRow[];
@@ -79,16 +79,7 @@ function bikeLabel(task: WorkshopTaskListRow): string {
 
 function formatSyncTime(iso: string | null): string {
   if (!iso) return "Never";
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Madrid",
-  });
+  return formatMadridDateTime(iso);
 }
 
 export function WorkshopQueue({

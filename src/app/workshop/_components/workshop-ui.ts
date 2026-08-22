@@ -34,6 +34,25 @@ export function m2ItemCaption(item: Pick<
   return "M1 is incomplete";
 }
 
+/** SSR-safe Madrid clock: ICU must not pick `at` vs `,` between date and time. */
+export function formatMadridDateTime(iso: string): string {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const datePart = date.toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    timeZone: "Europe/Madrid",
+  });
+  const timePart = date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: "Europe/Madrid",
+  });
+  return `${datePart}, ${timePart}`;
+}
+
 export function statusBadgeVariant(
   status: BikeTaskStatus,
 ): "warning" | "neutral" | "error" | "info" | "success" {

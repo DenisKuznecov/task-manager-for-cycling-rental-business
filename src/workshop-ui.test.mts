@@ -4,6 +4,7 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
+  formatMadridDateTime,
   isM1ItemValid,
   m2ItemCaption,
   shouldRenderWorkshopQueue,
@@ -33,6 +34,12 @@ function item(
     ...overrides,
   };
 }
+
+test("formatMadridDateTime joins date and time with a comma, not at", () => {
+  const text = formatMadridDateTime("2026-08-22T10:20:00.000Z");
+  assert.equal(text, "22 Aug 2026, 12:20");
+  assert.doesNotMatch(text, /\bat\b/);
+});
 
 test("invalid workshop filter becomes today", () => {
   assert.equal(resolveWorkshopQueueFilter("nope"), "today");

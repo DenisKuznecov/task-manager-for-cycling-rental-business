@@ -28,6 +28,7 @@ import type {
   WorkshopTaskListRow,
 } from "@/src/lib/workshop/domain";
 import {
+  formatMadridDateTime,
   isM1ItemValid,
   m2ItemCaption,
   statusBadgeVariant,
@@ -78,16 +79,7 @@ function formatStart(
 }
 
 function formatSignedAt(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  return date.toLocaleString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "Europe/Madrid",
-  });
+  return formatMadridDateTime(iso);
 }
 
 function bikeLabel(task: WorkshopTaskListRow): string {
