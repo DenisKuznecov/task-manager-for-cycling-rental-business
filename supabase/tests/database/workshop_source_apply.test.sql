@@ -1315,5 +1315,102 @@ SELECT isnt(
   'empty add-on list still has a fingerprint'
 );
 
+-- Enabling a mapping must re-resolve on an unchanged snapshot
+UPDATE public.checklist_tag_mappings
+SET enabled = false,
+    definition_id = NULL
+WHERE tag = 'workshop-e-city-bike';
+SELECT ok(
+  (
+    pg_temp.apply_snap(
+      'bq-map-enable',
+      pg_temp.snap(
+        'bq-map-enable',
+        'reserved',
+        '2026-12-10T10:00:00Z',
+        jsonb_build_array(
+          pg_temp.assignment(
+            'stock-me',
+            'sip-me',
+            '["workshop-e-city-bike"]'::jsonb,
+            'ECF/M-1',
+            'E-city'
+          )
+        ),
+        jsonb_build_array(pg_temp.line('e-city-bike', 'E-city', 1))
+      )
+    )->>'ok'
+  )::boolean,
+  'e-city setup succeeds'
+);
+
+SELECT is(
+  (
+    SELECT t.has_configuration_warning
+    FROM public.bike_tasks t
+    JOIN public.orders o ON o.id = t.order_id
+    WHERE o.booqable_order_id = 'bq-map-enable'
+  ),
+  true,
+  'e-city starts with configuration warning'
+);
+
+UPDATE public.checklist_tag_mappings
+SET enabled = true,
+    definition_id = (
+      SELECT d.id
+      FROM public.checklist_definitions d
+      WHERE d.definition_key = 'road_bike_preparation' AND d.version = 1
+    )
+WHERE tag = 'workshop-e-city-bike';
+
+SELECT ok(
+  (
+    pg_temp.apply_snap(
+      'bq-map-enable',
+      pg_temp.snap(
+        'bq-map-enable',
+        'reserved',
+        '2026-12-10T10:00:00Z',
+        jsonb_build_array(
+          pg_temp.assignment(
+            'stock-me',
+            'sip-me',
+            '["workshop-e-city-bike"]'::jsonb,
+            'ECF/M-1',
+            'E-city'
+          )
+        ),
+        jsonb_build_array(pg_temp.line('e-city-bike', 'E-city', 1))
+      )
+    )->>'ok'
+  )::boolean,
+  'unchanged snapshot after mapping enable applies'
+);
+
+SELECT is(
+  (
+    SELECT t.has_configuration_warning
+    FROM public.bike_tasks t
+    JOIN public.orders o ON o.id = t.order_id
+    WHERE o.booqable_order_id = 'bq-map-enable'
+  ),
+  false,
+  'mapping enable on unchanged snapshot clears warning'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.bike_task_items i
+    JOIN public.bike_tasks t ON t.id = i.task_id
+    JOIN public.orders o ON o.id = t.order_id
+    WHERE o.booqable_order_id = 'bq-map-enable'
+      AND i.stage = 'preparation'
+  ),
+  25,
+  'mapping enable on unchanged snapshot copies ROAD items'
+);
+
 SELECT * FROM finish();
 ROLLBACK;

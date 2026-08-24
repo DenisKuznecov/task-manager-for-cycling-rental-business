@@ -885,24 +885,6 @@ BEGIN
   WHERE oi.order_id = v_order.id
     AND NOT (oi.booqable_line_id = ANY (v_keep));
 
-  IF v_old_source IS NOT NULL
-     AND v_old_source = v_source_fp
-     AND v_old_addon = v_addon_fp
-     AND v_old_status::text = v_status THEN
-    SELECT count(*)::integer INTO v_retained
-    FROM public.booqable_assignment_instances i
-    WHERE i.order_id = v_order.id
-      AND i.closed_at IS NULL;
-    RETURN jsonb_build_object(
-      'ok', true,
-      'created', 0,
-      'retained', v_retained,
-      'cancelled', 0,
-      'sourceFingerprint', v_source_fp,
-      'addonFingerprint', v_addon_fp
-    );
-  END IF;
-
   SELECT COALESCE(array_agg(a->>'stockItemId'), '{}')
   INTO v_c_ids
   FROM jsonb_array_elements(p_snapshot->'assignments') AS a;
