@@ -6,9 +6,12 @@ export {
   CHECKLIST_ITEM_TYPES,
   TASK_KIND_RENTAL_TURNAROUND,
   WORKSHOP_QUEUE_FILTERS,
+  WORKSHOP_QUEUE_STATUSES,
   isBikeTaskStatus,
   isWorkshopQueueFilter,
+  isWorkshopQueueStatus,
   resolveWorkshopQueueFilter,
+  resolveWorkshopQueueStatus,
   type AttestationStage,
   type BikeTaskKind,
   type BikeTaskStatus,
@@ -16,6 +19,7 @@ export {
   type ChecklistItemStage,
   type ChecklistItemType,
   type WorkshopQueueFilter,
+  type WorkshopQueueStatus,
 } from "./statuses";
 
 export {
@@ -51,6 +55,7 @@ export {
 export type {
   WorkshopAddon,
   WorkshopAttestation,
+  WorkshopQueueStatusCounts,
   WorkshopTaskDetail,
   WorkshopTaskEvent,
   WorkshopTaskItem,

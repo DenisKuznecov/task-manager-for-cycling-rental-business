@@ -140,6 +140,7 @@ deferred:
 
 ## Spec Change Log
 
+- 2026-08-24: Queue list UX on `/workshop` is superseded by `{project-root}/_bmad-output/implementation-artifacts/spec-workshop-queue.md` (All default, status tiles, completed opt-in, column set, page size 15). Task page, named actions, and the parent-order drawer in this spec still apply.
 - 2026-08-21: Human added the brainstormed parent-order drawer on the task page (`OrderDetailsDrawer` + scoped mechanic SELECT). Avoids building a second order UI and keeps checklist work on the page.
 
 ## Review Triage Log

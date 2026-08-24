@@ -2,6 +2,8 @@ import { createClient } from "@/src/utils/supabase/server";
 import {
   isBikeTaskStatus,
   resolveWorkshopQueueFilter,
+  resolveWorkshopQueueStatus,
+  WORKSHOP_QUEUE_STATUSES,
   type AttestationStage,
   type ChecklistItemOutcome,
   type ChecklistItemStage,
@@ -9,6 +11,8 @@ import {
   type WorkshopAddon,
   type WorkshopAttestation,
   type WorkshopQueueFilter,
+  type WorkshopQueueStatus,
+  type WorkshopQueueStatusCounts,
   type WorkshopTaskDetail,
   type WorkshopTaskEvent,
   type WorkshopTaskItem,
@@ -16,7 +20,7 @@ import {
   type WorkshopTaskListRow,
 } from "@/src/lib/workshop/domain";
 
-export const WORKSHOP_PAGE_SIZE = 50;
+export const WORKSHOP_PAGE_SIZE = 15;
 
 type TaskListViewRow = {
   task_id: string;
@@ -25,6 +29,8 @@ type TaskListViewRow = {
   order_id: string;
   order_number: number | null;
   starts_at: string | null;
+  stops_at: string | null;
+  customer_name: string | null;
   madrid_start_date: string | null;
   bike_source_id: string;
   bike_display_id: string | null;
@@ -54,6 +60,8 @@ function mapListRow(row: TaskListViewRow): WorkshopTaskListRow | null {
     orderId: row.order_id,
     orderNumber: row.order_number,
     startsAt: row.starts_at,
+    stopsAt: row.stops_at ?? null,
+    customerName: row.customer_name ?? null,
     madridStartDate: row.madrid_start_date,
     bikeSourceId: row.bike_source_id,
     bikeDisplayId: row.bike_display_id,
@@ -77,48 +85,96 @@ function applyQueueFilter(
   return {};
 }
 
+function searchOrFilter(query: string | null | undefined): string | null {
+  const trimmed = query?.trim() ?? "";
+  const stripped = trimmed.replace(/^#/, "").replace(/[,()]/g, "");
+  if (!stripped) return null;
+  const escaped = stripped
+    .replace(/\\/g, "\\\\")
+    .replace(/%/g, "\\%")
+    .replace(/_/g, "\\_");
+  return `bike_display_id.ilike.%${escaped}%,bike_title.ilike.%${escaped}%,order_number_text.ilike.%${escaped}%,customer_name.ilike.%${escaped}%`;
+}
+
+function emptyStatusCounts(): WorkshopQueueStatusCounts {
+  return {
+    to_prepare: 0,
+    being_prepared: 0,
+    needs_recheck: 0,
+    ready_for_pickup: 0,
+    in_rental: 0,
+    returned: 0,
+    prepare_for_storage: 0,
+    completed: 0,
+  };
+}
+
 /**
  * Paginated work-queue rows from `workshop_tasks_view`.
- * Cancelled tasks are excluded from every filter; Completed stays in `all`.
+ * Cancelled is never listed. Completed is listed only when `status=completed`.
+ * Out-of-range `page` is clamped to 1.
  */
 export async function loadWorkshopTasks(
   query: WorkshopTaskListQuery = {},
-): Promise<{ tasks: WorkshopTaskListRow[]; count: number; error: string | null }> {
+): Promise<{
+  tasks: WorkshopTaskListRow[];
+  count: number;
+  page: number;
+  error: string | null;
+}> {
   const filter = resolveWorkshopQueueFilter(query.filter);
+  const status = resolveWorkshopQueueStatus(query.status);
   const parsedPage = Number(query.page);
-  const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
-  const from = (page - 1) * WORKSHOP_PAGE_SIZE;
-  const to = from + WORKSHOP_PAGE_SIZE - 1;
+  let page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
   const madridToday = madridTodayIsoDate();
   const bounds = applyQueueFilter(filter, madridToday);
+  const search = searchOrFilter(query.query);
 
   const supabase = await createClient();
-  let builder = supabase
+
+  let countBuilder = supabase
     .from("workshop_tasks_view")
-    .select("*", { count: "exact" })
+    .select("task_id", { count: "exact", head: true })
     .neq("status", "cancelled");
+  if (status) {
+    countBuilder = countBuilder.eq("status", status);
+  } else {
+    countBuilder = countBuilder.neq("status", "completed");
+  }
+  if (bounds.eq) countBuilder = countBuilder.eq("madrid_start_date", bounds.eq);
+  if (bounds.gte) countBuilder = countBuilder.gte("madrid_start_date", bounds.gte);
+  if (bounds.lt) countBuilder = countBuilder.lt("madrid_start_date", bounds.lt);
+  if (search) countBuilder = countBuilder.or(search);
 
-  if (filter !== "all") {
-    builder = builder.neq("status", "completed");
+  const countResult = await countBuilder;
+
+  if (countResult.error) {
+    console.error("workshop:", countResult.error);
+    return { tasks: [], count: 0, page: 1, error: countResult.error.message };
   }
 
-  if (bounds.eq) builder = builder.eq("madrid_start_date", bounds.eq);
-  if (bounds.gte) builder = builder.gte("madrid_start_date", bounds.gte);
-  if (bounds.lt) builder = builder.lt("madrid_start_date", bounds.lt);
+  const count = countResult.count ?? 0;
+  const totalPages = Math.max(1, Math.ceil(count / WORKSHOP_PAGE_SIZE));
+  if (page > totalPages) page = 1;
 
-  const trimmed = query.query?.trim() ?? "";
-  const stripped = trimmed.replace(/[,()]/g, "");
-  if (stripped) {
-    const escaped = stripped
-      .replace(/\\/g, "\\\\")
-      .replace(/%/g, "\\%")
-      .replace(/_/g, "\\_");
-    builder = builder.or(
-      `bike_display_id.ilike.%${escaped}%,bike_title.ilike.%${escaped}%,order_number_text.ilike.%${escaped}%`,
-    );
+  const from = (page - 1) * WORKSHOP_PAGE_SIZE;
+  const to = from + WORKSHOP_PAGE_SIZE - 1;
+
+  let listBuilder = supabase
+    .from("workshop_tasks_view")
+    .select("*")
+    .neq("status", "cancelled");
+  if (status) {
+    listBuilder = listBuilder.eq("status", status);
+  } else {
+    listBuilder = listBuilder.neq("status", "completed");
   }
+  if (bounds.eq) listBuilder = listBuilder.eq("madrid_start_date", bounds.eq);
+  if (bounds.gte) listBuilder = listBuilder.gte("madrid_start_date", bounds.gte);
+  if (bounds.lt) listBuilder = listBuilder.lt("madrid_start_date", bounds.lt);
+  if (search) listBuilder = listBuilder.or(search);
 
-  const { data, count, error } = await builder
+  const { data, error } = await listBuilder
     .order("starts_at", { ascending: true, nullsFirst: false })
     .order("order_number", { ascending: true, nullsFirst: false })
     .order("bike_display_id", { ascending: true, nullsFirst: false })
@@ -127,14 +183,55 @@ export async function loadWorkshopTasks(
 
   if (error) {
     console.error("workshop:", error);
-    return { tasks: [], count: 0, error: error.message };
+    return { tasks: [], count: 0, page: 1, error: error.message };
   }
 
   const tasks = ((data as TaskListViewRow[] | null) ?? [])
     .map(mapListRow)
     .filter((row): row is WorkshopTaskListRow => row !== null);
 
-  return { tasks, count: count ?? 0, error: null };
+  return { tasks, count, page, error: null };
+}
+
+/**
+ * Tile counts for the current date + search window (not the selected status tile).
+ * Completed is included; cancelled is not. Counted in Postgres via `head: true`.
+ */
+export async function loadWorkshopTaskStatusCounts(
+  query: Pick<WorkshopTaskListQuery, "filter" | "query"> = {},
+): Promise<{ counts: WorkshopQueueStatusCounts; error: string | null }> {
+  const filter = resolveWorkshopQueueFilter(query.filter);
+  const madridToday = madridTodayIsoDate();
+  const bounds = applyQueueFilter(filter, madridToday);
+  const search = searchOrFilter(query.query);
+  const empty = emptyStatusCounts();
+
+  const supabase = await createClient();
+
+  const results = await Promise.all(
+    WORKSHOP_QUEUE_STATUSES.map((status: WorkshopQueueStatus) => {
+      let builder = supabase
+        .from("workshop_tasks_view")
+        .select("task_id", { count: "exact", head: true })
+        .eq("status", status);
+      if (bounds.eq) builder = builder.eq("madrid_start_date", bounds.eq);
+      if (bounds.gte) builder = builder.gte("madrid_start_date", bounds.gte);
+      if (bounds.lt) builder = builder.lt("madrid_start_date", bounds.lt);
+      if (search) builder = builder.or(search);
+      return builder.then((result) => ({ status, result }));
+    }),
+  );
+
+  const counts = emptyStatusCounts();
+  for (const { status, result } of results) {
+    if (result.error) {
+      console.error("workshop:", result.error);
+      return { counts: empty, error: result.error.message };
+    }
+    counts[status] = result.count ?? 0;
+  }
+
+  return { counts, error: null };
 }
 
 function isItemType(value: unknown): value is ChecklistItemType {

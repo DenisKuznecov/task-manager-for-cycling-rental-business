@@ -12,18 +12,23 @@ import { TextField } from "@/ui/components/TextField";
 import { TablePagination } from "@/src/components/TablePagination";
 import * as workshopActions from "@/src/lib/workshop/actions";
 import type { WorkshopSyncHealth } from "@/src/lib/workshop/data";
-import type {
-  ManualSyncScope,
-  WorkshopErrorCode,
-  WorkshopQueueFilter,
-  WorkshopTaskListRow,
+import {
+  WORKSHOP_QUEUE_STATUSES,
+  type ManualSyncScope,
+  type WorkshopErrorCode,
+  type WorkshopQueueFilter,
+  type WorkshopQueueStatus,
+  type WorkshopQueueStatusCounts,
+  type WorkshopTaskListRow,
 } from "@/src/lib/workshop/domain";
 import { createClient } from "@/src/utils/supabase/client";
 import {
+  buildWorkshopQueueHref,
   formatMadridDateTime,
   formatWorkshopStart,
-  statusBadgeVariant,
-  workshopBikeLabel,
+  shouldBlockQueueNavigation,
+  statusTileClassName,
+  workshopStatusBadgeProps,
   WORKSHOP_STATUS_LABELS,
 } from "./workshop-ui";
 
@@ -33,21 +38,27 @@ interface WorkshopQueueProps {
   totalPages: number;
   query: string;
   filter: WorkshopQueueFilter;
+  status: WorkshopQueueStatus | null;
+  statusCounts: WorkshopQueueStatusCounts;
   health: WorkshopSyncHealth;
 }
 
 const SEARCH_DEBOUNCE_MS = 300;
 
 const FILTER_TABS: { value: WorkshopQueueFilter; label: string }[] = [
+  { value: "all", label: "All" },
   { value: "today", label: "Today" },
   { value: "tomorrow", label: "Tomorrow" },
   { value: "next_7_days", label: "Next 7 Days" },
-  { value: "all", label: "All" },
 ];
 
 function formatSyncTime(iso: string | null): string {
   if (!iso) return "Never";
   return formatMadridDateTime(iso);
+}
+
+function bikeIdCell(task: WorkshopTaskListRow): string {
+  return task.bikeDisplayId?.trim() || task.bikeSourceId?.trim() || "Unknown bike";
 }
 
 export function WorkshopQueue({
@@ -56,6 +67,8 @@ export function WorkshopQueue({
   totalPages,
   query,
   filter,
+  status,
+  statusCounts,
   health,
 }: WorkshopQueueProps) {
   const router = useRouter();
@@ -74,6 +87,8 @@ export function WorkshopQueue({
     setPrevQuery(query);
     setSearch(query);
   }
+
+  const syncInFlight = shouldBlockQueueNavigation(isPending, health);
 
   useEffect(() => {
     const supabase = createClient();
@@ -111,26 +126,30 @@ export function WorkshopQueue({
     nextQuery: string,
     nextPage: number,
     nextFilter: WorkshopQueueFilter,
+    nextStatus: WorkshopQueueStatus | null,
+  ) =>
+    buildWorkshopQueueHref(pathname, nextQuery, nextPage, nextFilter, nextStatus);
+
+  const pushQueue = (
+    nextQuery: string,
+    nextPage: number,
+    nextFilter: WorkshopQueueFilter,
+    nextStatus: WorkshopQueueStatus | null,
   ) => {
-    const params = new URLSearchParams();
-    if (nextFilter !== "today") params.set("filter", nextFilter);
-    const trimmed = nextQuery.trim();
-    if (trimmed) params.set("query", trimmed);
-    if (nextPage !== 1) params.set("page", String(nextPage));
-    const queryString = params.toString();
-    return queryString ? `${pathname}?${queryString}` : pathname;
+    if (syncInFlight) return;
+    router.push(buildHref(nextQuery, nextPage, nextFilter, nextStatus));
   };
 
   useEffect(() => {
     if (search === query) return;
 
     const handle = setTimeout(() => {
-      router.push(buildHref(search, 1, filter));
+      pushQueue(search, 1, filter, status);
     }, SEARCH_DEBOUNCE_MS);
 
     return () => clearTimeout(handle);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, query, filter, pathname, router]);
+  }, [search, query, filter, status, pathname, router]);
 
   const resumable = Boolean(health.cursor);
   const syncStatusLabel = (() => {
@@ -174,13 +193,18 @@ export function WorkshopQueue({
     });
   };
 
+  const openTask = (taskId: string) => {
+    if (syncInFlight) return;
+    router.push(`/workshop/${taskId}`);
+  };
+
   return (
     <div className="flex w-full flex-col items-start gap-6">
       <div className="flex w-full flex-col items-start gap-3">
         <span className="text-body font-body text-subtext-color">
           Last full sync: {formatSyncTime(health.lastSuccessAt)}
         </span>
-        {syncStatusLabel ? (
+        {syncStatusLabel && !syncInFlight ? (
           <Alert
             variant={health.state === "failed" ? "error" : "warning"}
             icon={<FeatherAlertTriangle />}
@@ -194,6 +218,14 @@ export function WorkshopQueue({
             icon={<FeatherAlertTriangle />}
             title={syncError.code}
             description={syncError.error}
+          />
+        ) : null}
+        {syncInFlight ? (
+          <Alert
+            variant="warning"
+            icon={<FeatherAlertTriangle />}
+            title="Updating from Booqable"
+            description="Updating from Booqable… stay on this page until it finishes."
           />
         ) : null}
         <div className="flex w-full flex-wrap items-center gap-2">
@@ -241,6 +273,37 @@ export function WorkshopQueue({
             </Button>
           ) : null}
         </div>
+        <span className="text-caption font-caption text-subtext-color">
+          Use these when something changed in Booqable and you need that change
+          on the task list. Next 7 days syncs reserved rentals starting this
+          week. All reserved syncs every reserved order (this can take a while).
+          Each click fetches one page of 50; use Resume sync if more remain.
+        </span>
+      </div>
+
+      <div className="flex w-full flex-wrap items-stretch gap-2">
+        {WORKSHOP_QUEUE_STATUSES.map((tileStatus) => {
+          const selected = status === tileStatus;
+          return (
+            <button
+              key={tileStatus}
+              type="button"
+              aria-pressed={selected}
+              className={statusTileClassName(tileStatus, selected)}
+              onClick={() => {
+                const nextStatus = selected ? null : tileStatus;
+                pushQueue(query, 1, filter, nextStatus);
+              }}
+            >
+              <span className="text-heading-3 font-heading-3">
+                {statusCounts[tileStatus]}
+              </span>
+              <span className="text-caption font-caption">
+                {WORKSHOP_STATUS_LABELS[tileStatus]}
+              </span>
+            </button>
+          );
+        })}
       </div>
 
       <Tabs>
@@ -250,7 +313,7 @@ export function WorkshopQueue({
             active={filter === tab.value}
             onClick={() => {
               if (tab.value === filter) return;
-              router.push(buildHref(query, 1, tab.value));
+              pushQueue(query, 1, tab.value, status);
             }}
           >
             {tab.label}
@@ -266,7 +329,7 @@ export function WorkshopQueue({
         icon={<FeatherSearch />}
       >
         <TextField.Input
-          placeholder="Search by bike, title, or order #"
+          placeholder="Search by bike, title, order #, or customer"
           value={search}
           onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
             setSearch(event.target.value)
@@ -290,12 +353,14 @@ export function WorkshopQueue({
           <Table
             header={
               <Table.HeaderRow>
-                <Table.HeaderCell>Bike</Table.HeaderCell>
+                <Table.HeaderCell>Bike ID</Table.HeaderCell>
+                <Table.HeaderCell>Bike title</Table.HeaderCell>
+                <Table.HeaderCell>Customer</Table.HeaderCell>
                 <Table.HeaderCell>Order #</Table.HeaderCell>
-                <Table.HeaderCell>Start</Table.HeaderCell>
+                <Table.HeaderCell>From</Table.HeaderCell>
+                <Table.HeaderCell>Until</Table.HeaderCell>
                 <Table.HeaderCell>Status</Table.HeaderCell>
-                <Table.HeaderCell>Progress</Table.HeaderCell>
-                <Table.HeaderCell>Config</Table.HeaderCell>
+                <Table.HeaderCell>Warnings</Table.HeaderCell>
               </Table.HeaderRow>
             }
           >
@@ -304,11 +369,21 @@ export function WorkshopQueue({
                 key={task.taskId}
                 clickable={true}
                 className="cursor-pointer"
-                onClick={() => router.push(`/workshop/${task.taskId}`)}
+                onClick={() => openTask(task.taskId)}
               >
                 <Table.Cell>
                   <span className="text-body-bold font-body-bold text-default-font">
-                    {workshopBikeLabel(task)}
+                    {bikeIdCell(task)}
+                  </span>
+                </Table.Cell>
+                <Table.Cell>
+                  <span className="text-body font-body text-default-font">
+                    {task.bikeTitle?.trim() || "—"}
+                  </span>
+                </Table.Cell>
+                <Table.Cell>
+                  <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
+                    {task.customerName?.trim() || "—"}
                   </span>
                 </Table.Cell>
                 <Table.Cell>
@@ -322,14 +397,14 @@ export function WorkshopQueue({
                   </span>
                 </Table.Cell>
                 <Table.Cell>
-                  <Badge variant={statusBadgeVariant(task.status)}>
-                    {WORKSHOP_STATUS_LABELS[task.status]}
-                  </Badge>
+                  <span className="whitespace-nowrap text-body font-body text-neutral-500">
+                    {formatWorkshopStart(task.stopsAt, null)}
+                  </span>
                 </Table.Cell>
                 <Table.Cell>
-                  <span className="whitespace-nowrap text-body font-body text-neutral-500">
-                    {task.itemsCompleted}/{task.itemsTotal}
-                  </span>
+                  <Badge {...workshopStatusBadgeProps(task.status)}>
+                    {WORKSHOP_STATUS_LABELS[task.status]}
+                  </Badge>
                 </Table.Cell>
                 <Table.Cell>
                   {task.hasConfigurationWarning ? (
@@ -348,7 +423,9 @@ export function WorkshopQueue({
       <TablePagination
         currentPage={currentPage}
         totalPages={totalPages}
-        onPageChange={(page) => router.push(buildHref(query, page, filter))}
+        onPageChange={(nextPage) =>
+          pushQueue(query, nextPage, filter, status)
+        }
       />
     </div>
   );

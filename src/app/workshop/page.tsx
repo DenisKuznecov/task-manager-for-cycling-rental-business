@@ -9,28 +9,40 @@ export default async function WorkshopPage({
 }: {
   searchParams: Promise<{
     filter?: string;
+    status?: string;
     query?: string;
     page?: string;
   }>;
 }) {
   const {
     filter: filterParam,
+    status: statusParam,
     query: queryParam,
     page: pageParam,
   } = await searchParams;
 
   const filter = workshopDomain.resolveWorkshopQueueFilter(filterParam);
+  const status = workshopDomain.resolveWorkshopQueueStatus(statusParam);
   const query = queryParam ?? "";
   const parsedPage = Number(pageParam);
-  const page = Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+  const requestedPage =
+    Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
 
-  const { tasks, count, error } = await workshopData.loadWorkshopTasks({
-    filter,
-    query,
-    page,
-  });
-  const { health, error: healthError } =
-    await workshopData.loadWorkshopSyncHealth();
+  const [tasksResult, countsResult, healthResult] = await Promise.all([
+    workshopData.loadWorkshopTasks({
+      filter,
+      status,
+      query,
+      page: requestedPage,
+    }),
+    workshopData.loadWorkshopTaskStatusCounts({ filter, query }),
+    workshopData.loadWorkshopSyncHealth(),
+  ]);
+
+  const { tasks, count, page, error } = tasksResult;
+  const { counts, error: countsError } = countsResult;
+  const { health, error: healthError } = healthResult;
+  const loadError = error ?? countsError;
   const totalPages = Math.max(
     1,
     Math.ceil(count / workshopData.WORKSHOP_PAGE_SIZE),
@@ -54,19 +66,21 @@ export default async function WorkshopPage({
         />
       ) : null}
 
-      {shouldRenderWorkshopQueue(error) ? (
+      {shouldRenderWorkshopQueue(loadError) ? (
         <WorkshopQueue
           tasks={tasks}
           currentPage={page}
           totalPages={totalPages}
           query={query}
           filter={filter}
+          status={status}
+          statusCounts={counts}
           health={health}
         />
       ) : (
         <DataLoadError
           title="Couldn't load workshop tasks"
-          message={error ?? "Couldn't load workshop tasks"}
+          message={loadError ?? "Couldn't load workshop tasks"}
         />
       )}
     </div>

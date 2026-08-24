@@ -5,6 +5,7 @@ import type {
   ChecklistItemStage,
   ChecklistItemType,
   WorkshopQueueFilter,
+  WorkshopQueueStatus,
 } from "./statuses";
 
 export type WorkshopTaskListRow = {
@@ -14,6 +15,8 @@ export type WorkshopTaskListRow = {
   orderId: string;
   orderNumber: number | null;
   startsAt: string | null;
+  stopsAt: string | null;
+  customerName: string | null;
   madridStartDate: string | null;
   bikeSourceId: string;
   bikeDisplayId: string | null;
@@ -23,6 +26,8 @@ export type WorkshopTaskListRow = {
   itemsCompleted: number;
   itemsTotal: number;
 };
+
+export type WorkshopQueueStatusCounts = Record<WorkshopQueueStatus, number>;
 
 export type WorkshopTaskItem = {
   itemId: string;
@@ -82,6 +87,7 @@ export type WorkshopTaskDetail = {
 
 export type WorkshopTaskListQuery = {
   filter?: WorkshopQueueFilter | string | null;
+  status?: WorkshopQueueStatus | string | null;
   query?: string | null;
   page?: number;
 };

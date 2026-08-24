@@ -4,16 +4,23 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
+  buildWorkshopQueueHref,
   formatMadridDateTime,
   formatWorkshopStart,
   isM1ItemValid,
   m2ItemCaption,
+  PREPARE_FOR_STORAGE_BADGE_CLASS,
+  shouldBlockQueueNavigation,
   shouldRenderWorkshopQueue,
   statusBadgeVariant,
+  statusTileClassName,
   workshopBikeLabel,
 } from "./app/workshop/_components/workshop-ui.ts";
 import type { WorkshopTaskItem } from "./lib/workshop/domain/dtos.ts";
-import { resolveWorkshopQueueFilter } from "./lib/workshop/domain/statuses.ts";
+import {
+  resolveWorkshopQueueFilter,
+  resolveWorkshopQueueStatus,
+} from "./lib/workshop/domain/statuses.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -79,11 +86,67 @@ test("workshopBikeLabel falls back to Unknown bike", () => {
   );
 });
 
-test("invalid workshop filter becomes today", () => {
-  assert.equal(resolveWorkshopQueueFilter("nope"), "today");
-  assert.equal(resolveWorkshopQueueFilter(undefined), "today");
+test("invalid workshop filter becomes all", () => {
+  assert.equal(resolveWorkshopQueueFilter("nope"), "all");
+  assert.equal(resolveWorkshopQueueFilter(undefined), "all");
   assert.equal(resolveWorkshopQueueFilter("tomorrow"), "tomorrow");
+  assert.equal(resolveWorkshopQueueFilter("today"), "today");
   assert.equal(resolveWorkshopQueueFilter("all"), "all");
+});
+
+test("queue status is opt-in; invalid or cancelled becomes active work", () => {
+  assert.equal(resolveWorkshopQueueStatus(undefined), null);
+  assert.equal(resolveWorkshopQueueStatus("nope"), null);
+  assert.equal(resolveWorkshopQueueStatus("cancelled"), null);
+  assert.equal(resolveWorkshopQueueStatus("completed"), "completed");
+  assert.equal(resolveWorkshopQueueStatus("being_prepared"), "being_prepared");
+});
+
+test("workshop queue page size is 15", () => {
+  const source = readFileSync(join(root, "src/lib/workshop/data/tasks.ts"), "utf8");
+  assert.match(source, /export const WORKSHOP_PAGE_SIZE = 15/);
+  assert.match(source, /replace\(\/\^#\/, ""\)/);
+});
+
+test("queue href omits filter=all and keeps filter=today", () => {
+  assert.equal(
+    buildWorkshopQueueHref("/workshop", "", 1, "all", null),
+    "/workshop",
+  );
+  assert.equal(
+    buildWorkshopQueueHref("/workshop", "", 1, "today", null),
+    "/workshop?filter=today",
+  );
+  assert.equal(
+    buildWorkshopQueueHref("/workshop", "", 1, "all", "being_prepared"),
+    "/workshop?status=being_prepared",
+  );
+  assert.equal(
+    buildWorkshopQueueHref("/workshop", "ana", 2, "today", "completed"),
+    "/workshop?filter=today&status=completed&query=ana&page=2",
+  );
+});
+
+test("in-flight sync blocks queue navigation", () => {
+  assert.equal(
+    shouldBlockQueueNavigation(true, { state: "idle", cursor: null }),
+    true,
+  );
+  assert.equal(
+    shouldBlockQueueNavigation(false, { state: "in_progress", cursor: null }),
+    true,
+  );
+  assert.equal(
+    shouldBlockQueueNavigation(false, {
+      state: "in_progress",
+      cursor: "cursor-1",
+    }),
+    false,
+  );
+  assert.equal(
+    shouldBlockQueueNavigation(false, { state: "failed", cursor: null }),
+    false,
+  );
 });
 
 test("loader error is not treated as an empty success queue", () => {
@@ -166,8 +229,28 @@ test("M2 caption does not say completed when M1 outcome is missing", () => {
   );
 });
 
-test("returned status has an explicit badge variant", () => {
-  assert.equal(statusBadgeVariant("returned"), "neutral");
+test("queue statuses use distinct badge colours", () => {
+  assert.equal(statusBadgeVariant("to_prepare"), "warning");
+  assert.equal(statusBadgeVariant("being_prepared"), "dark");
+  assert.equal(statusBadgeVariant("needs_recheck"), "error");
+  assert.equal(statusBadgeVariant("ready_for_pickup"), "info");
+  assert.equal(statusBadgeVariant("in_rental"), "success");
+  assert.equal(statusBadgeVariant("returned"), "mint");
+  assert.equal(statusBadgeVariant("completed"), "neutral");
+  assert.equal(statusBadgeVariant("cancelled"), "error");
+  assert.equal(statusBadgeVariant("prepare_for_storage"), null);
+  assert.match(PREPARE_FOR_STORAGE_BADGE_CLASS, /violet|slate/);
+  const tileClasses = [
+    statusTileClassName("to_prepare", false),
+    statusTileClassName("being_prepared", false),
+    statusTileClassName("needs_recheck", false),
+    statusTileClassName("ready_for_pickup", false),
+    statusTileClassName("in_rental", false),
+    statusTileClassName("returned", false),
+    statusTileClassName("prepare_for_storage", false),
+    statusTileClassName("completed", false),
+  ];
+  assert.equal(new Set(tileClasses).size, tileClasses.length);
 });
 
 test("workshop page is a server component that reads URL filters", () => {
@@ -199,20 +282,68 @@ test("hello-pangea/dnd is not a dependency", () => {
   assert.equal(pkg.devDependencies?.["@hello-pangea/dnd"], undefined);
 });
 
-test("queue surface: filters, search, row opens task page, load error banner", () => {
+test("queue I/O matrix: empty today, status isolate/clear, completed, page clamp, missing cells, sync intercept", () => {
+  const queue = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopQueue.tsx"),
+    "utf8",
+  );
+  const tasks = readFileSync(join(root, "src/lib/workshop/data/tasks.ts"), "utf8");
+  const page = readFileSync(join(root, "src/app/workshop/page.tsx"), "utf8");
+
+  assert.equal(resolveWorkshopQueueFilter("today"), "today");
+  assert.equal(shouldRenderWorkshopQueue(null), true);
+  assert.match(queue, /No tasks found/);
+  assert.match(queue, /No bikes need work in this filter/);
+  assert.doesNotMatch(page, /notFound\(\)/);
+
+  assert.match(queue, /const nextStatus = selected \? null : tileStatus/);
+  assert.match(queue, /buildWorkshopQueueHref/);
+  assert.match(tasks, /Pick<WorkshopTaskListQuery, "filter" \| "query">/);
+
+  assert.equal(resolveWorkshopQueueStatus("completed"), "completed");
+  assert.match(tasks, /Completed is listed only when `status=completed`/);
+
+  assert.match(tasks, /if \(page > totalPages\) page = 1/);
+  assert.match(queue, /TablePagination/);
+
+  assert.equal(formatWorkshopStart(null, null), "—");
+  assert.match(queue, /task\.customerName\?\.trim\(\) \|\| "—"/);
+  assert.match(queue, /formatWorkshopStart\(task\.stopsAt, null\)/);
+
+  assert.match(queue, /if \(syncInFlight\) return/);
+  assert.match(queue, /pushQueue/);
+  assert.match(queue, /Updating from Booqable… stay on this page until it finishes/);
+  assert.match(queue, /Use these when something changed in Booqable/);
+  assert.match(queue, /syncStatusLabel && !syncInFlight/);
+});
+
+test("queue surface: All-first tabs, status tiles, columns, sync help, load error banner", () => {
   const page = readFileSync(join(root, "src/app/workshop/page.tsx"), "utf8");
   const queue = readFileSync(
     join(root, "src/app/workshop/_components/WorkshopQueue.tsx"),
     "utf8",
   );
+  const tasks = readFileSync(join(root, "src/lib/workshop/data/tasks.ts"), "utf8");
   assert.match(page, /filter: filterParam/);
+  assert.match(page, /status: statusParam/);
   assert.match(page, /query: queryParam/);
   assert.match(page, /page: pageParam/);
   assert.match(page, /DataLoadError/);
-  assert.match(queue, /today/);
-  assert.match(queue, /tomorrow/);
-  assert.match(queue, /next_7_days/);
-  assert.match(queue, /\/workshop\/\$\{task\.taskId\}/);
+  assert.match(page, /loadWorkshopTaskStatusCounts/);
+  assert.match(queue, /value: "all".*Today/s);
+  assert.match(queue, /buildWorkshopQueueHref/);
+  assert.match(queue, /Bike ID/);
+  assert.match(queue, /Bike title/);
+  assert.match(queue, /Customer/);
+  assert.match(queue, /Until/);
+  assert.match(queue, /Warnings/);
+  assert.doesNotMatch(queue, /Progress/);
+  assert.match(queue, /Updating from Booqable/);
+  assert.match(queue, /this can take a while/);
+  assert.match(queue, /\/workshop\/\$\{taskId\}/);
+  assert.match(tasks, /status=completed|status\)/);
+  assert.match(tasks, /neq\("status", "completed"\)/);
+  assert.match(tasks, /customer_name\.ilike/);
 });
 
 test("task page: not-found vs error vs cancelled tombstone and named actions", () => {

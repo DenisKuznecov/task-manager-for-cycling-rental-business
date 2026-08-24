@@ -31,8 +31,8 @@ import {
   formatWorkshopStart,
   isM1ItemValid,
   m2ItemCaption,
-  statusBadgeVariant,
   workshopBikeLabel,
+  workshopStatusBadgeProps,
   WORKSHOP_STATUS_LABELS,
 } from "./workshop-ui";
 
@@ -226,7 +226,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
             <span className="text-heading-2 font-heading-2 text-default-font">
               {workshopBikeLabel(task)}
             </span>
-            <Badge variant={statusBadgeVariant(task.status)}>
+            <Badge {...workshopStatusBadgeProps(task.status)}>
               {WORKSHOP_STATUS_LABELS[task.status]}
             </Badge>
           </div>
