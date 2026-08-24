@@ -117,15 +117,17 @@ BEGIN
   RETURNING id INTO v_task_id;
 
   IF p_copy_road THEN
-    SELECT d.id INTO v_def_id
-    FROM public.checklist_definitions d
-    WHERE d.definition_key = 'road_bike_preparation' AND d.version = 1;
-    UPDATE public.bike_tasks
-    SET selected_definition_id = v_def_id
-    WHERE id = v_task_id;
-    PERFORM private.workshop_copy_definition_items(
-      v_task_id, v_def_id, 'preparation'::public.bike_task_item_stage
-    );
+    SELECT m.definition_id INTO v_def_id
+    FROM public.checklist_tag_mappings m
+    WHERE m.tag = p_tag;
+    IF v_def_id IS NOT NULL THEN
+      UPDATE public.bike_tasks
+      SET selected_definition_id = v_def_id
+      WHERE id = v_task_id;
+      PERFORM private.workshop_copy_definition_items(
+        v_task_id, v_def_id, 'preparation'::public.bike_task_item_stage
+      );
+    END IF;
   END IF;
 
   RETURN v_task_id;
@@ -236,16 +238,16 @@ GRANT EXECUTE ON FUNCTION pg_temp.fill_m1(uuid, text[]) TO authenticated;
 GRANT EXECUTE ON FUNCTION pg_temp.fill_m2(uuid) TO authenticated;
 GRANT EXECUTE ON FUNCTION pg_temp.fill_storage(uuid) TO authenticated;
 
--- Seeds
+-- Seeds (mapped active catalogs)
 SELECT is(
   (
     SELECT count(*)::integer
     FROM public.checklist_definition_items i
-    JOIN public.checklist_definitions d ON d.id = i.definition_id
-    WHERE d.definition_key = 'road_bike_preparation' AND d.version = 1
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-road-bike'
   ),
-  25,
-  'ROAD seed has 25 items'
+  19,
+  'mapped ROAD seed has 19 items'
 );
 
 SELECT is(
@@ -263,16 +265,15 @@ SELECT is(
   ARRAY(
     SELECT i.item_key
     FROM public.checklist_definition_items i
-    JOIN public.checklist_definitions d ON d.id = i.definition_id
-    WHERE d.definition_key = 'road_bike_preparation' AND d.version = 1
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-road-bike'
     ORDER BY i.sort_order
   ),
   ARRAY[
     'ROAD-01','ROAD-02','ROAD-03','ROAD-04','ROAD-05',
     'ROAD-06','ROAD-07','ROAD-08','ROAD-09','ROAD-10',
     'ROAD-11','ROAD-12','ROAD-13','ROAD-14','ROAD-15',
-    'ROAD-16','ROAD-17','ROAD-18','ROAD-19','ROAD-20',
-    'ROAD-21','ROAD-22','ROAD-23','ROAD-24','ROAD-25'
+    'ROAD-16','ROAD-17','ROAD-18','ROAD-19'
   ],
   'ROAD item keys match launch-checklists.md'
 );
@@ -281,36 +282,30 @@ SELECT is(
   ARRAY(
     SELECT i.label
     FROM public.checklist_definition_items i
-    JOIN public.checklist_definitions d ON d.id = i.definition_id
-    WHERE d.definition_key = 'road_bike_preparation' AND d.version = 1
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-road-bike'
     ORDER BY i.sort_order
   ),
   ARRAY[
-    'Check bike cleaned',
+    'Bikefit applied',
+    'Bike cleaned',
     'Check frame and components for damage',
-    'Check front brake performance',
-    'Check rear brake performance',
-    'Check front derailleur shifting',
-    'Check rear derailleur shifting',
-    'Torque check: pedals',
-    'Torque check: stem and handlebar',
-    'Torque check: seatpost and saddle clamp',
-    'Torque check: front and rear thru-axles',
-    'Check headset for play',
-    'Check front wheel is true',
-    'Check front tyre for wear, cuts, and cracks',
-    'Check rear wheel is true',
-    'Check rear tyre for wear, cuts, and cracks',
-    'Set front tyre pressure',
-    'Set rear tyre pressure',
-    'Check main battery level is above 80%',
-    'Check shifters battery level is above 20%',
-    'Check power-meter battery level is above 20%',
-    'Check saddle bag contents and pump',
-    'Verify charger and lube are included',
-    'Attach customer name tag',
+    'Rewax chain',
+    'Check brake pads wear, pins checked',
+    'Check rotors wear',
+    'Adjust brakes',
+    'Adjust gears',
+    'Tighten pedals and cranks',
+    'Check front tyre wear, pressure PSI',
+    'Check rear tyre wear, pressure PSI',
+    'Adjust headset preload',
     'Check saddle level',
-    'Apply bikefit'
+    'Bolt check — stem, handlebar, saddle',
+    'Bag/pump/comp mount',
+    'Charger/lube with a bike',
+    'Charge + check shifting batteries',
+    'Check powermeter battery',
+    'Customer name on a bike'
   ],
   'ROAD labels match launch-checklists.md'
 );
@@ -319,16 +314,15 @@ SELECT is(
   ARRAY(
     SELECT i.item_type::text
     FROM public.checklist_definition_items i
-    JOIN public.checklist_definitions d ON d.id = i.definition_id
-    WHERE d.definition_key = 'road_bike_preparation' AND d.version = 1
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-road-bike'
     ORDER BY i.sort_order
   ),
   ARRAY[
     'action','action','action','action','action',
-    'action','action','action','action','action',
-    'action','action','action','action','action',
-    'tyre_pressure_psi','tyre_pressure_psi','action','action','action',
-    'action','action','action','action','action'
+    'action','action','action','action','tyre_pressure_psi',
+    'tyre_pressure_psi','action','action','action','action',
+    'action','action','action','action'
   ],
   'ROAD item types match launch-checklists.md'
 );
@@ -337,16 +331,15 @@ SELECT is(
   ARRAY(
     SELECT i.required
     FROM public.checklist_definition_items i
-    JOIN public.checklist_definitions d ON d.id = i.definition_id
-    WHERE d.definition_key = 'road_bike_preparation' AND d.version = 1
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-road-bike'
     ORDER BY i.sort_order
   ),
   ARRAY[
     true,true,true,true,true,
     true,true,true,true,true,
     true,true,true,true,true,
-    true,true,true,true,true,
-    true,true,true,true,true
+    true,true,true,true
   ],
   'ROAD required flags are all true'
 );
@@ -355,16 +348,15 @@ SELECT is(
   ARRAY(
     SELECT i.m2_verifies
     FROM public.checklist_definition_items i
-    JOIN public.checklist_definitions d ON d.id = i.definition_id
-    WHERE d.definition_key = 'road_bike_preparation' AND d.version = 1
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-road-bike'
     ORDER BY i.sort_order
   ),
   ARRAY[
-    false,false,true,true,true,
-    true,true,true,true,true,
-    true,true,true,true,true,
-    true,true,true,true,true,
-    true,true,false,false,false
+    false,false,false,false,false,
+    false,true,true,false,true,
+    true,false,false,true,true,
+    true,true,false,false
   ],
   'ROAD m2_verifies flags match launch-checklists.md'
 );
@@ -373,18 +365,153 @@ SELECT is(
   ARRAY(
     SELECT i.na_allowed
     FROM public.checklist_definition_items i
-    JOIN public.checklist_definitions d ON d.id = i.definition_id
-    WHERE d.definition_key = 'road_bike_preparation' AND d.version = 1
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-road-bike'
     ORDER BY i.sort_order
   ),
   ARRAY[
-    false,false,false,false,true,
+    true,false,false,true,false,
     false,false,false,false,false,
     false,false,false,false,false,
-    false,false,true,true,true,
-    false,true,false,false,true
+    true,false,true,false
   ],
   'ROAD na_allowed flags match launch-checklists.md'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-e-city-bike'
+  ),
+  22,
+  'mapped e-city seed has 22 items'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.item_key
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-e-city-bike'
+    ORDER BY i.sort_order
+  ),
+  ARRAY[
+    'ECITY-01','ECITY-02','ECITY-03','ECITY-04','ECITY-05',
+    'ECITY-06','ECITY-07','ECITY-08','ECITY-09','ECITY-10',
+    'ECITY-11','ECITY-12','ECITY-13','ECITY-14','ECITY-15',
+    'ECITY-16','ECITY-17','ECITY-18','ECITY-19','ECITY-20',
+    'ECITY-21','ECITY-22'
+  ],
+  'e-city item keys match launch-checklists.md'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.label
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-e-city-bike'
+    ORDER BY i.sort_order
+  ),
+  ARRAY[
+    'Check bike, bag cleaned',
+    'Check frame and components for damage',
+    'Check front brake performance',
+    'Check rear brake performance',
+    'Check rear derailleur shifting',
+    'Torque check: stem and handlebar',
+    'Torque check: seatpost and saddle clamp',
+    'Torque check: front and rear thru-axle',
+    'Check headset for play',
+    'Check front wheel is true',
+    'Check front tyre for wear, cuts, and cracks',
+    'Check rear wheel is true',
+    'Check rear tyre for wear, cuts, and cracks',
+    'Set front tyre pressure PSI',
+    'Set rear tyre pressure PSI',
+    'Check main battery level (>80%)',
+    'Check saddle bag contents, pump',
+    'Verify charger and lock included',
+    'Verify keys matched and included',
+    'Customer name tag attached',
+    'Check saddle level',
+    'Bikefit applied'
+  ],
+  'e-city labels match launch-checklists.md'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.item_type::text
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-e-city-bike'
+    ORDER BY i.sort_order
+  ),
+  ARRAY[
+    'action','action','action','action','action',
+    'action','action','action','action','action',
+    'action','action','action','tyre_pressure_psi','tyre_pressure_psi',
+    'action','action','action','action','action',
+    'action','action'
+  ],
+  'e-city item types match launch-checklists.md'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.required
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-e-city-bike'
+    ORDER BY i.sort_order
+  ),
+  ARRAY[
+    true,true,true,true,true,
+    true,true,true,true,true,
+    true,true,true,true,true,
+    true,true,true,true,true,
+    true,true
+  ],
+  'e-city required flags are all true'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.m2_verifies
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-e-city-bike'
+    ORDER BY i.sort_order
+  ),
+  ARRAY[
+    false,false,true,true,true,
+    true,true,true,true,false,
+    true,false,true,true,true,
+    true,true,true,true,false,
+    false,false
+  ],
+  'e-city m2_verifies flags match launch-checklists.md'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.na_allowed
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-e-city-bike'
+    ORDER BY i.sort_order
+  ),
+  ARRAY[
+    false,false,false,false,false,
+    false,false,false,false,false,
+    false,false,false,false,false,
+    false,false,false,false,false,
+    false,true
+  ],
+  'e-city na_allowed flags match launch-checklists.md'
 );
 
 SELECT is(
@@ -473,6 +600,56 @@ SELECT is(
 );
 
 SELECT is(
+  (
+    SELECT d.definition_key
+    FROM public.checklist_tag_mappings m
+    JOIN public.checklist_definitions d ON d.id = m.definition_id
+    WHERE m.tag = 'workshop-road-bike'
+  ),
+  'road_bike_preparation',
+  'road mapping uses road_bike_preparation'
+);
+
+SELECT is(
+  (
+    SELECT d.version
+    FROM public.checklist_tag_mappings m
+    JOIN public.checklist_definitions d ON d.id = m.definition_id
+    WHERE m.tag = 'workshop-road-bike'
+  ),
+  2,
+  'road mapping points at version 2'
+);
+
+SELECT is(
+  (SELECT enabled FROM public.checklist_tag_mappings WHERE tag = 'workshop-e-city-bike'),
+  true,
+  'e-city mapping is enabled'
+);
+
+SELECT is(
+  (
+    SELECT d.definition_key
+    FROM public.checklist_tag_mappings m
+    JOIN public.checklist_definitions d ON d.id = m.definition_id
+    WHERE m.tag = 'workshop-e-city-bike'
+  ),
+  'e_city_bike_preparation',
+  'e-city mapping uses e_city_bike_preparation'
+);
+
+SELECT is(
+  (
+    SELECT d.version
+    FROM public.checklist_tag_mappings m
+    JOIN public.checklist_definitions d ON d.id = m.definition_id
+    WHERE m.tag = 'workshop-e-city-bike'
+  ),
+  1,
+  'e-city mapping points at version 1'
+);
+
+SELECT is(
   ARRAY(
     SELECT tag
     FROM public.checklist_tag_mappings
@@ -480,12 +657,11 @@ SELECT is(
     ORDER BY tag
   ),
   ARRAY[
-    'workshop-e-city-bike',
     'workshop-e-mtb-bike',
     'workshop-e-road-bike',
     'workshop-gravel-bike'
   ],
-  'four unsupplied tags stay disabled'
+  'three unsupplied tags stay disabled'
 );
 
 -- Users
@@ -541,7 +717,7 @@ SELECT * FROM (
   VALUES
     ('unknown', pg_temp.make_task('not-a-workshop-tag', true, false)),
     ('multiple', pg_temp.make_task(NULL, true, false)),
-    ('e-city', pg_temp.make_task('workshop-e-city-bike', true, false)),
+    ('e-city', pg_temp.make_task('workshop-e-city-bike', false, true)),
     ('e-mtb', pg_temp.make_task('workshop-e-mtb-bike', true, false)),
     ('gravel', pg_temp.make_task('workshop-gravel-bike', true, false)),
     ('e-road', pg_temp.make_task('workshop-e-road-bike', true, false))
@@ -596,9 +772,9 @@ SELECT is(
   'multiple-tag warning fixture → CONFIGURATION_BLOCKED'
 );
 SELECT is(
-  public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'e-city'), 1) ->> 'code',
-  'CONFIGURATION_BLOCKED',
-  'disabled e-city tag is not startable'
+  public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'e-city'), 1) ->> 'status',
+  'being_prepared',
+  'mapped e-city start prep → being_prepared'
 );
 SELECT is(
   public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'e-mtb'), 1) ->> 'code',
@@ -672,7 +848,7 @@ SELECT isnt(
   'mechanic workshop_task_detail is non-null after M1'
 );
 SELECT ok(
-  COALESCE(jsonb_array_length(public.workshop_task_detail((SELECT road_task FROM ws_ids))->'items'), 0) >= 25,
+  COALESCE(jsonb_array_length(public.workshop_task_detail((SELECT road_task FROM ws_ids))->'items'), 0) >= 19,
   'detail includes preparation items'
 );
 SELECT ok(
@@ -853,7 +1029,7 @@ SELECT is(
   public.workshop_set_item_outcome(
     (SELECT id FROM ws_item_task),
     (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_item_task)),
-    (SELECT i.id FROM public.bike_task_items i WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-16'),
+    (SELECT i.id FROM public.bike_task_items i WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-10'),
     'completed',
     NULL
   ) ->> 'code',
@@ -864,7 +1040,7 @@ SELECT is(
   public.workshop_set_item_outcome(
     (SELECT id FROM ws_item_task),
     (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_item_task)),
-    (SELECT i.id FROM public.bike_task_items i WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-16'),
+    (SELECT i.id FROM public.bike_task_items i WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-10'),
     'completed',
     0
   ) ->> 'code',
@@ -875,7 +1051,7 @@ SELECT is(
   public.workshop_set_item_outcome(
     (SELECT id FROM ws_item_task),
     (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_item_task)),
-    (SELECT i.id FROM public.bike_task_items i WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-16'),
+    (SELECT i.id FROM public.bike_task_items i WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-10'),
     'completed',
     -1
   ) ->> 'code',
@@ -886,14 +1062,14 @@ SELECT is(
   public.workshop_set_item_outcome(
     (SELECT id FROM ws_item_task),
     (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_item_task)),
-    (SELECT i.id FROM public.bike_task_items i WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-01'),
+    (SELECT i.id FROM public.bike_task_items i WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-02'),
     'not_applicable',
     NULL
   ) ->> 'code',
   'INCOMPLETE_CHECKLIST',
   'N/A on item with na_allowed false → INCOMPLETE_CHECKLIST'
 );
-SELECT pg_temp.fill_m1((SELECT id FROM ws_item_task), ARRAY['ROAD-05']::text[]);
+SELECT pg_temp.fill_m1((SELECT id FROM ws_item_task), ARRAY['ROAD-16']::text[]);
 SELECT public.workshop_complete_m1(
   (SELECT id FROM ws_item_task),
   (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_item_task))
@@ -902,7 +1078,7 @@ SELECT is(
   public.workshop_confirm_m2_item(
     (SELECT id FROM ws_item_task),
     (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_item_task)),
-    (SELECT i.id FROM public.bike_task_items i WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-05')
+    (SELECT i.id FROM public.bike_task_items i WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-16')
   ) ->> 'ok',
   'true',
   'M2 can confirm an allowed N/A item'
@@ -911,16 +1087,16 @@ SELECT is(
   (
     SELECT i.m1_outcome::text
     FROM public.bike_task_items i
-    WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-05'
+    WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-16'
   ),
   'not_applicable',
-  'M2 confirm keeps ROAD-05 N/A outcome'
+  'M2 confirm keeps ROAD-16 N/A outcome'
 );
 SELECT is(
   (
     SELECT i.m1_psi
     FROM public.bike_task_items i
-    WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-05'
+    WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-16'
   ),
   NULL,
   'M2 confirm of N/A does not write m1_psi'

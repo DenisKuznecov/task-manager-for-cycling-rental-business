@@ -274,7 +274,7 @@ SELECT is(
     WHERE o.booqable_order_id = 'bq-road'
       AND i.stage = 'preparation'
   ),
-  25,
+  19,
   'identified road copies ROAD items'
 );
 
@@ -811,7 +811,7 @@ SELECT is(
     WHERE o.booqable_order_id = 'bq-prep-replace'
       AND i.stage = 'preparation'
   ),
-  25,
+  19,
   'to_prepare road restore recopies ROAD items'
 );
 
@@ -1360,7 +1360,7 @@ SET enabled = true,
     definition_id = (
       SELECT d.id
       FROM public.checklist_definitions d
-      WHERE d.definition_key = 'road_bike_preparation' AND d.version = 1
+      WHERE d.definition_key = 'e_city_bike_preparation' AND d.version = 1
     )
 WHERE tag = 'workshop-e-city-bike';
 
@@ -1408,8 +1408,8 @@ SELECT is(
     WHERE o.booqable_order_id = 'bq-map-enable'
       AND i.stage = 'preparation'
   ),
-  25,
-  'mapping enable on unchanged snapshot copies ROAD items'
+  22,
+  'mapping enable on unchanged snapshot copies e-city items'
 );
 
 SELECT * FROM finish();
