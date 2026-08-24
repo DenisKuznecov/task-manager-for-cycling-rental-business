@@ -48,17 +48,19 @@ export default async function WorkshopPage({
     Math.ceil(count / workshopData.WORKSHOP_PAGE_SIZE),
   );
 
-  return (
-    <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12">
-      <div className="flex w-full flex-col items-start gap-2">
-        <span className="text-heading-1 font-heading-1 text-default-font">
-          Task Management
-        </span>
-        <span className="text-body font-body text-subtext-color">
-          Bike preparation, pickup, return, and storage.
-        </span>
-      </div>
+  const heading = (
+    <div className="flex min-w-0 flex-col items-start gap-2">
+      <span className="text-heading-1 font-heading-1 text-default-font">
+        Workshop
+      </span>
+      <span className="text-body font-body text-subtext-color">
+        Bike preparation, pickup, return, and storage.
+      </span>
+    </div>
+  );
 
+  return (
+    <div className="container max-w-none flex w-full flex-col items-start gap-6 bg-default-background py-12">
       {healthError ? (
         <DataLoadError
           title="Couldn't load sync status"
@@ -68,6 +70,7 @@ export default async function WorkshopPage({
 
       {shouldRenderWorkshopQueue(loadError) ? (
         <WorkshopQueue
+          heading={heading}
           tasks={tasks}
           currentPage={page}
           totalPages={totalPages}
@@ -78,10 +81,13 @@ export default async function WorkshopPage({
           health={health}
         />
       ) : (
-        <DataLoadError
-          title="Couldn't load workshop tasks"
-          message={loadError ?? "Couldn't load workshop tasks"}
-        />
+        <>
+          {heading}
+          <DataLoadError
+            title="Couldn't load workshop tasks"
+            message={loadError ?? "Couldn't load workshop tasks"}
+          />
+        </>
       )}
     </div>
   );

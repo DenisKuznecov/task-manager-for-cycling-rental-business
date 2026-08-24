@@ -16,7 +16,7 @@ export const NAV_ITEMS: NavItem[] = [
   },
   { label: "Customers", roles: ["admin", "manager"] },
   {
-    label: "Task Management",
+    label: "Workshop",
     roles: ["admin", "manager", "mechanic"],
     href: "/workshop",
   },

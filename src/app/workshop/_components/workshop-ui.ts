@@ -28,26 +28,84 @@ export function workshopBikeLabel(task: {
   return title ? `${id} · ${title}` : id;
 }
 
-/** Start time as `DD-MM-YYYY HH:mm` in Europe/Madrid. */
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"] as const;
+const MONTHS = [
+  "Jan",
+  "Feb",
+  "Mar",
+  "Apr",
+  "May",
+  "Jun",
+  "Jul",
+  "Aug",
+  "Sep",
+  "Oct",
+  "Nov",
+  "Dec",
+] as const;
+
+/** Numeric Madrid wall clock — ICU must not pick `Sept` vs `Sep` or `at` vs `,`. */
+function madridClockParts(date: Date): {
+  weekday: (typeof WEEKDAYS)[number];
+  day: string;
+  dayPadded: string;
+  month: string;
+  monthName: (typeof MONTHS)[number];
+  year: string;
+  hour: string;
+  minute: string;
+} | null {
+  if (Number.isNaN(date.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+    timeZone: "Europe/Madrid",
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "";
+  const year = Number(value("year"));
+  const month = Number(value("month"));
+  const day = Number(value("day"));
+  if (!year || !month || !day) return null;
+  return {
+    weekday: WEEKDAYS[new Date(Date.UTC(year, month - 1, day, 12)).getUTCDay()],
+    day: String(day),
+    dayPadded: value("day"),
+    month: value("month"),
+    monthName: MONTHS[month - 1],
+    year: value("year"),
+    hour: value("hour"),
+    minute: value("minute"),
+  };
+}
+
+/** Start time as `DD-MM-YYYY HH:mm` in Europe/Madrid. Task page only. */
 export function formatWorkshopStart(
   startsAt: string | null,
   madridStartDate: string | null,
 ): string {
   if (startsAt) {
-    const date = new Date(startsAt);
-    if (!Number.isNaN(date.getTime())) {
-      const parts = new Intl.DateTimeFormat("en-GB", {
-        day: "2-digit",
-        month: "2-digit",
-        year: "numeric",
-        hour: "2-digit",
-        minute: "2-digit",
-        hourCycle: "h23",
-        timeZone: "Europe/Madrid",
-      }).formatToParts(date);
-      const value = (type: Intl.DateTimeFormatPartTypes) =>
-        parts.find((part) => part.type === type)?.value ?? "";
-      return `${value("day")}-${value("month")}-${value("year")} ${value("hour")}:${value("minute")}`;
+    const clock = madridClockParts(new Date(startsAt));
+    if (clock) {
+      return `${clock.dayPadded}-${clock.month}-${clock.year} ${clock.hour}:${clock.minute}`;
+    }
+  }
+  return madridStartDate ?? "—";
+}
+
+/** Queue From/Until: `Thu 27 Aug · 19:00` in Europe/Madrid. */
+export function formatWorkshopQueueWhen(
+  startsAt: string | null,
+  madridStartDate: string | null,
+): string {
+  if (startsAt) {
+    const clock = madridClockParts(new Date(startsAt));
+    if (clock) {
+      return `${clock.weekday} ${clock.day} ${clock.monthName} · ${clock.hour}:${clock.minute}`;
     }
   }
   return madridStartDate ?? "—";
@@ -113,23 +171,11 @@ export function m2ItemCaption(item: Pick<
   return "M1 is incomplete";
 }
 
-/** SSR-safe Madrid clock: ICU must not pick `at` vs `,` between date and time. */
+/** SSR-safe Madrid clock: ICU must not pick `at` vs `,` or `Sept` vs `Sep`. */
 export function formatMadridDateTime(iso: string): string {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) return iso;
-  const datePart = date.toLocaleDateString("en-GB", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-    timeZone: "Europe/Madrid",
-  });
-  const timePart = date.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-    timeZone: "Europe/Madrid",
-  });
-  return `${datePart}, ${timePart}`;
+  const clock = madridClockParts(new Date(iso));
+  if (!clock) return iso;
+  return `${clock.day} ${clock.monthName} ${clock.year}, ${clock.hour}:${clock.minute}`;
 }
 
 export function statusBadgeVariant(
@@ -161,9 +207,6 @@ export function statusBadgeVariant(
 export const PREPARE_FOR_STORAGE_BADGE_CLASS =
   "!border-violet-300 !bg-violet-100 [&_span]:!text-violet-800";
 
-export const PREPARE_FOR_STORAGE_TILE_CLASS =
-  "border-violet-300 bg-violet-100 text-violet-800";
-
 export function workshopStatusBadgeProps(status: BikeTaskStatus): {
   variant: "warning" | "neutral" | "error" | "info" | "success" | "dark" | "mint";
   className?: string;
@@ -175,20 +218,75 @@ export function workshopStatusBadgeProps(status: BikeTaskStatus): {
   return { variant };
 }
 
+const ATTENTION_TILES = new Set<WorkshopQueueStatus>([
+  "to_prepare",
+  "being_prepared",
+  "needs_recheck",
+]);
+
+const TILE_ACCENTS: Record<
+  WorkshopQueueStatus,
+  { bar: string; barMuted: string; tint: string }
+> = {
+  to_prepare: {
+    bar: "shadow-[inset_4px_0_0_0_rgb(217_119_6)]",
+    barMuted: "shadow-[inset_4px_0_0_0_rgb(253_230_138)]",
+    tint: "bg-brand-50 text-brand-800",
+  },
+  being_prepared: {
+    bar: "shadow-[inset_4px_0_0_0_rgb(146_64_14)]",
+    barMuted: "shadow-[inset_4px_0_0_0_rgb(252_211_77)]",
+    tint: "bg-neutral-50 text-brand-900",
+  },
+  needs_recheck: {
+    bar: "shadow-[inset_4px_0_0_0_rgb(220_38_38)]",
+    barMuted: "shadow-[inset_4px_0_0_0_rgb(254_202_202)]",
+    tint: "bg-error-50 text-error-800",
+  },
+  ready_for_pickup: {
+    bar: "shadow-[inset_4px_0_0_0_rgb(45_212_191)]",
+    barMuted: "shadow-[inset_4px_0_0_0_rgb(153_246_228)]",
+    tint: "bg-success-50 text-success-800",
+  },
+  in_rental: {
+    bar: "shadow-[inset_4px_0_0_0_rgb(15_118_110)]",
+    barMuted: "shadow-[inset_4px_0_0_0_rgb(153_246_228)]",
+    tint: "bg-success-50 text-success-800",
+  },
+  returned: {
+    bar: "shadow-[inset_4px_0_0_0_rgb(94_234_212)]",
+    barMuted: "shadow-[inset_4px_0_0_0_rgb(204_251_241)]",
+    tint: "bg-success-50 text-success-700",
+  },
+  prepare_for_storage: {
+    bar: "shadow-[inset_4px_0_0_0_rgb(124_58_237)]",
+    barMuted: "shadow-[inset_4px_0_0_0_rgb(221_214_254)]",
+    tint: "bg-violet-50 text-violet-800",
+  },
+  completed: {
+    bar: "shadow-[inset_4px_0_0_0_rgb(148_163_184)]",
+    barMuted: "shadow-[inset_4px_0_0_0_rgb(226_232_240)]",
+    tint: "bg-neutral-50 text-neutral-700",
+  },
+};
+
+const TILE_BASE =
+  "flex min-h-16 min-w-28 grow basis-0 flex-col items-start justify-center gap-1 rounded-md border border-solid border-neutral-200 px-3 py-2 text-left";
+
 export function statusTileClassName(
   status: WorkshopQueueStatus,
   selected: boolean,
+  count: number,
 ): string {
-  const palette: Record<WorkshopQueueStatus, string> = {
-    to_prepare: "border-brand-100 bg-brand-100 text-brand-800",
-    being_prepared: "border-brand-800 bg-brand-800 text-brand-200",
-    needs_recheck: "border-error-100 bg-error-100 text-error-800",
-    ready_for_pickup: "border-success-100 bg-success-100 text-success-800",
-    in_rental: "border-success-700 bg-success-700 text-success-100",
-    returned: "border-success-50 bg-success-50 text-success-700",
-    prepare_for_storage: PREPARE_FOR_STORAGE_TILE_CLASS,
-    completed: "border-neutral-100 bg-neutral-200 text-neutral-700",
-  };
-  const selectedClass = selected ? "ring-2 ring-brand-600 ring-offset-1" : "";
-  return `flex min-h-16 min-w-28 grow basis-0 flex-col items-start justify-center gap-1 rounded-md border border-solid px-3 py-2 text-left ${palette[status]} ${selectedClass}`;
+  const accent = TILE_ACCENTS[status];
+  if (selected) {
+    return `${TILE_BASE} ${accent.bar} bg-brand-50 text-default-font ring-2 ring-brand-600 ring-offset-2`;
+  }
+  if (count <= 0) {
+    return `${TILE_BASE} ${accent.barMuted} bg-default-background text-neutral-400`;
+  }
+  if (ATTENTION_TILES.has(status)) {
+    return `${TILE_BASE} ${accent.bar} ${accent.tint}`;
+  }
+  return `${TILE_BASE} ${accent.bar} bg-default-background text-default-font`;
 }

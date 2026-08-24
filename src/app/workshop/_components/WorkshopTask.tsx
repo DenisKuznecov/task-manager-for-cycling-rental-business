@@ -213,7 +213,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
     <div className="flex w-full flex-col items-start gap-6">
       <Breadcrumbs>
         <Breadcrumbs.Item onClick={() => router.push("/workshop")}>
-          Task Management
+          Workshop
         </Breadcrumbs.Item>
         <Breadcrumbs.Divider />
         <Breadcrumbs.Item active={true}>{workshopBikeLabel(task)}</Breadcrumbs.Item>

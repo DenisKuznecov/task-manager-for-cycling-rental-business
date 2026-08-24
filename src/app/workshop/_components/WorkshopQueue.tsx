@@ -25,7 +25,7 @@ import { createClient } from "@/src/utils/supabase/client";
 import {
   buildWorkshopQueueHref,
   formatMadridDateTime,
-  formatWorkshopStart,
+  formatWorkshopQueueWhen,
   shouldBlockQueueNavigation,
   statusTileClassName,
   workshopStatusBadgeProps,
@@ -33,6 +33,7 @@ import {
 } from "./workshop-ui";
 
 interface WorkshopQueueProps {
+  heading: React.ReactNode;
   tasks: WorkshopTaskListRow[];
   currentPage: number;
   totalPages: number;
@@ -44,6 +45,8 @@ interface WorkshopQueueProps {
 }
 
 const SEARCH_DEBOUNCE_MS = 300;
+/** Overrides Subframe Cell `h-12` (48px) for workshop touch screens. */
+const QUEUE_CELL_CLASS = "!h-16";
 
 const FILTER_TABS: { value: WorkshopQueueFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -62,6 +65,7 @@ function bikeIdCell(task: WorkshopTaskListRow): string {
 }
 
 export function WorkshopQueue({
+  heading,
   tasks,
   currentPage,
   totalPages,
@@ -199,87 +203,95 @@ export function WorkshopQueue({
   };
 
   return (
-    <div className="flex w-full flex-col items-start gap-6">
+    <div className="flex w-full flex-col items-start gap-5">
       <div className="flex w-full flex-col items-start gap-3">
-        <span className="text-body font-body text-subtext-color">
-          Last full sync: {formatSyncTime(health.lastSuccessAt)}
-        </span>
-        {syncStatusLabel && !syncInFlight ? (
-          <Alert
-            variant={health.state === "failed" ? "error" : "warning"}
-            icon={<FeatherAlertTriangle />}
-            title={health.state === "failed" ? "Sync did not finish" : "Sync in progress"}
-            description={syncStatusLabel}
-          />
-        ) : null}
-        {syncError ? (
-          <Alert
-            variant="error"
-            icon={<FeatherAlertTriangle />}
-            title={syncError.code}
-            description={syncError.error}
-          />
-        ) : null}
-        {syncInFlight ? (
-          <Alert
-            variant="warning"
-            icon={<FeatherAlertTriangle />}
-            title="Updating from Booqable"
-            description="Updating from Booqable… stay on this page until it finishes."
-          />
-        ) : null}
-        <div className="flex w-full flex-wrap items-center gap-2">
-          <Button
-            size="large"
-            disabled={isPending}
-            loading={pendingScope === "next_7_days"}
-            onClick={() =>
-              runSync(
-                () => workshopActions.startManualSync("next_7_days"),
-                "next_7_days",
-              )
-            }
-          >
-            Sync next 7 days
-          </Button>
-          <Button
-            size="large"
-            variant="neutral-secondary"
-            disabled={isPending}
-            loading={pendingScope === "all_reserved"}
-            onClick={() =>
-              runSync(
-                () => workshopActions.startManualSync("all_reserved"),
-                "all_reserved",
-              )
-            }
-          >
-            Sync all reserved
-          </Button>
-          {resumable && health.cursor ? (
+        {heading}
+        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
+          <div className="flex shrink-0 flex-wrap items-center gap-2">
             <Button
               size="large"
-              variant="brand-secondary"
+              variant="neutral-secondary"
               disabled={isPending}
-              loading={pendingScope === "resume"}
+              loading={pendingScope === "next_7_days"}
               onClick={() =>
                 runSync(
-                  () => workshopActions.resumeManualSync(health.cursor as string),
-                  "resume",
+                  () => workshopActions.startManualSync("next_7_days"),
+                  "next_7_days",
                 )
               }
             >
-              Resume sync
+              Sync next 7 days
             </Button>
-          ) : null}
+            <Button
+              size="large"
+              variant="neutral-secondary"
+              disabled={isPending}
+              loading={pendingScope === "all_reserved"}
+              onClick={() =>
+                runSync(
+                  () => workshopActions.startManualSync("all_reserved"),
+                  "all_reserved",
+                )
+              }
+            >
+              Sync all reserved
+            </Button>
+            {resumable && health.cursor ? (
+              <Button
+                size="large"
+                variant="brand-secondary"
+                disabled={isPending}
+                loading={pendingScope === "resume"}
+                onClick={() =>
+                  runSync(
+                    () => workshopActions.resumeManualSync(health.cursor as string),
+                    "resume",
+                  )
+                }
+              >
+                Resume sync
+              </Button>
+            ) : null}
+          </div>
+          <div className="ml-2 flex flex-col gap-0.5">
+            <span className="text-body font-body-bold text-default-font">
+              Last full sync: {formatSyncTime(health.lastSuccessAt)}
+            </span>
+            <span className="whitespace-nowrap text-caption font-caption text-subtext-color">
+              Pulls Booqable changes onto this list. Next 7 days = this week.
+              All reserved = every reserved order (slow).
+              {resumable
+                ? " Each click fetches 50 orders. Use Resume sync if more remain."
+                : null}
+            </span>
+          </div>
         </div>
-        <span className="text-caption font-caption text-subtext-color">
-          Use these when something changed in Booqable and you need that change
-          on the task list. Next 7 days syncs reserved rentals starting this
-          week. All reserved syncs every reserved order (this can take a while).
-          Each click fetches one page of 50; use Resume sync if more remain.
-        </span>
       </div>
+
+      {syncStatusLabel && !syncInFlight ? (
+        <Alert
+          variant={health.state === "failed" ? "error" : "warning"}
+          icon={<FeatherAlertTriangle />}
+          title={health.state === "failed" ? "Sync did not finish" : "Sync in progress"}
+          description={syncStatusLabel}
+        />
+      ) : null}
+      {syncError ? (
+        <Alert
+          variant="error"
+          icon={<FeatherAlertTriangle />}
+          title={syncError.code}
+          description={syncError.error}
+        />
+      ) : null}
+      {syncInFlight ? (
+        <Alert
+          variant="warning"
+          icon={<FeatherAlertTriangle />}
+          title="Updating from Booqable"
+          description="Updating from Booqable… stay on this page until it finishes."
+        />
+      ) : null}
 
       <div className="flex w-full flex-wrap items-stretch gap-2">
         {WORKSHOP_QUEUE_STATUSES.map((tileStatus) => {
@@ -289,7 +301,11 @@ export function WorkshopQueue({
               key={tileStatus}
               type="button"
               aria-pressed={selected}
-              className={statusTileClassName(tileStatus, selected)}
+              className={statusTileClassName(
+                tileStatus,
+                selected,
+                statusCounts[tileStatus],
+              )}
               onClick={() => {
                 const nextStatus = selected ? null : tileStatus;
                 pushQueue(query, 1, filter, nextStatus);
@@ -324,7 +340,7 @@ export function WorkshopQueue({
       <TextField
         className="w-full max-w-md"
         variant="filled"
-        label="Search"
+        label=""
         helpText=""
         icon={<FeatherSearch />}
       >
@@ -371,42 +387,42 @@ export function WorkshopQueue({
                 className="cursor-pointer"
                 onClick={() => openTask(task.taskId)}
               >
-                <Table.Cell>
+                <Table.Cell className={QUEUE_CELL_CLASS}>
                   <span className="text-body-bold font-body-bold text-default-font">
                     {bikeIdCell(task)}
                   </span>
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell className={QUEUE_CELL_CLASS}>
                   <span className="text-body font-body text-default-font">
                     {task.bikeTitle?.trim() || "—"}
                   </span>
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell className={QUEUE_CELL_CLASS}>
                   <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
                     {task.customerName?.trim() || "—"}
                   </span>
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell className={QUEUE_CELL_CLASS}>
                   <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
                     {task.orderNumber != null ? `#${task.orderNumber}` : "—"}
                   </span>
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell className={QUEUE_CELL_CLASS}>
                   <span className="whitespace-nowrap text-body font-body text-neutral-500">
-                    {formatWorkshopStart(task.startsAt, task.madridStartDate)}
+                    {formatWorkshopQueueWhen(task.startsAt, task.madridStartDate)}
                   </span>
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell className={QUEUE_CELL_CLASS}>
                   <span className="whitespace-nowrap text-body font-body text-neutral-500">
-                    {formatWorkshopStart(task.stopsAt, null)}
+                    {formatWorkshopQueueWhen(task.stopsAt, null)}
                   </span>
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell className={QUEUE_CELL_CLASS}>
                   <Badge {...workshopStatusBadgeProps(task.status)}>
                     {WORKSHOP_STATUS_LABELS[task.status]}
                   </Badge>
                 </Table.Cell>
-                <Table.Cell>
+                <Table.Cell className={QUEUE_CELL_CLASS}>
                   {task.hasConfigurationWarning ? (
                     <Badge variant="warning">Warning</Badge>
                   ) : (

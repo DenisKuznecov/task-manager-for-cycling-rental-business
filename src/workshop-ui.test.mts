@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   buildWorkshopQueueHref,
   formatMadridDateTime,
+  formatWorkshopQueueWhen,
   formatWorkshopStart,
   isM1ItemValid,
   m2ItemCaption,
@@ -48,6 +49,10 @@ test("formatMadridDateTime joins date and time with a comma, not at", () => {
   const text = formatMadridDateTime("2026-08-22T10:20:00.000Z");
   assert.equal(text, "22 Aug 2026, 12:20");
   assert.doesNotMatch(text, /\bat\b/);
+  assert.equal(
+    formatMadridDateTime("2026-09-03T17:00:00.000Z"),
+    "3 Sep 2026, 19:00",
+  );
 });
 
 test("formatWorkshopStart uses DD-MM-YYYY HH:mm in Madrid", () => {
@@ -57,6 +62,23 @@ test("formatWorkshopStart uses DD-MM-YYYY HH:mm in Madrid", () => {
   );
   assert.equal(formatWorkshopStart(null, "2026-08-22"), "2026-08-22");
   assert.equal(formatWorkshopStart("not-a-date", null), "—");
+});
+
+test("formatWorkshopQueueWhen uses weekday day month · time in Madrid", () => {
+  assert.equal(
+    formatWorkshopQueueWhen("2026-08-22T10:20:00.000Z", null),
+    "Sat 22 Aug · 12:20",
+  );
+  assert.equal(
+    formatWorkshopQueueWhen("2026-09-03T17:00:00.000Z", null),
+    "Thu 3 Sep · 19:00",
+  );
+  assert.doesNotMatch(
+    formatWorkshopQueueWhen("2026-09-03T17:00:00.000Z", null),
+    /Sept/,
+  );
+  assert.equal(formatWorkshopQueueWhen(null, "2026-08-22"), "2026-08-22");
+  assert.equal(formatWorkshopQueueWhen("not-a-date", null), "—");
 });
 
 test("workshopBikeLabel falls back to Unknown bike", () => {
@@ -241,16 +263,30 @@ test("queue statuses use distinct badge colours", () => {
   assert.equal(statusBadgeVariant("prepare_for_storage"), null);
   assert.match(PREPARE_FOR_STORAGE_BADGE_CLASS, /violet|slate/);
   const tileClasses = [
-    statusTileClassName("to_prepare", false),
-    statusTileClassName("being_prepared", false),
-    statusTileClassName("needs_recheck", false),
-    statusTileClassName("ready_for_pickup", false),
-    statusTileClassName("in_rental", false),
-    statusTileClassName("returned", false),
-    statusTileClassName("prepare_for_storage", false),
-    statusTileClassName("completed", false),
+    statusTileClassName("to_prepare", false, 1),
+    statusTileClassName("being_prepared", false, 1),
+    statusTileClassName("needs_recheck", false, 1),
+    statusTileClassName("ready_for_pickup", false, 1),
+    statusTileClassName("in_rental", false, 1),
+    statusTileClassName("returned", false, 1),
+    statusTileClassName("prepare_for_storage", false, 1),
+    statusTileClassName("completed", false, 1),
   ];
   assert.equal(new Set(tileClasses).size, tileClasses.length);
+  assert.match(statusTileClassName("to_prepare", false, 0), /text-neutral-400/);
+  assert.doesNotMatch(statusTileClassName("to_prepare", false, 0), /bg-brand-50/);
+  assert.match(statusTileClassName("to_prepare", false, 3), /bg-brand-50/);
+  assert.match(statusTileClassName("being_prepared", true, 2), /ring-offset-2/);
+  const activeTile = statusTileClassName("to_prepare", false, 3);
+  assert.match(activeTile, /(?:^|\s)border(?:\s|$)/);
+  assert.match(activeTile, /border-neutral-200/);
+  assert.match(activeTile, /shadow-\[inset_4px_0_0_0_rgb\(217_119_6\)\]/);
+  assert.doesNotMatch(activeTile, /border-l-4/);
+  assert.doesNotMatch(activeTile, /border-l-brand-/);
+  assert.match(
+    statusTileClassName("to_prepare", false, 0),
+    /shadow-\[inset_4px_0_0_0_rgb\(253_230_138\)\]/,
+  );
 });
 
 test("workshop page is a server component that reads URL filters", () => {
@@ -306,14 +342,14 @@ test("queue I/O matrix: empty today, status isolate/clear, completed, page clamp
   assert.match(tasks, /if \(page > totalPages\) page = 1/);
   assert.match(queue, /TablePagination/);
 
-  assert.equal(formatWorkshopStart(null, null), "—");
+  assert.equal(formatWorkshopQueueWhen(null, null), "—");
   assert.match(queue, /task\.customerName\?\.trim\(\) \|\| "—"/);
-  assert.match(queue, /formatWorkshopStart\(task\.stopsAt, null\)/);
+  assert.match(queue, /formatWorkshopQueueWhen\(task\.stopsAt, null\)/);
 
   assert.match(queue, /if \(syncInFlight\) return/);
   assert.match(queue, /pushQueue/);
   assert.match(queue, /Updating from Booqable… stay on this page until it finishes/);
-  assert.match(queue, /Use these when something changed in Booqable/);
+  assert.match(queue, /Pulls Booqable changes onto this list/);
   assert.match(queue, /syncStatusLabel && !syncInFlight/);
 });
 
@@ -330,8 +366,12 @@ test("queue surface: All-first tabs, status tiles, columns, sync help, load erro
   assert.match(page, /page: pageParam/);
   assert.match(page, /DataLoadError/);
   assert.match(page, /loadWorkshopTaskStatusCounts/);
+  assert.match(page, /heading=\{heading\}/);
+  assert.match(queue, /whitespace-nowrap text-caption font-caption text-subtext-color/);
   assert.match(queue, /value: "all".*Today/s);
   assert.match(queue, /buildWorkshopQueueHref/);
+  assert.match(queue, /QUEUE_CELL_CLASS = "!h-16"/);
+  assert.match(queue, /className=\{QUEUE_CELL_CLASS\}/);
   assert.match(queue, /Bike ID/);
   assert.match(queue, /Bike title/);
   assert.match(queue, /Customer/);
@@ -339,7 +379,11 @@ test("queue surface: All-first tabs, status tiles, columns, sync help, load erro
   assert.match(queue, /Warnings/);
   assert.doesNotMatch(queue, /Progress/);
   assert.match(queue, /Updating from Booqable/);
-  assert.match(queue, /this can take a while/);
+  assert.match(queue, /every reserved order \(slow\)/);
+  assert.doesNotMatch(queue, /bg-warning-100/);
+  assert.doesNotMatch(queue, /text-warning-800/);
+  assert.match(queue, /text-body font-body-bold text-default-font/);
+  assert.match(queue, /Last full sync:/);
   assert.match(queue, /\/workshop\/\$\{taskId\}/);
   assert.match(tasks, /status=completed|status\)/);
   assert.match(tasks, /neq\("status", "completed"\)/);

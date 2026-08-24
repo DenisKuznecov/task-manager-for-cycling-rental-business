@@ -24,12 +24,12 @@ context:
 - Date tabs in order: **All**, Today, Tomorrow, Next 7 Days (`all` / `today` / `tomorrow` / `next_7_days`). Omit `filter` from the URL when `all`. Window is rental **start** in Europe/Madrid (`madrid_start_date`).
 - Status tiles above tabs, one each: To prepare, Being prepared, Needs recheck, Ready for pickup, In rental, Returned, Prepare for storage, Completed. No Cancelled tile. Counts use the same date+search as the table (not a shop-wide total) and still show every status while a tile is selected. Click a tile → `?status=`; click it again to clear. Date/status/search changes reset `page` to 1.
 - Default table: all dates, active work only. `cancelled` never in the queue. `completed` only when `status=completed`. Search (bike id, title, order #, customer name) applies inside the date × status cut.
-- Columns: **Bike ID**, **Bike title**, **Customer**, **Order #**, **From**, **Until**, **Status**, **Warnings**. Drop **Progress**. Warnings = `hasConfigurationWarning` (Booqable tag/checklist block, not bike setup): **Warning** badge or `—`. Row click → `/workshop/[taskId]`. From/Until = existing Madrid `DD-MM-YYYY HH:mm`. Missing customer or until → `—`.
+- Columns: **Bike ID**, **Bike title**, **Customer**, **Order #**, **From**, **Until**, **Status**, **Warnings**. Drop **Progress**. Warnings = `hasConfigurationWarning` (Booqable tag/checklist block, not bike setup): **Warning** badge or `—`. Row click → `/workshop/[taskId]`. Queue From/Until = Madrid `Thu 27 Aug · 19:00`. Task page keeps `DD-MM-YYYY HH:mm`. Missing customer or until → `—`. Body cells `h-14` (56px) via `Table.Row` className for touch; keep the Subframe Table. Header stays default `h-8`.
 - `WORKSHOP_PAGE_SIZE` = **15**. Reuse `TablePagination` (already hides when `totalPages <= 1`).
-- Distinct colours on badges and tiles: `to_prepare`=`warning`, `being_prepared`=`dark`, `needs_recheck`=`error`, `ready_for_pickup`=`info`, `in_rental`=`success`, `returned`=`mint`, `prepare_for_storage`=custom (not a Badge variant; e.g. violet/slate), `completed`=`neutral`, `cancelled`=`error` (tombstone only).
+- Distinct colours on **badges**: `to_prepare`=`warning`, `being_prepared`=`dark`, `needs_recheck`=`error`, `ready_for_pickup`=`info`, `in_rental`=`success`, `returned`=`mint`, `prepare_for_storage`=custom (not a Badge variant; e.g. violet/slate), `completed`=`neutral`, `cancelled`=`error` (tombstone only). Tiles use a left colour bar (same mapping), not a full fill. Count `0` is muted. Attention statuses (`to_prepare`, `being_prepared`, `needs_recheck`) get a light tint when count > 0. Selected tile: brand ring + `ring-offset-2` (louder than the bar).
 - Extend `workshop_tasks_view` + list DTO/loader with `orders.stops_at` and `customers.name`. Split id/title in the UI only. Local idempotent migration. Mechanics already SELECT those parent rows when a `bike_tasks` row exists — do not broaden DML or open `/orders`. Count tiles in Postgres (no JS `reduce` of matching rows).
 - Realtime, named actions, parent-order drawer unchanged from `spec-workshop-ui.md`. Task page keeps `workshopBikeLabel`. Log with `workshop:`.
-- Sync chrome explains when/what: Booqable is the source; buttons pull reserved-order updates into tasks (new reservation, bike change, dates, cancel) — not a page refresh. Help line under the buttons, not a modal. Copy: “Use these when something changed in Booqable and you need that change on the task list.” Next 7 days = reserved rentals starting this week (everyday catch-up). All reserved = every reserved order, any start; **this can take a while**. One click = one Booqable page (50); **Resume sync** if more remain.
+- Sync chrome is a header toolbar, not a right-side island: title + subtitle, then a left-aligned row of secondary buttons with last-sync + help beside them. Do not `justify-between` the title and sync across the page. Copy: “Pulls Booqable changes onto this list. Next 7 days = this week. All reserved = every reserved order (slow).” Page-of-50 / Resume sentence only when Resume is visible. Buttons are `neutral-secondary` (not brand-primary). Not a modal.
 - In-flight list sync (`isPending` / health `in_progress` for this run) must not be aborted by opening a task or other client navigation. Today a row click unmounts the queue and can cancel the server action. Keep the mechanic on `/workshop` until the batch finishes, **or** keep the request alive if they open a task (sync owner above the table, e.g. layout). If still page-scoped, intercept row navigation and show: “Updating from Booqable… stay on this page until it finishes.” Sync buttons already disable while pending.
 
 **Ask First:**
@@ -50,7 +50,7 @@ context:
 | Search | `query` set | Tiles and table recount/filter together, including customer name | Empty copy if none |
 | Pagination | 16+ rows in the current cut | Page size 15; control shown | `page` out of range → `1` |
 | Until / customer missing | `stops_at` or name null | `—` in that cell | Not an error |
-| Sync help | Two Sync buttons visible | Help line: Booqable → tasks; all-reserved can take a while | — |
+| Sync help | Two Sync buttons visible | Help beside buttons: Booqable → tasks; all-reserved is slow | — |
 | Sync in flight + row click | Sync pending; mechanic taps a row | Must not abort the request; stay with banner, or continue after navigation | Surface `{ ok: false }` inline; never silent |
 
 </frozen-after-approval>
@@ -91,13 +91,15 @@ context:
 
 ## Spec Change Log
 
+- 2026-08-24: Queue rows `[&>td]:h-14` (56px) for workshop touch screens; header stays `h-8`. Sync toolbar left-aligned under the title, not a right-side island.
+- 2026-08-24: Queue chrome pass with Denys (Sally). Title + secondary sync on one row; help beside buttons; tiles as accent bar + mute zeros + louder selected; queue dates `Thu 27 Aug · 19:00`; search on the tabs row.
 - 2026-08-24: List column **Config** → **Warnings** (same `hasConfigurationWarning` flag; badge **Warning** / `—`).
 - 2026-08-24: Sync chrome — help copy (Booqable updates → task list; all-reserved is slow); in-flight list sync must not be aborted by opening a task.
 - 2026-08-24: UX freeze with Denys (Sally). All default; tiles as single-select status filter scoped to the date tab; completed opt-in via Completed tile; cancelled stays hidden; split bike columns; Until + Customer from existing order/customer; drop Progress; distinct colours; page size 15.
 
 ## Design Notes
 
-`runSync` is queue-scoped `useTransition`; navigating to `/workshop/[taskId]` unmounts it. Intercept row clicks while pending **or** hoist into `layout.tsx`. Tile counts include Completed in the date+search window even when the table is active-only — count in SQL. Queue splits id/title; `workshopBikeLabel` stays on the task page. Reuse `formatWorkshopStart` for Until.
+`runSync` is queue-scoped `useTransition`; navigating to `/workshop/[taskId]` unmounts it. Intercept row clicks while pending **or** hoist into `layout.tsx`. Tile counts include Completed in the date+search window even when the table is active-only — count in SQL. Queue splits id/title; `workshopBikeLabel` stays on the task page. Queue From/Until uses `formatWorkshopQueueWhen`; task page keeps `formatWorkshopStart`.
 
 ## Verification
 
