@@ -394,7 +394,7 @@ test("queue surface: All-first tabs, status tiles, columns, sync help, load erro
   assert.match(page, /DataLoadError/);
   assert.match(page, /loadWorkshopTaskStatusCounts/);
   assert.match(page, /heading=\{heading\}/);
-  assert.match(queue, /text-caption font-caption text-subtext-color/);
+  assert.match(queue, /text-body font-body text-subtext-color/);
   const helpStart = queue.indexOf("Pulls Booqable changes onto this list");
   assert.notEqual(helpStart, -1);
   assert.doesNotMatch(
@@ -415,7 +415,7 @@ test("queue surface: All-first tabs, status tiles, columns, sync help, load erro
   assert.match(queue, /every reserved order \(slow\)/);
   assert.doesNotMatch(queue, /bg-warning-100/);
   assert.doesNotMatch(queue, /text-warning-800/);
-  assert.match(queue, /text-body font-body-bold text-default-font/);
+  assert.match(queue, /text-heading-3 font-heading-3 text-default-font/);
   assert.match(queue, /Last full sync:/);
   assert.match(queue, /\/workshop\/\$\{taskId\}/);
   assert.match(tasks, /status=completed|status\)/);

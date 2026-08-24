@@ -51,6 +51,10 @@ interface WorkshopQueueProps {
 const SEARCH_DEBOUNCE_MS = 300;
 /** Overrides Subframe Cell `h-12` (48px) for workshop touch screens. */
 const QUEUE_CELL_CLASS = "!h-16";
+const QUEUE_HEADER_CELL_CLASS =
+  "[&_span]:!text-body-bold [&_span]:!font-body-bold";
+const QUEUE_BADGE_CLASS = "h-7 [&_span]:!text-body [&_span]:!font-body";
+const QUEUE_TAB_CLASS = "[&_span]:!text-heading-3 [&_span]:!font-heading-3";
 
 const FILTER_TABS: { value: WorkshopQueueFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -66,6 +70,22 @@ function formatSyncTime(iso: string | null): string {
 
 function bikeIdCell(task: WorkshopTaskListRow): string {
   return task.bikeDisplayId?.trim() || task.bikeSourceId?.trim() || "Unknown bike";
+}
+
+function QueueStatusBadge({
+  status,
+}: {
+  status: WorkshopTaskListRow["status"];
+}) {
+  const props = workshopStatusBadgeProps(status);
+  return (
+    <Badge
+      {...props}
+      className={[QUEUE_BADGE_CLASS, props.className].filter(Boolean).join(" ")}
+    >
+      {WORKSHOP_STATUS_LABELS[status]}
+    </Badge>
+  );
 }
 
 export function WorkshopQueue({
@@ -210,7 +230,7 @@ export function WorkshopQueue({
     <div className="flex w-full min-w-0 flex-col items-start gap-5">
       <div className="flex w-full flex-col items-start gap-3">
         {heading}
-        <div className="flex w-full min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
+        <div className="mt-3 mb-4 flex w-full min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
           <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Button
               size="large"
@@ -258,10 +278,10 @@ export function WorkshopQueue({
             ) : null}
           </div>
           <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-body font-body-bold text-default-font">
+            <span className="text-heading-3 font-heading-3 text-default-font">
               Last full sync: {formatSyncTime(health.lastSuccessAt)}
             </span>
-            <span className="text-caption font-caption text-subtext-color">
+            <span className="text-body font-body text-subtext-color">
               Pulls Booqable changes onto this list. Next 7 days = this week.
               All reserved = every reserved order (slow).
               {resumable
@@ -299,7 +319,7 @@ export function WorkshopQueue({
 
       <div className="hidden w-full mobile:block">
         <Select
-          className="w-full"
+          className="w-full [&_span]:text-heading-3 [&_span]:font-heading-3"
           placeholder="Select"
           disabled={syncInFlight}
           value={queueStatusSelectValue(status)}
@@ -336,10 +356,10 @@ export function WorkshopQueue({
                 pushQueue(query, 1, filter, nextStatus);
               }}
             >
-              <span className="text-heading-3 font-heading-3">
+              <span className="text-heading-2 font-heading-2">
                 {statusCounts[tileStatus]}
               </span>
-              <span className="text-caption font-caption">
+              <span className="text-body font-body">
                 {WORKSHOP_STATUS_LABELS[tileStatus]}
               </span>
             </button>
@@ -351,6 +371,7 @@ export function WorkshopQueue({
         {FILTER_TABS.map((tab) => (
           <Tabs.Item
             key={tab.value}
+            className={QUEUE_TAB_CLASS}
             active={filter === tab.value}
             onClick={() => {
               if (tab.value === filter) return;
@@ -363,8 +384,7 @@ export function WorkshopQueue({
       </Tabs>
 
       <TextField
-        className="w-full max-w-md"
-        variant="filled"
+        className="w-full max-w-md [&>div]:h-10 [&_input]:text-heading-3 [&_input]:font-heading-3"
         label=""
         helpText=""
         icon={<FeatherSearch />}
@@ -381,10 +401,10 @@ export function WorkshopQueue({
       <div className="flex w-full flex-col items-start gap-6 overflow-hidden overflow-x-auto mobile:overflow-auto mobile:max-w-full">
         {tasks.length === 0 ? (
           <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-solid border-neutral-border bg-default-background py-12">
-            <span className="text-body-bold font-body-bold text-default-font text-center">
+            <span className="text-heading-3 font-heading-3 text-default-font text-center">
               No tasks found
             </span>
-            <span className="text-body font-body text-subtext-color text-center">
+            <span className="text-heading-3 font-heading-3 text-subtext-color text-center">
               {query.trim()
                 ? "Try adjusting your search."
                 : "No bikes need work in this filter."}
@@ -394,14 +414,30 @@ export function WorkshopQueue({
           <Table
             header={
               <Table.HeaderRow>
-                <Table.HeaderCell>Bike ID</Table.HeaderCell>
-                <Table.HeaderCell>Bike title</Table.HeaderCell>
-                <Table.HeaderCell>Customer</Table.HeaderCell>
-                <Table.HeaderCell>Order #</Table.HeaderCell>
-                <Table.HeaderCell>From</Table.HeaderCell>
-                <Table.HeaderCell>Until</Table.HeaderCell>
-                <Table.HeaderCell>Status</Table.HeaderCell>
-                <Table.HeaderCell>Warnings</Table.HeaderCell>
+                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  Bike ID
+                </Table.HeaderCell>
+                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  Bike title
+                </Table.HeaderCell>
+                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  Customer
+                </Table.HeaderCell>
+                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  Order #
+                </Table.HeaderCell>
+                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  From
+                </Table.HeaderCell>
+                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  Until
+                </Table.HeaderCell>
+                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  Status
+                </Table.HeaderCell>
+                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  Warnings
+                </Table.HeaderCell>
               </Table.HeaderRow>
             }
           >
@@ -413,45 +449,45 @@ export function WorkshopQueue({
                 onClick={() => openTask(task.taskId)}
               >
                 <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <span className="text-body-bold font-body-bold text-default-font">
+                  <span className="text-heading-3 font-heading-3 text-default-font">
                     {bikeIdCell(task)}
                   </span>
                 </Table.Cell>
                 <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <span className="text-body font-body text-default-font">
+                  <span className="text-heading-3 font-heading-3 text-default-font">
                     {task.bikeTitle?.trim() || "—"}
                   </span>
                 </Table.Cell>
                 <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
+                  <span className="whitespace-nowrap text-heading-3 font-heading-3 text-default-font">
                     {task.customerName?.trim() || "—"}
                   </span>
                 </Table.Cell>
                 <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
+                  <span className="whitespace-nowrap text-heading-3 font-heading-3 text-default-font">
                     {task.orderNumber != null ? `#${task.orderNumber}` : "—"}
                   </span>
                 </Table.Cell>
                 <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <span className="whitespace-nowrap text-body font-body text-neutral-500">
+                  <span className="whitespace-nowrap text-heading-3 font-heading-3 text-neutral-500">
                     {formatWorkshopQueueWhen(task.startsAt, task.madridStartDate)}
                   </span>
                 </Table.Cell>
                 <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <span className="whitespace-nowrap text-body font-body text-neutral-500">
+                  <span className="whitespace-nowrap text-heading-3 font-heading-3 text-neutral-500">
                     {formatWorkshopQueueWhen(task.stopsAt, null)}
                   </span>
                 </Table.Cell>
                 <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <Badge {...workshopStatusBadgeProps(task.status)}>
-                    {WORKSHOP_STATUS_LABELS[task.status]}
-                  </Badge>
+                  <QueueStatusBadge status={task.status} />
                 </Table.Cell>
                 <Table.Cell className={QUEUE_CELL_CLASS}>
                   {task.hasConfigurationWarning ? (
-                    <Badge variant="warning">Warning</Badge>
+                    <Badge variant="warning" className={QUEUE_BADGE_CLASS}>
+                      Warning
+                    </Badge>
                   ) : (
-                    <span className="text-body font-body text-neutral-500">
+                    <span className="text-heading-3 font-heading-3 text-neutral-500">
                       —
                     </span>
                   )}

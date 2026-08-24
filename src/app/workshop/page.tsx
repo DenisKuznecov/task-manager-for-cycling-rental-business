@@ -53,14 +53,14 @@ export default async function WorkshopPage({
       <span className="text-heading-1 font-heading-1 text-default-font">
         Workshop
       </span>
-      <span className="text-body font-body text-subtext-color">
+      <span className="text-heading-3 font-heading-3 text-subtext-color">
         Bike preparation, pickup, return, and storage.
       </span>
     </div>
   );
 
   return (
-    <div className="container max-w-none flex w-full flex-col items-start gap-6 bg-default-background py-12 mobile:pt-4">
+    <div className="container max-w-none flex w-full flex-col items-start gap-6 bg-default-background pt-4 pb-12">
       {healthError ? (
         <DataLoadError
           title="Couldn't load sync status"

@@ -15,7 +15,7 @@ export default async function WorkshopTaskPage({
 
   if (error) {
     return (
-      <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12 mobile:pt-4">
+      <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background pt-4 pb-12">
         <Alert
           variant="error"
           icon={<FeatherAlertTriangle />}
@@ -31,7 +31,7 @@ export default async function WorkshopTaskPage({
   }
 
   return (
-    <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12 mobile:pt-4">
+    <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background pt-4 pb-12">
       <WorkshopTask detail={item} />
     </div>
   );

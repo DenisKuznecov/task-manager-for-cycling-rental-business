@@ -5,7 +5,7 @@ const TABLE_ROW_COUNT = 8;
 
 export function WorkshopLoadingSkeleton() {
   return (
-    <div className="container max-w-none flex w-full flex-col items-start gap-6 bg-default-background py-12 mobile:pt-4">
+    <div className="container max-w-none flex w-full flex-col items-start gap-6 bg-default-background pt-4 pb-12">
       <div className="flex w-full flex-col items-start gap-3">
         <div className="flex flex-col items-start gap-2">
           <SkeletonText size="section-header" className="max-w-64" />
@@ -71,7 +71,7 @@ export function WorkshopLoadingSkeleton() {
 
 export function WorkshopTaskLoadingSkeleton() {
   return (
-    <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12 mobile:pt-4">
+    <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background pt-4 pb-12">
       <SkeletonText size="default" className="max-w-64" />
       <div className="flex w-full items-center justify-between gap-4">
         <SkeletonText size="section-header" className="max-w-80" />
