@@ -5,7 +5,7 @@ created: '2026-08-21'
 status: 'done'
 baseline_revision: '6210851dd8480750f10f95a74793c2bd7ed8f885'
 review_loop_iteration: 0
-followup_review_recommended: true
+followup_review_recommended: false
 context:
   - '{project-root}/_bmad-output/specs/spec-automating-mechanics-daily-work/checklist-contract.md'
   - '{project-root}/_bmad-output/planning-artifacts/architecture/architecture-echelon-cycling-hub-admin-2026-08-20/ARCHITECTURE-SPINE.md'
@@ -122,11 +122,34 @@ deferred:
 - Given a legal named action with current `version`, when the mechanic submits, then the existing action is called and a success refreshes the page to the new status.
 - Given `/workshop/{taskId}`, when the mechanic activates the order button, then `OrderDetailsDrawer` opens for that task’s `orderId` (same host/drawer as `/orders`) and the checklist stays on the page.
 
+### Review Findings
+
+- [x] [Review][Patch] Unify bikeLabel, formatStart, and STATUS_LABELS in workshop-ui.ts (Unknown bike + Madrid date and time) [src/app/workshop/_components/WorkshopTask.tsx:85]
+- [x] [Review][Patch] Stop wrapping WorkshopTask in Suspense fallback={null} [src/app/workshop/[taskId]/page.tsx:35]
+- [x] [Review][Patch] Log command failures with workshop: prefix [src/app/workshop/_components/WorkshopTask.tsx:122]
+- [x] [Review][Dismiss] Include bike_source_id in queue search — not important
+- [x] [Review][Dismiss] Disable Complete M2 until profile.id is known — unlikely given layout already loaded the profile
+- [x] [Review][Dismiss] Disable M2 confirm until the M1 outcome is valid — unreachable: all current items are required before Complete M1
+- [x] [Review][Dismiss] Guard runCommand against double-submit before isPending — not important
+- [x] [Review][Dismiss] Add an executing test that completed rows are excluded from date filters — do nothing
+- [x] [Review][Dismiss] Add an executing test for task-page error vs not-found vs cancelled — tests only; page already branches correctly
+- [x] [Review][Defer] README still lists @hello-pangea/dnd after uninstall [README.md:18] — deferred, pre-existing
+- [x] [Review][Defer] Drawer host tests grep source instead of rendering OrderDetailsDrawerHost [src/workshop-ui.test.mts:203] — deferred, pre-existing
+- [x] [Review][Defer] Repo-wide npm run lint still fails on bike-fits/wiki react-hooks findings [src/app/bike-fits] — deferred, pre-existing
+- [x] [Review][Defer] Workshop layout redirect("/login") has no ?next= [src/app/workshop/layout.tsx:23] — deferred, pre-existing
+
 ## Spec Change Log
 
 - 2026-08-21: Human added the brainstormed parent-order drawer on the task page (`OrderDetailsDrawer` + scoped mechanic SELECT). Avoids building a second order UI and keeps checklist work on the page.
 
 ## Review Triage Log
+
+### 2026-08-24 — Follow-up review pass
+- intent_gap: 0
+- bad_spec: 0
+- patch: 3 applied (shared bike/start helpers with `DD-MM-YYYY HH:mm`; task page no longer blanks on drawer `useSearchParams`; `workshop:` command-failure logs)
+- defer: 4 (unchanged)
+- dismiss: 6 (search source id, same-person profile miss, M2-before-M1, double-submit, completed-filter test, error/404/cancelled grep test)
 
 ### 2026-08-21 — Review pass
 - intent_gap: 0

@@ -1,4 +1,55 @@
-import type { BikeTaskStatus, WorkshopTaskItem } from "@/src/lib/workshop/domain";
+import type {
+  BikeTaskStatus,
+  WorkshopTaskItem,
+} from "@/src/lib/workshop/domain";
+
+export const WORKSHOP_STATUS_LABELS: Record<BikeTaskStatus, string> = {
+  to_prepare: "To prepare",
+  being_prepared: "Being prepared",
+  needs_recheck: "Needs recheck",
+  ready_for_pickup: "Ready for pickup",
+  in_rental: "In rental",
+  returned: "Returned",
+  prepare_for_storage: "Prepare for storage",
+  completed: "Completed",
+  cancelled: "Cancelled",
+};
+
+export function workshopBikeLabel(task: {
+  bikeDisplayId: string | null;
+  bikeSourceId: string;
+  bikeTitle: string | null;
+}): string {
+  const id = task.bikeDisplayId?.trim() || task.bikeSourceId?.trim() || "";
+  if (!id) return "Unknown bike";
+  const title = task.bikeTitle?.trim();
+  return title ? `${id} · ${title}` : id;
+}
+
+/** Start time as `DD-MM-YYYY HH:mm` in Europe/Madrid. */
+export function formatWorkshopStart(
+  startsAt: string | null,
+  madridStartDate: string | null,
+): string {
+  if (startsAt) {
+    const date = new Date(startsAt);
+    if (!Number.isNaN(date.getTime())) {
+      const parts = new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        hourCycle: "h23",
+        timeZone: "Europe/Madrid",
+      }).formatToParts(date);
+      const value = (type: Intl.DateTimeFormatPartTypes) =>
+        parts.find((part) => part.type === type)?.value ?? "";
+      return `${value("day")}-${value("month")}-${value("year")} ${value("hour")}:${value("minute")}`;
+    }
+  }
+  return madridStartDate ?? "—";
+}
 
 export function shouldRenderWorkshopQueue(error: string | null): boolean {
   return error === null;

@@ -13,14 +13,19 @@ import { TablePagination } from "@/src/components/TablePagination";
 import * as workshopActions from "@/src/lib/workshop/actions";
 import type { WorkshopSyncHealth } from "@/src/lib/workshop/data";
 import type {
-  BikeTaskStatus,
   ManualSyncScope,
   WorkshopErrorCode,
   WorkshopQueueFilter,
   WorkshopTaskListRow,
 } from "@/src/lib/workshop/domain";
 import { createClient } from "@/src/utils/supabase/client";
-import { formatMadridDateTime, statusBadgeVariant } from "./workshop-ui";
+import {
+  formatMadridDateTime,
+  formatWorkshopStart,
+  statusBadgeVariant,
+  workshopBikeLabel,
+  WORKSHOP_STATUS_LABELS,
+} from "./workshop-ui";
 
 interface WorkshopQueueProps {
   tasks: WorkshopTaskListRow[];
@@ -39,43 +44,6 @@ const FILTER_TABS: { value: WorkshopQueueFilter; label: string }[] = [
   { value: "next_7_days", label: "Next 7 Days" },
   { value: "all", label: "All" },
 ];
-
-const STATUS_LABELS: Record<BikeTaskStatus, string> = {
-  to_prepare: "To prepare",
-  being_prepared: "Being prepared",
-  needs_recheck: "Needs recheck",
-  ready_for_pickup: "Ready for pickup",
-  in_rental: "In rental",
-  returned: "Returned",
-  prepare_for_storage: "Prepare for storage",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
-
-function formatStart(
-  startsAt: string | null,
-  madridStartDate: string | null,
-): string {
-  if (startsAt) {
-    const date = new Date(startsAt);
-    if (!Number.isNaN(date.getTime())) {
-      return date.toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        timeZone: "Europe/Madrid",
-      });
-    }
-  }
-  return madridStartDate ?? "—";
-}
-
-function bikeLabel(task: WorkshopTaskListRow): string {
-  const id = task.bikeDisplayId?.trim() || task.bikeSourceId?.trim() || "";
-  if (!id) return "Unknown bike";
-  const title = task.bikeTitle?.trim();
-  return title ? `${id} · ${title}` : id;
-}
 
 function formatSyncTime(iso: string | null): string {
   if (!iso) return "Never";
@@ -340,7 +308,7 @@ export function WorkshopQueue({
               >
                 <Table.Cell>
                   <span className="text-body-bold font-body-bold text-default-font">
-                    {bikeLabel(task)}
+                    {workshopBikeLabel(task)}
                   </span>
                 </Table.Cell>
                 <Table.Cell>
@@ -350,12 +318,12 @@ export function WorkshopQueue({
                 </Table.Cell>
                 <Table.Cell>
                   <span className="whitespace-nowrap text-body font-body text-neutral-500">
-                    {formatStart(task.startsAt, task.madridStartDate)}
+                    {formatWorkshopStart(task.startsAt, task.madridStartDate)}
                   </span>
                 </Table.Cell>
                 <Table.Cell>
                   <Badge variant={statusBadgeVariant(task.status)}>
-                    {STATUS_LABELS[task.status]}
+                    {WORKSHOP_STATUS_LABELS[task.status]}
                   </Badge>
                 </Table.Cell>
                 <Table.Cell>

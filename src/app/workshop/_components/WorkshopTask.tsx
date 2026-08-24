@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { Suspense, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   FeatherAlertTriangle,
@@ -17,7 +17,6 @@ import { useOpenOrderDetails } from "@/src/components/orders/useOpenOrderDetails
 import { useUser } from "@/src/context/UserContext";
 import * as workshopActions from "@/src/lib/workshop/actions";
 import type {
-  BikeTaskStatus,
   ChecklistItemOutcome,
   WorkshopAttestation,
   WorkshopCommandResult,
@@ -29,9 +28,12 @@ import type {
 } from "@/src/lib/workshop/domain";
 import {
   formatMadridDateTime,
+  formatWorkshopStart,
   isM1ItemValid,
   m2ItemCaption,
   statusBadgeVariant,
+  workshopBikeLabel,
+  WORKSHOP_STATUS_LABELS,
 } from "./workshop-ui";
 
 type WorkshopNamedAction =
@@ -48,44 +50,8 @@ interface WorkshopTaskProps {
   detail: WorkshopTaskDetail;
 }
 
-const STATUS_LABELS: Record<BikeTaskStatus, string> = {
-  to_prepare: "To prepare",
-  being_prepared: "Being prepared",
-  needs_recheck: "Needs recheck",
-  ready_for_pickup: "Ready for pickup",
-  in_rental: "In rental",
-  returned: "Returned",
-  prepare_for_storage: "Prepare for storage",
-  completed: "Completed",
-  cancelled: "Cancelled",
-};
-
-function formatStart(
-  startsAt: string | null,
-  madridStartDate: string | null,
-): string {
-  if (startsAt) {
-    const date = new Date(startsAt);
-    if (!Number.isNaN(date.getTime())) {
-      return date.toLocaleDateString("en-GB", {
-        day: "numeric",
-        month: "short",
-        year: "numeric",
-        timeZone: "Europe/Madrid",
-      });
-    }
-  }
-  return madridStartDate ?? "—";
-}
-
 function formatSignedAt(iso: string): string {
   return formatMadridDateTime(iso);
-}
-
-function bikeLabel(task: WorkshopTaskListRow): string {
-  const id = task.bikeDisplayId?.trim() || task.bikeSourceId;
-  const title = task.bikeTitle?.trim();
-  return title ? `${id} · ${title}` : id;
 }
 
 function orderButtonLabel(task: WorkshopTaskListRow): string {
@@ -100,9 +66,35 @@ function sortItems(items: WorkshopTaskItem[]): WorkshopTaskItem[] {
   return [...items].sort((a, b) => a.sortOrder - b.sortOrder);
 }
 
+function OrderDetailsButton({
+  orderId,
+  label,
+}: {
+  orderId: string;
+  label: string;
+}) {
+  const openOrderDetails = useOpenOrderDetails();
+  return (
+    <Button
+      size="large"
+      variant="neutral-secondary"
+      onClick={() => openOrderDetails(orderId)}
+    >
+      {label}
+    </Button>
+  );
+}
+
+function OrderDetailsButtonFallback({ label }: { label: string }) {
+  return (
+    <Button size="large" variant="neutral-secondary" disabled>
+      {label}
+    </Button>
+  );
+}
+
 export function WorkshopTask({ detail }: WorkshopTaskProps) {
   const router = useRouter();
-  const openOrderDetails = useOpenOrderDetails();
   const { profile, isLoading: isProfileLoading } = useUser();
   const [isPending, startTransition] = useTransition();
   const [commandError, setCommandError] = useState<{
@@ -130,6 +122,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
       try {
         const result = await fn();
         if (!result.ok) {
+          console.error("workshop:", result.code, result.error);
           setCommandError({ code: result.code, error: result.error });
           if (result.code === "STALE_VERSION") {
             router.refresh();
@@ -141,6 +134,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
         setPsiDrafts({});
         router.refresh();
       } catch (error) {
+        console.error("workshop:", error);
         const message =
           error instanceof Error ? error.message : "Workshop command failed.";
         setCommandError({ code: "SOURCE_UNAVAILABLE", error: message });
@@ -191,14 +185,11 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
     !isProfileLoading &&
     (!isSamePerson || samePersonConfirmed);
 
+  const orderLabel = orderButtonLabel(task);
   const orderButton = (
-    <Button
-      size="large"
-      variant="neutral-secondary"
-      onClick={() => openOrderDetails(task.orderId)}
-    >
-      {orderButtonLabel(task)}
-    </Button>
+    <Suspense fallback={<OrderDetailsButtonFallback label={orderLabel} />}>
+      <OrderDetailsButton orderId={task.orderId} label={orderLabel} />
+    </Suspense>
   );
 
   const syncButton = (
@@ -225,7 +216,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
           Task Management
         </Breadcrumbs.Item>
         <Breadcrumbs.Divider />
-        <Breadcrumbs.Item active={true}>{bikeLabel(task)}</Breadcrumbs.Item>
+        <Breadcrumbs.Item active={true}>{workshopBikeLabel(task)}</Breadcrumbs.Item>
       </Breadcrumbs>
 
       <div className="flex w-full flex-wrap items-start justify-between gap-4">
@@ -233,14 +224,14 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
           <div className="flex flex-wrap items-center gap-2">
             <FeatherWrench className="text-heading-2 font-heading-2 text-default-font" />
             <span className="text-heading-2 font-heading-2 text-default-font">
-              {bikeLabel(task)}
+              {workshopBikeLabel(task)}
             </span>
             <Badge variant={statusBadgeVariant(task.status)}>
-              {STATUS_LABELS[task.status]}
+              {WORKSHOP_STATUS_LABELS[task.status]}
             </Badge>
           </div>
           <span className="text-body font-body text-subtext-color">
-            Starts {formatStart(task.startsAt, task.madridStartDate)}
+            Starts {formatWorkshopStart(task.startsAt, task.madridStartDate)}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">

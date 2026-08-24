@@ -5,10 +5,12 @@ import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import {
   formatMadridDateTime,
+  formatWorkshopStart,
   isM1ItemValid,
   m2ItemCaption,
   shouldRenderWorkshopQueue,
   statusBadgeVariant,
+  workshopBikeLabel,
 } from "./app/workshop/_components/workshop-ui.ts";
 import type { WorkshopTaskItem } from "./lib/workshop/domain/dtos.ts";
 import { resolveWorkshopQueueFilter } from "./lib/workshop/domain/statuses.ts";
@@ -39,6 +41,42 @@ test("formatMadridDateTime joins date and time with a comma, not at", () => {
   const text = formatMadridDateTime("2026-08-22T10:20:00.000Z");
   assert.equal(text, "22 Aug 2026, 12:20");
   assert.doesNotMatch(text, /\bat\b/);
+});
+
+test("formatWorkshopStart uses DD-MM-YYYY HH:mm in Madrid", () => {
+  assert.equal(
+    formatWorkshopStart("2026-08-22T10:20:00.000Z", null),
+    "22-08-2026 12:20",
+  );
+  assert.equal(formatWorkshopStart(null, "2026-08-22"), "2026-08-22");
+  assert.equal(formatWorkshopStart("not-a-date", null), "—");
+});
+
+test("workshopBikeLabel falls back to Unknown bike", () => {
+  assert.equal(
+    workshopBikeLabel({
+      bikeDisplayId: "ECH-1",
+      bikeSourceId: "src",
+      bikeTitle: "Road",
+    }),
+    "ECH-1 · Road",
+  );
+  assert.equal(
+    workshopBikeLabel({
+      bikeDisplayId: null,
+      bikeSourceId: "src-9",
+      bikeTitle: null,
+    }),
+    "src-9",
+  );
+  assert.equal(
+    workshopBikeLabel({
+      bikeDisplayId: "  ",
+      bikeSourceId: "  ",
+      bikeTitle: null,
+    }),
+    "Unknown bike",
+  );
 });
 
 test("invalid workshop filter becomes today", () => {
@@ -188,6 +226,7 @@ test("task page: not-found vs error vs cancelled tombstone and named actions", (
   );
   assert.match(page, /notFound\(\)/);
   assert.match(page, /Couldn't load this task/);
+  assert.doesNotMatch(page, /fallback=\{null\}/);
   assert.match(task, /Abandon this work/);
   assert.match(task, /startPreparation/);
   assert.match(task, /completeM1/);
@@ -209,5 +248,6 @@ test("task page reuses all-orders drawer via ?order=", () => {
   assert.match(layout, /OrderDetailsDrawerHost/);
   assert.match(layout, /Suspense/);
   assert.match(task, /useOpenOrderDetails/);
-  assert.match(task, /openOrderDetails\(task\.orderId\)/);
+  assert.match(task, /openOrderDetails\(orderId\)/);
+  assert.match(task, /OrderDetailsButtonFallback/);
 });

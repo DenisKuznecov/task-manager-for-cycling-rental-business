@@ -29,3 +29,10 @@
 - Live `SET ROLE authenticated` call of apply/acquire still not executed; local Postgres closed the connection on that path, so staff-JWT denial remains `has_function_privilege` plus an empty `bq-authz` count.
 - Parser envelope is not round-tripped into `booqable_apply_source_snapshot_v1` in CI; `verify:workshop` / adapter→apply remains an AD-13 seam (prior review also rejected adding CI wiring in this slice).
 - Bike `identifier` / title changes do not update workshop display fields when source and add-on fingerprints are otherwise unchanged; accepted for now (rename in Booqable need not refresh the task row).
+
+## Deferred from: code review of spec-workshop-ui.md (2026-08-24)
+
+- README still lists `@hello-pangea/dnd` for the mechanic kanban board after the package and Kanban files were removed; README was outside this story’s file list.
+- Drawer wiring tests still grep layout/task source for `OrderDetailsDrawerHost` / `useOpenOrderDetails` and never render the host, so a missing host in the tree would not fail `test:workshop-ui`.
+- Repo-wide `npm run lint` still fails on pre-existing bike-fits/wiki `react-hooks` findings from the Next.js 16 upgrade; workshop eslint is clean.
+- Workshop layout `redirect("/login")` has no `?next=`, matching the other role layouts; session expiry on a task page does not resume at that task.

@@ -1,4 +1,4 @@
-import React, { Suspense } from "react";
+import React from "react";
 import { notFound } from "next/navigation";
 import { FeatherAlertTriangle } from "@subframe/core";
 import { Alert } from "@/ui/components/Alert";
@@ -32,9 +32,7 @@ export default async function WorkshopTaskPage({
 
   return (
     <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12">
-      <Suspense fallback={null}>
-        <WorkshopTask detail={item} />
-      </Suspense>
+      <WorkshopTask detail={item} />
     </div>
   );
 }
