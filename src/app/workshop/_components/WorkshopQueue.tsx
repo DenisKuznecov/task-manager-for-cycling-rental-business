@@ -6,6 +6,7 @@ import { FeatherAlertTriangle, FeatherSearch } from "@subframe/core";
 import { Alert } from "@/ui/components/Alert";
 import { Badge } from "@/ui/components/Badge";
 import { Button } from "@/ui/components/Button";
+import { Select } from "@/ui/components/Select";
 import { Table } from "@/ui/components/Table";
 import { Tabs } from "@/ui/components/Tabs";
 import { TextField } from "@/ui/components/TextField";
@@ -26,9 +27,12 @@ import {
   buildWorkshopQueueHref,
   formatMadridDateTime,
   formatWorkshopQueueWhen,
+  queueStatusSelectValue,
   shouldBlockQueueNavigation,
+  statusFromQueueSelectValue,
   statusTileClassName,
   workshopStatusBadgeProps,
+  WORKSHOP_QUEUE_STATUS_SELECT_NONE,
   WORKSHOP_STATUS_LABELS,
 } from "./workshop-ui";
 
@@ -203,11 +207,11 @@ export function WorkshopQueue({
   };
 
   return (
-    <div className="flex w-full flex-col items-start gap-5">
+    <div className="flex w-full min-w-0 flex-col items-start gap-5">
       <div className="flex w-full flex-col items-start gap-3">
         {heading}
-        <div className="flex flex-wrap items-center gap-x-6 gap-y-2">
-          <div className="flex shrink-0 flex-wrap items-center gap-2">
+        <div className="flex w-full min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
+          <div className="flex min-w-0 flex-wrap items-center gap-2">
             <Button
               size="large"
               variant="neutral-secondary"
@@ -253,11 +257,11 @@ export function WorkshopQueue({
               </Button>
             ) : null}
           </div>
-          <div className="ml-2 flex flex-col gap-0.5">
+          <div className="flex min-w-0 flex-col gap-0.5">
             <span className="text-body font-body-bold text-default-font">
               Last full sync: {formatSyncTime(health.lastSuccessAt)}
             </span>
-            <span className="whitespace-nowrap text-caption font-caption text-subtext-color">
+            <span className="text-caption font-caption text-subtext-color">
               Pulls Booqable changes onto this list. Next 7 days = this week.
               All reserved = every reserved order (slow).
               {resumable
@@ -293,7 +297,28 @@ export function WorkshopQueue({
         />
       ) : null}
 
-      <div className="flex w-full flex-wrap items-stretch gap-2">
+      <div className="hidden w-full mobile:block">
+        <Select
+          className="w-full"
+          placeholder="Select"
+          disabled={syncInFlight}
+          value={queueStatusSelectValue(status)}
+          onValueChange={(value) => {
+            pushQueue(query, 1, filter, statusFromQueueSelectValue(value));
+          }}
+        >
+          <Select.Item value={WORKSHOP_QUEUE_STATUS_SELECT_NONE}>
+            Select
+          </Select.Item>
+          {WORKSHOP_QUEUE_STATUSES.map((tileStatus) => (
+            <Select.Item key={tileStatus} value={tileStatus}>
+              {WORKSHOP_STATUS_LABELS[tileStatus]}
+            </Select.Item>
+          ))}
+        </Select>
+      </div>
+
+      <div className="flex w-full flex-wrap items-stretch gap-2 mobile:hidden">
         {WORKSHOP_QUEUE_STATUSES.map((tileStatus) => {
           const selected = status === tileStatus;
           return (

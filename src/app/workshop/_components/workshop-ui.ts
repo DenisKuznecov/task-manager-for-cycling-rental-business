@@ -115,6 +115,23 @@ export function shouldRenderWorkshopQueue(error: string | null): boolean {
   return error === null;
 }
 
+/** Radix Select forbids an empty value; this row clears the mobile status filter. */
+export const WORKSHOP_QUEUE_STATUS_SELECT_NONE = "__none__";
+
+export function queueStatusSelectValue(
+  status: WorkshopQueueStatus | null,
+): string {
+  return status ?? WORKSHOP_QUEUE_STATUS_SELECT_NONE;
+}
+
+export function statusFromQueueSelectValue(
+  value: string,
+): WorkshopQueueStatus | null {
+  if (value === WORKSHOP_QUEUE_STATUS_SELECT_NONE) return null;
+  if (value === "cancelled" || !(value in WORKSHOP_STATUS_LABELS)) return null;
+  return value as WorkshopQueueStatus;
+}
+
 /** Queue URL: omit `filter` when All, omit `status` when active work, omit `page` when 1. */
 export function buildWorkshopQueueHref(
   pathname: string,

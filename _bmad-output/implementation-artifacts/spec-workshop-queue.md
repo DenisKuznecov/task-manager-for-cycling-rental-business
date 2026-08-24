@@ -22,7 +22,7 @@ context:
 **Always:**
 - Server page. Read `filter`, `status`, `query`, `page` from async `searchParams`. Invalid `filter` → `all`. Missing/invalid `status` → active work (exclude `completed` and `cancelled`). Invalid or out-of-range `page` → `1`.
 - Date tabs in order: **All**, Today, Tomorrow, Next 7 Days (`all` / `today` / `tomorrow` / `next_7_days`). Omit `filter` from the URL when `all`. Window is rental **start** in Europe/Madrid (`madrid_start_date`).
-- Status tiles above tabs, one each: To prepare, Being prepared, Needs recheck, Ready for pickup, In rental, Returned, Prepare for storage, Completed. No Cancelled tile. Counts use the same date+search as the table (not a shop-wide total) and still show every status while a tile is selected. Click a tile → `?status=`; click it again to clear. Date/status/search changes reset `page` to 1.
+- Status tiles above tabs, one each: To prepare, Being prepared, Needs recheck, Ready for pickup, In rental, Returned, Prepare for storage, Completed. No Cancelled tile. Counts use the same date+search as the table (not a shop-wide total) and still show every status while a tile is selected. Click a tile → `?status=`; click it again to clear. Date/status/search changes reset `page` to 1. On `mobile` (max 767px) hide the tiles and use a Subframe `Select`: placeholder and clear row both **Select** (no counts); picking Select clears `status` (active work). Same URL rules.
 - Default table: all dates, active work only. `cancelled` never in the queue. `completed` only when `status=completed`. Search (bike id, title, order #, customer name) applies inside the date × status cut.
 - Columns: **Bike ID**, **Bike title**, **Customer**, **Order #**, **From**, **Until**, **Status**, **Warnings**. Drop **Progress**. Warnings = `hasConfigurationWarning` (Booqable tag/checklist block, not bike setup): **Warning** badge or `—`. Row click → `/workshop/[taskId]`. Queue From/Until = Madrid `Thu 27 Aug · 19:00`. Task page keeps `DD-MM-YYYY HH:mm`. Missing customer or until → `—`. Body cells `h-14` (56px) via `Table.Row` className for touch; keep the Subframe Table. Header stays default `h-8`.
 - `WORKSHOP_PAGE_SIZE` = **15**. Reuse `TablePagination` (already hides when `totalPages <= 1`).
@@ -91,6 +91,7 @@ context:
 
 ## Spec Change Log
 
+- 2026-08-24: Mobile (max 767px) replaces status tiles with a clearable Select (placeholder/clear = Select; labels only). Tiles stay at 768+. Table may scroll horizontally.
 - 2026-08-24: Queue rows `[&>td]:h-14` (56px) for workshop touch screens; header stays `h-8`. Sync toolbar left-aligned under the title, not a right-side island.
 - 2026-08-24: Queue chrome pass with Denys (Sally). Title + secondary sync on one row; help beside buttons; tiles as accent bar + mute zeros + louder selected; queue dates `Thu 27 Aug · 19:00`; search on the tabs row.
 - 2026-08-24: List column **Config** → **Warnings** (same `hasConfigurationWarning` flag; badge **Warning** / `—`).

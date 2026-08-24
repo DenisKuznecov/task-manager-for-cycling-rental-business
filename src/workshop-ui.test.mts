@@ -11,11 +11,14 @@ import {
   isM1ItemValid,
   m2ItemCaption,
   PREPARE_FOR_STORAGE_BADGE_CLASS,
+  queueStatusSelectValue,
   shouldBlockQueueNavigation,
   shouldRenderWorkshopQueue,
   statusBadgeVariant,
+  statusFromQueueSelectValue,
   statusTileClassName,
   workshopBikeLabel,
+  WORKSHOP_QUEUE_STATUS_SELECT_NONE,
 } from "./app/workshop/_components/workshop-ui.ts";
 import type { WorkshopTaskItem } from "./lib/workshop/domain/dtos.ts";
 import {
@@ -251,6 +254,30 @@ test("M2 caption does not say completed when M1 outcome is missing", () => {
   );
 });
 
+test("mobile status select is clearable and label-only", () => {
+  assert.equal(queueStatusSelectValue(null), WORKSHOP_QUEUE_STATUS_SELECT_NONE);
+  assert.equal(queueStatusSelectValue("to_prepare"), "to_prepare");
+  assert.equal(statusFromQueueSelectValue(WORKSHOP_QUEUE_STATUS_SELECT_NONE), null);
+  assert.equal(statusFromQueueSelectValue("select"), null);
+  assert.equal(statusFromQueueSelectValue("being_prepared"), "being_prepared");
+
+  const queue = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopQueue.tsx"),
+    "utf8",
+  );
+  assert.match(queue, /hidden w-full mobile:block/);
+  assert.match(queue, /flex-wrap items-stretch gap-2 mobile:hidden/);
+  assert.match(queue, /placeholder="Select"/);
+  assert.match(queue, /WORKSHOP_QUEUE_STATUS_SELECT_NONE/);
+  assert.match(queue, /WORKSHOP_STATUS_LABELS\[tileStatus\]/);
+  const selectBlock = queue.slice(
+    queue.indexOf("<Select"),
+    queue.indexOf("</Select>") + "</Select>".length,
+  );
+  assert.match(selectBlock, /Select/);
+  assert.doesNotMatch(selectBlock, /statusCounts/);
+});
+
 test("queue statuses use distinct badge colours", () => {
   assert.equal(statusBadgeVariant("to_prepare"), "warning");
   assert.equal(statusBadgeVariant("being_prepared"), "dark");
@@ -367,7 +394,13 @@ test("queue surface: All-first tabs, status tiles, columns, sync help, load erro
   assert.match(page, /DataLoadError/);
   assert.match(page, /loadWorkshopTaskStatusCounts/);
   assert.match(page, /heading=\{heading\}/);
-  assert.match(queue, /whitespace-nowrap text-caption font-caption text-subtext-color/);
+  assert.match(queue, /text-caption font-caption text-subtext-color/);
+  const helpStart = queue.indexOf("Pulls Booqable changes onto this list");
+  assert.notEqual(helpStart, -1);
+  assert.doesNotMatch(
+    queue.slice(helpStart - 120, helpStart),
+    /whitespace-nowrap/,
+  );
   assert.match(queue, /value: "all".*Today/s);
   assert.match(queue, /buildWorkshopQueueHref/);
   assert.match(queue, /QUEUE_CELL_CLASS = "!h-16"/);

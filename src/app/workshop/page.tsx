@@ -60,7 +60,7 @@ export default async function WorkshopPage({
   );
 
   return (
-    <div className="container max-w-none flex w-full flex-col items-start gap-6 bg-default-background py-12">
+    <div className="container max-w-none flex w-full flex-col items-start gap-6 bg-default-background py-12 mobile:pt-4">
       {healthError ? (
         <DataLoadError
           title="Couldn't load sync status"

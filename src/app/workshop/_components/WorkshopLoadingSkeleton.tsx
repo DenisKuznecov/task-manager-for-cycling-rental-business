@@ -5,7 +5,7 @@ const TABLE_ROW_COUNT = 8;
 
 export function WorkshopLoadingSkeleton() {
   return (
-    <div className="container max-w-none flex w-full flex-col items-start gap-6 bg-default-background py-12">
+    <div className="container max-w-none flex w-full flex-col items-start gap-6 bg-default-background py-12 mobile:pt-4">
       <div className="flex w-full flex-col items-start gap-3">
         <div className="flex flex-col items-start gap-2">
           <SkeletonText size="section-header" className="max-w-64" />
@@ -18,7 +18,11 @@ export function WorkshopLoadingSkeleton() {
         </div>
       </div>
 
-      <div className="flex w-full flex-wrap items-stretch gap-2">
+      <SkeletonText
+        size="default"
+        className="hidden h-8 w-full mobile:block"
+      />
+      <div className="flex w-full flex-wrap items-stretch gap-2 mobile:hidden">
         {Array.from({ length: 8 }).map((_, index) => (
           <SkeletonText
             key={index}
@@ -67,7 +71,7 @@ export function WorkshopLoadingSkeleton() {
 
 export function WorkshopTaskLoadingSkeleton() {
   return (
-    <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12">
+    <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12 mobile:pt-4">
       <SkeletonText size="default" className="max-w-64" />
       <div className="flex w-full items-center justify-between gap-4">
         <SkeletonText size="section-header" className="max-w-80" />
