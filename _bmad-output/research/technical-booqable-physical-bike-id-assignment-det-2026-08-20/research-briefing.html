@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Booqable physical bike ID assignment detection</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f7f9;
+      --surface: #ffffff;
+      --surface-2: #eef1f5;
+      --text: #172033;
+      --muted: #5b6578;
+      --line: #d7dde6;
+      --accent: #145da0;
+      --accent-soft: #e2eef9;
+      --verified: #176b45;
+      --verified-soft: #dff4e9;
+      --medium: #8a5a00;
+      --medium-soft: #fff0c7;
+      --low: #9b2c2c;
+      --low-soft: #fde2e2;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #11151d;
+        --surface: #191f2a;
+        --surface-2: #222a37;
+        --text: #eef2f7;
+        --muted: #aeb8c8;
+        --line: #344052;
+        --accent: #79b8ee;
+        --accent-soft: #203a52;
+        --verified: #7bd5aa;
+        --verified-soft: #173b2d;
+        --medium: #f0c36b;
+        --medium-soft: #443513;
+        --low: #ff9b9b;
+        --low-soft: #4a2427;
+      }
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font: 16px/1.55 system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    a { color: var(--accent); }
+    header {
+      border-bottom: 1px solid var(--line);
+      background: var(--surface);
+      padding: 38px max(24px, calc((100vw - 1120px) / 2));
+    }
+    header p { margin: 10px 0 0; color: var(--muted); max-width: 900px; }
+    h1 { margin: 0; font-size: clamp(26px, 4vw, 40px); line-height: 1.14; }
+    h2 { margin-top: 0; font-size: 25px; line-height: 1.25; }
+    h3 { margin-top: 30px; font-size: 19px; }
+    .meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 18px; }
+    .pill, .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 650;
+      padding: 4px 10px;
+    }
+    .pill { background: var(--surface-2); color: var(--muted); }
+    .verified { background: var(--verified-soft); color: var(--verified); }
+    .medium { background: var(--medium-soft); color: var(--medium); }
+    .low, .unverified { background: var(--low-soft); color: var(--low); }
+    .layout {
+      display: grid;
+      grid-template-columns: 230px minmax(0, 1fr);
+      gap: 34px;
+      max-width: 1120px;
+      margin: 0 auto;
+      padding: 30px 24px 64px;
+    }
+    nav { position: sticky; top: 18px; align-self: start; }
+    nav strong { display: block; margin-bottom: 8px; }
+    nav a {
+      display: block;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 6px 0;
+      border-bottom: 1px solid transparent;
+    }
+    nav a:hover { color: var(--accent); }
+    main { min-width: 0; }
+    section {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      margin-bottom: 22px;
+      padding: clamp(22px, 4vw, 36px);
+    }
+    .summary { border-top: 5px solid var(--accent); }
+    .decision {
+      background: var(--accent-soft);
+      border-left: 4px solid var(--accent);
+      padding: 15px 18px;
+      margin-top: 22px;
+    }
+    ol, ul { padding-left: 22px; }
+    li + li { margin-top: 9px; }
+    code {
+      background: var(--surface-2);
+      border-radius: 5px;
+      padding: 2px 5px;
+      font-size: 0.92em;
+    }
+    pre {
+      overflow-x: auto;
+      background: var(--surface-2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    pre code { padding: 0; background: none; }
+    .source-ref {
+      text-decoration: none;
+      font-weight: 700;
+      white-space: nowrap;
+    }
+    .status-row { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+    details { border-top: 1px solid var(--line); padding-top: 18px; }
+    summary { cursor: pointer; font-weight: 700; }
+    .table-wrap { overflow-x: auto; margin-top: 18px; }
+    .sources { border-collapse: collapse; min-width: 940px; width: 100%; font-size: 13px; }
+    .sources td { border-bottom: 1px solid var(--line); padding: 11px 9px; vertical-align: top; }
+    .sources td:first-child { color: var(--accent); font-weight: 750; }
+    .maintenance { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .maintenance div { background: var(--surface-2); border-radius: 9px; padding: 14px; }
+    footer { color: var(--muted); font-size: 13px; text-align: center; padding: 24px; }
+    @media (max-width: 820px) {
+      .layout { grid-template-columns: 1fr; }
+      nav { position: static; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 15px 18px; }
+      nav a { display: inline-block; margin-right: 14px; }
+      .maintenance { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Booqable physical bike ID assignment detection</h1>
+    <p><strong>Decision:</strong> Choose the smallest reliable mechanism for detecting physical bike assignment, removal, and replacement on reserved Booqable orders.</p>
+    <div class="meta">
+      <span class="pill">Technical research</span>
+      <span class="pill">Standard depth</span>
+      <span class="pill">Normal validation</span>
+      <span class="pill">20 August 2026</span>
+      <span class="badge verified">2 verified claims</span>
+      <span class="badge unverified">2 unverified claims</span>
+    </div>
+  </header>
+  <div class="layout">
+    <nav aria-label="Table of contents">
+      <strong>Contents</strong>
+      <a href="#summary">Decision</a>
+      <a href="#architecture">Architecture</a>
+      <a href="#spike">Tenant spike</a>
+      <a href="#evidence">Evidence</a>
+      <a href="#sources">Sources</a>
+      <a href="#maintenance">Maintenance</a>
+    </nav>
+    <main>
+      <section class="summary" id="summary">
+        <h2>Build a snapshot reconciler</h2>
+        <p>The current implementation already uses <code>order.updated</code> as a signal, then fetches the complete order instead of interpreting the webhook payload. Keep that flow. Add a staff-triggered <strong>Sync latest data from Booqable</strong> action that re-fetches relevant upcoming reserved orders, compares their current <code>stock_items.id</code> values with stored state, and creates or cancels bike tasks from the difference. Skip completed and cancelled orders.</p>
+        <ol>
+          <li>The v4 API exposes physical assignments through order-line planning relationships, although the complete <code>include</code> parameter value needs live verification <a class="source-ref" href="#src-1">[1]</a>.</li>
+          <li>The retrieved official sources do not establish assignment-event coverage or delivery guarantees. Fresh verification did not reproduce the initial pass's <code>order.updated</code> finding <a class="source-ref" href="#src-2">[2]</a>; the official Zapier material confirms only a broader Updated Order trigger <a class="source-ref" href="#src-3">[3]</a>.</li>
+          <li>Human-readable stock identifiers are editable, making the API resource ID the safer identity key <a class="source-ref" href="#src-5">[5]</a>.</li>
+        </ol>
+        <div class="decision"><strong>MVP decision:</strong> Use <code>order.updated</code> plus an explicit manual sync. Do not add automatic periodic polling. Task creation may wait until the webhook fires or staff run the sync action.</div>
+      </section>
+
+      <section id="architecture">
+        <h2>Recommended architecture</h2>
+        <div class="status-row">
+          <span class="badge verified">Medium-high: snapshot reconciliation</span>
+          <span class="badge low">Low: assignment webhook as sole trigger</span>
+        </div>
+        <ol>
+          <li><strong>Reconcile and persist.</strong> Implement one idempotent <code>reconcileOrder(orderId)</code>. Fetch current assignments, serialize per order, and persist the canonical assignment set or snapshot hash.</li>
+          <li><strong>Apply set-diff semantics.</strong> For previous set <code>P</code> and current set <code>C</code>, create tasks for <code>C − P</code>, cancel tasks for <code>P − C</code>, and retain tasks for <code>P ∩ C</code>. Replacement <code>{A} → {B}</code> cancels A and creates B; it never transfers A's history.</li>
+          <li><strong>Trigger and recover.</strong> Keep the existing <code>order.updated</code> handler: use the event only to identify the order, then fetch its authoritative API state. Add <strong>Sync latest data from Booqable</strong> for staff to reconcile relevant upcoming reserved orders on demand. Exclude completed and cancelled orders, prevent simultaneous runs, show the last successful sync time, and use the same reconciler for both paths.</li>
+          <li><strong>Handle failure.</strong> Paginate until exhaustion. Retry transient failures and HTTP <code>5xx</code> or <code>429</code> responses with exponential backoff and jitter; honor <code>Retry-After</code> when present.</li>
+        </ol>
+        <p>Use a uniqueness constraint equivalent to <code>(booqable_order_id, stock_item_id, task_kind)</code>. This design preserves the rule that work history belongs to one physical bike.</p>
+      </section>
+
+      <section id="spike">
+        <h2>Controlled tenant spike</h2>
+        <p>Use a disposable order containing a trackable bike product. Capture each webhook request and its headers, body, delivery timestamp, and response attempts. Capture the API snapshot immediately and after 1, 5, and 30 seconds.</p>
+        <ol>
+          <li>Reserve the generic product without selecting a bike; confirm that the snapshot has no physical stock item.</li>
+          <li>Assign bike A in the UI; record emitted topics and verify the v4 relationship path, complete <code>include</code> parameter, resource ID, and read-after-write lag.</li>
+          <li>Remove A; verify <code>{A} → ∅</code>.</li>
+          <li>Replace A with B; verify <code>{A} → {B}</code> becomes cancellation of A and creation of B.</li>
+          <li>Repeat assignment, removal, and replacement through <code>order_fulfillments/specify</code>; compare UI and API behavior.</li>
+          <li>Make an unrelated order edit; verify a broad update produces a no-op reconciliation.</li>
+          <li>Perform rapid <code>A → B → C</code>; measure ordering, coalescing, stale payloads, and convergence.</li>
+          <li>Cause a timeout and return HTTP <code>500</code> responses; measure retries, duplicates, identifiers, and authentication. Trigger API <code>429</code> separately.</li>
+        </ol>
+        <h3>Required outputs</h3>
+        <ul>
+          <li>Exact successful v4 relationship and <code>include</code> request.</li>
+          <li>Event behavior for every UI and API mutation.</li>
+          <li>Webhook retry, duplication, ordering, payload, and authentication behavior.</li>
+          <li>Measured read-after-write delay and chosen debounce window.</li>
+          <li>Manual sync request volume, duration, failure behavior, and any HTTP <code>429</code> responses.</li>
+          <li>Clear UI behavior for progress, last successful sync time, success, and failure.</li>
+        </ul>
+        <div class="decision"><strong>Acceptance rule:</strong> Both <code>order.updated</code> and the manual sync must call the same idempotent reconciler and converge on the correct physical-bike assignment. A missing webhook is acceptable because staff can recover through manual sync.</div>
+      </section>
+
+      <section id="evidence">
+        <h2>Integration evidence</h2>
+        <h3>Snapshot reconciliation is feasible</h3>
+        <p>Booqable distinguishes generic reservation from later selection of a specific physical item and supports removing selected items <a class="source-ref" href="#src-4">[4]</a>. The v4 hierarchy is:</p>
+        <pre><code>order
+└── lines
+    └── planning
+        └── stock_item_plannings
+            └── stock_item</code></pre>
+        <p>The candidate nested request is:</p>
+        <pre><code>GET /api/4/orders/{order_id}
+  ?include=lines,lines.planning,
+           lines.planning.stock_item_plannings,
+           lines.planning.stock_item_plannings.stock_item</code></pre>
+        <p>The complete dotted parameter remains unverified. Legacy v1 independently confirms the planning model but should not guide v4 compatibility <a class="source-ref" href="#src-7">[7]</a>. Store <code>stock_items.id</code> as the safer identity key and the human-readable stock identifier as mutable display metadata <a class="source-ref" href="#src-5">[5]</a>.</p>
+
+        <h3>Events cannot yet be authoritative</h3>
+        <p>The retrieved official sources do not define whether UI or API assignment changes emit an event. The official Zapier article does not connect stock assignment to its Updated Order trigger <a class="source-ref" href="#src-3">[3]</a>. A secondary OpenAPI extraction identifies <code>POST /api/4/order_fulfillments/specify</code>, useful for testing but not authoritative for webhook side effects <a class="source-ref" href="#src-6">[6]</a>.</p>
+        <p>The retrieved v4 page documents authentication, pagination, single-use signed requests, and HTTP <code>429</code>, but it does not specify quotas, assignment payloads, webhook delivery behavior, event IDs, receiver authentication, read-after-write lag, or an assignment change feed <a class="source-ref" href="#src-8">[8]</a>.</p>
+        <div class="status-row">
+          <span class="badge medium">Medium confidence: documentation silence</span>
+          <span class="badge unverified">Unverified: assignment-event behavior</span>
+        </div>
+      </section>
+
+      <section id="sources">
+        <h2>Sources</h2>
+        <details open>
+          <summary>Eight cited source records</summary>
+          <div class="table-wrap">
+            <table class="sources"><tbody><tr id="src-1"><td>[1]</td><td>v4 order/planning/stock-item relationship hierarchy and nested includes</td><td><a href="https://developers.booqable.com/v4.html" target="_blank" rel="noopener">Booqable API v4 documentation</a></td><td>n.d.</td><td>2026-08-20</td><td>High for hierarchy; complete include string unverified</td></tr><tr id="src-2"><td>[2]</td><td>An initial pass recorded `order.updated`, but fresh verification did not find it on the retrieved v4 page; retrieved official sources do not establish an assignment-trigger contract</td><td><a href="https://developers.booqable.com/v4.html" target="_blank" rel="noopener">Booqable API v4 documentation</a></td><td>n.d.</td><td>2026-08-20</td><td>Low for topic availability; medium for documentation silence</td></tr><tr id="src-3"><td>[3]</td><td>Official Zapier integration lists Updated, Reserved, Started, and Stopped Order triggers</td><td><a href="https://help.booqable.com/en/articles/1202508-how-to-connect-booqable-to-other-applications-through-zapier" target="_blank" rel="noopener">Booqable help</a></td><td>n.d.</td><td>2026-08-20</td><td>High for trigger names; low for raw-webhook mapping</td></tr><tr id="src-4"><td>[4]</td><td>Trackable products can be reserved generically and assigned specific physical items later</td><td><a href="https://help.booqable.com/en/articles/99552-how-to-add-products-to-an-order" target="_blank" rel="noopener">Booqable help</a></td><td>2026-08-19</td><td>2026-08-20</td><td>High</td></tr><tr id="src-5"><td>[5]</td><td>Human stock/product identifiers are adjustable</td><td><a href="https://help.booqable.com/en/articles/1209362-how-to-track-rental-stock-items-individually" target="_blank" rel="noopener">Booqable help</a></td><td>n.d.; page showed “Updated yesterday”</td><td>2026-08-20</td><td>High</td></tr><tr id="src-6"><td>[6]</td><td>Secondary extraction identifies `POST /api/4/order_fulfillments/specify`</td><td><a href="https://raw.githubusercontent.com/api-evangelist/booqable/refs/heads/main/openapi/booqable-order-fulfillment-api-openapi.yml" target="_blank" rel="noopener">API Evangelist OpenAPI extraction</a></td><td>n.d.</td><td>2026-08-20</td><td>Medium</td></tr><tr id="src-7"><td>[7]</td><td>Legacy API independently confirms planning and stock-item-planning assignment semantics</td><td><a href="https://developers.booqable.com/v1.html" target="_blank" rel="noopener">Booqable API v1 documentation</a></td><td>n.d.</td><td>2026-08-20</td><td>High for legacy semantics</td></tr><tr id="src-8"><td>[8]</td><td>Retrieved v4 page documents authentication, pagination, request signing, and HTTP `429`, but does not state delivery details</td><td><a href="https://developers.booqable.com/v4.html" target="_blank" rel="noopener">Booqable API v4 documentation</a></td><td>n.d.</td><td>2026-08-20</td><td>High for documented features; medium for documentation silence</td></tr></tbody></table>
+          </div>
+        </details>
+      </section>
+
+      <section id="maintenance">
+        <h2>Source maintenance</h2>
+        <p>The one-month compatibility window uses the live-document access date where publishers provide no publication date.</p>
+        <div class="maintenance">
+          <div><strong>Relationship path</strong><br>Re-check by 2026-09-20</div>
+          <div><strong>Webhook documentation</strong><br>Re-check by 2026-09-20</div>
+          <div><strong>Stock-item identity</strong><br>Re-check by 2026-09-20</div>
+          <div><strong>Auth and rate limits</strong><br>Re-check by 2026-09-20</div>
+        </div>
+        <p>No tracked claim is stale as of 2026-08-20. A completed tenant test should trigger an immediate refresh because it can replace the principal unverified claim with observed evidence.</p>
+      </section>
+    </main>
+  </div>
+  <footer>Generated from the cited research report. The Markdown report remains the source of truth.</footer>
+</body>
+</html>

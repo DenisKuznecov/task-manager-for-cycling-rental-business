@@ -5,11 +5,12 @@ import { LoginForm } from "./_components/LoginForm";
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams?: { next?: string };
+  searchParams: Promise<{ next?: string }>;
 }) {
   // If already signed in, send the user to their role-based landing (or the
   // explicit ?next= that originally bounced them here).
-  await requireAnonymous(searchParams?.next ?? null);
+  const { next } = await searchParams;
+  await requireAnonymous(next ?? null);
 
   return (
     <Suspense

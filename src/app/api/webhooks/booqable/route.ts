@@ -1,23 +1,19 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { syncBooqableOrder } from "@/src/lib/booqable/sync";
+import { reconcileBooqableOrder } from "@/src/lib/workshop/application/reconcile-order";
+import {
+  parseBooqableWebhookOrderId,
+  webhookDeliveryStatus,
+  workshopSyncAllowed,
+} from "@/src/lib/workshop/application/sync-env";
 
 export const dynamic = "force-dynamic";
 
 /**
- * Thin webhook: the form-encoded payload is only used to identify the order
- * and filter out ghost orders. The actual data (customer, order, items) is
- * fetched from the Booqable API by syncBooqableOrder, so out-of-order or
- * duplicate webhook deliveries always converge on the current state.
+ * Thin webhook: the form-encoded payload is only used to identify the order.
+ * Eligibility and assignment state come from a full Booqable snapshot apply.
  */
 export async function POST(request: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
-
   try {
-    // --- 1. SECURITY CHECK: VERIFY THE WEBHOOK SECRET ---
     const { searchParams } = new URL(request.url);
     const providedSecret = searchParams.get("secret");
 
@@ -32,46 +28,38 @@ export async function POST(request: Request) {
     }
 
     if (providedSecret !== process.env.BOOQABLE_WEBHOOK_SECRET) {
-      console.warn(
-        `[webhooks/booqable] Unauthorized webhook attempt. Provided secret: ${providedSecret}`,
-      );
+      console.warn("[webhooks/booqable] Unauthorized webhook attempt");
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
-    // ----------------------------------------------------
 
-    const rawText = await request.text();
-    const urlParams = new URLSearchParams(rawText);
-    const data = Object.fromEntries(urlParams.entries()) as Record<
-      string,
-      string
-    >;
-
-    // --- THE GHOST ORDER BOUNCER ---
-    const orderStatus = data["data[status]"] || null;
-    const orderNumber = data["data[number]"] || null;
-
-    if (orderStatus === "new" || orderStatus === "concept" || !orderNumber) {
-      console.log(
-        `[webhooks/booqable] Ignoring ghost order. Status: ${orderStatus}, Number: ${orderNumber}`,
+    if (!workshopSyncAllowed()) {
+      const outcome = webhookDeliveryStatus({ allowed: false });
+      return NextResponse.json(
+        { received: true, ignored: true },
+        { status: outcome.status },
       );
-      // Return 200 OK so Booqable knows we received it and doesn't retry
-      return NextResponse.json({ received: true, ignored: true }, { status: 200 });
     }
-    // -------------------------------
 
-    const booqableOrderId = data["data[id]"] || null;
+    const booqableOrderId = parseBooqableWebhookOrderId(await request.text());
     if (!booqableOrderId) {
-      console.warn("[webhooks/booqable] Missing data[id] - skipping sync");
-      return NextResponse.json({ received: true }, { status: 200 });
+      const outcome = webhookDeliveryStatus({ allowed: true });
+      return NextResponse.json({ received: true }, { status: outcome.status });
     }
 
-    await syncBooqableOrder(supabase, booqableOrderId);
+    const result = await reconcileBooqableOrder(booqableOrderId, "webhook");
+    const outcome = webhookDeliveryStatus({ allowed: true, result });
+    if (outcome.status === 500) {
+      console.error("[webhooks/booqable] Failure:", result.ok ? undefined : result.error);
+      return NextResponse.json(
+        { error: "Failed to process webhook", message: result.ok ? undefined : result.error },
+        { status: 500 },
+      );
+    }
 
     return NextResponse.json({ received: true }, { status: 200 });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[webhooks/booqable] Failure:", err);
-    // 500 so Booqable retries the delivery
     return NextResponse.json(
       { error: "Failed to process webhook", message },
       { status: 500 },

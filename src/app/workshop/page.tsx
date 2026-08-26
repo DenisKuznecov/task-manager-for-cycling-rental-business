@@ -1,163 +1,94 @@
-"use client";
+import React from "react";
+import { DataLoadError } from "@/src/components/DataLoadError";
+import { workshopData, workshopDomain } from "@/src/lib/workshop";
+import { WorkshopQueue } from "./_components/WorkshopQueue";
+import { shouldRenderWorkshopQueue } from "./_components/workshop-ui";
 
-import React, { useState } from "react";
-import { Badge } from "@/ui/components/Badge";
-import { Button } from "@/ui/components/Button";
-import { DropdownMenu } from "@/ui/components/DropdownMenu";
-import { TextField } from "@/ui/components/TextField";
-import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
-import { FeatherChevronDown } from "@subframe/core";
-import { FeatherCircleDot } from "@subframe/core";
-import { FeatherDollarSign } from "@subframe/core";
-import { FeatherDownload } from "@subframe/core";
-import { FeatherKanbanSquare } from "@subframe/core";
-import { FeatherPlus } from "@subframe/core";
-import { FeatherSearch } from "@subframe/core";
-import { FeatherSettings2 } from "@subframe/core";
-import { FeatherUser } from "@subframe/core";
-import * as SubframeCore from "@subframe/core";
-import { KanbanBoard } from "@/src/components/KanbanBoard";
+export default async function WorkshopPage({
+  searchParams,
+}: {
+  searchParams: Promise<{
+    filter?: string;
+    status?: string;
+    query?: string;
+    page?: string;
+  }>;
+}) {
+  const {
+    filter: filterParam,
+    status: statusParam,
+    query: queryParam,
+    page: pageParam,
+  } = await searchParams;
 
-function WorkshopPage() {
-  const [search, setSearch] = useState("");
+  const filter = workshopDomain.resolveWorkshopQueueFilter(filterParam);
+  const status = workshopDomain.resolveWorkshopQueueStatus(statusParam);
+  const query = queryParam ?? "";
+  const parsedPage = Number(pageParam);
+  const requestedPage =
+    Number.isInteger(parsedPage) && parsedPage > 0 ? parsedPage : 1;
+
+  const [tasksResult, countsResult, healthResult] = await Promise.all([
+    workshopData.loadWorkshopTasks({
+      filter,
+      status,
+      query,
+      page: requestedPage,
+    }),
+    workshopData.loadWorkshopTaskStatusCounts({ filter, query }),
+    workshopData.loadWorkshopSyncHealth(),
+  ]);
+
+  const { tasks, count, page, error } = tasksResult;
+  const { counts, error: countsError } = countsResult;
+  const { health, error: healthError } = healthResult;
+  const loadError = error ?? countsError;
+  const totalPages = Math.max(
+    1,
+    Math.ceil(count / workshopData.WORKSHOP_PAGE_SIZE),
+  );
+
+  const heading = (
+    <div className="flex min-w-0 flex-col items-start gap-2">
+      <span className="text-heading-1 font-heading-1 text-default-font">
+        Workshop
+      </span>
+      <span className="text-heading-3 font-heading-3 text-subtext-color">
+        Bike preparation, pickup, return, and storage.
+      </span>
+    </div>
+  );
 
   return (
-    <DefaultPageLayout>
-      <div className="flex min-h-full w-full flex-1 flex-col items-start bg-default-background">
-        <div className="flex w-full flex-wrap items-center gap-2 px-6 pt-6 pb-2">
-          <div className="flex grow shrink-0 basis-0 items-center gap-2">
-            <FeatherKanbanSquare className="text-heading-2 font-heading-2 text-default-font" />
-            <span className="text-heading-2 font-heading-2 text-default-font">
-              Echelon Tasks
-            </span>
-            <Badge>Active</Badge>
-          </div>
-          <Button
-            variant="neutral-primary"
-            onClick={() => {}}
-          >
-            Add new task
-          </Button>
-        </div>
-        <div className="flex w-full flex-wrap items-center gap-6 border-b border-solid border-neutral-border px-6 py-2">
-          <div className="flex grow shrink-0 basis-0 items-center gap-6">
-            <TextField
-              variant="filled"
-              label=""
-              helpText=""
-              icon={<FeatherSearch />}
-            >
-              <TextField.Input
-                placeholder="Search"
-                value={search}
-                onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-                  setSearch(event.target.value)
-                }
-              />
-            </TextField>
-          </div>
-          <div className="flex flex-wrap items-start gap-1">
-            <SubframeCore.DropdownMenu.Root>
-              <SubframeCore.DropdownMenu.Trigger asChild={true}>
-                <Button
-                  variant="neutral-tertiary"
-                  iconRight={<FeatherChevronDown />}
-                  onClick={() => {}}
-                >
-                  Filter
-                </Button>
-              </SubframeCore.DropdownMenu.Trigger>
-              <SubframeCore.DropdownMenu.Portal>
-                <SubframeCore.DropdownMenu.Content
-                  side="bottom"
-                  align="start"
-                  sideOffset={4}
-                  asChild={true}
-                >
-                  <DropdownMenu>
-                    <DropdownMenu.DropdownItem icon={<FeatherPlus />}>
-                      Add filter
-                    </DropdownMenu.DropdownItem>
-                  </DropdownMenu>
-                </SubframeCore.DropdownMenu.Content>
-              </SubframeCore.DropdownMenu.Portal>
-            </SubframeCore.DropdownMenu.Root>
-            <SubframeCore.DropdownMenu.Root>
-              <SubframeCore.DropdownMenu.Trigger asChild={true}>
-                <Button
-                  variant="neutral-tertiary"
-                  iconRight={<FeatherChevronDown />}
-                  onClick={() => {}}
-                >
-                  Sort
-                </Button>
-              </SubframeCore.DropdownMenu.Trigger>
-              <SubframeCore.DropdownMenu.Portal>
-                <SubframeCore.DropdownMenu.Content
-                  side="bottom"
-                  align="start"
-                  sideOffset={4}
-                  asChild={true}
-                >
-                  <DropdownMenu>
-                    <DropdownMenu.DropdownItem icon={<FeatherPlus />}>
-                      Add sort
-                    </DropdownMenu.DropdownItem>
-                  </DropdownMenu>
-                </SubframeCore.DropdownMenu.Content>
-              </SubframeCore.DropdownMenu.Portal>
-            </SubframeCore.DropdownMenu.Root>
-            <SubframeCore.DropdownMenu.Root>
-              <SubframeCore.DropdownMenu.Trigger asChild={true}>
-                <Button
-                  variant="neutral-tertiary"
-                  iconRight={<FeatherChevronDown />}
-                  onClick={() => {}}
-                >
-                  Group by
-                </Button>
-              </SubframeCore.DropdownMenu.Trigger>
-              <SubframeCore.DropdownMenu.Portal>
-                <SubframeCore.DropdownMenu.Content
-                  side="bottom"
-                  align="start"
-                  sideOffset={4}
-                  asChild={true}
-                >
-                  <DropdownMenu>
-                    <DropdownMenu.DropdownItem icon={<FeatherCircleDot />}>
-                      Status
-                    </DropdownMenu.DropdownItem>
-                    <DropdownMenu.DropdownItem icon={<FeatherUser />}>
-                      Owner
-                    </DropdownMenu.DropdownItem>
-                    <DropdownMenu.DropdownItem icon={<FeatherDollarSign />}>
-                      Amount
-                    </DropdownMenu.DropdownItem>
-                  </DropdownMenu>
-                </SubframeCore.DropdownMenu.Content>
-              </SubframeCore.DropdownMenu.Portal>
-            </SubframeCore.DropdownMenu.Root>
-            <Button
-              variant="neutral-tertiary"
-              icon={<FeatherSettings2 />}
-              onClick={() => {}}
-            >
-              Customize
-            </Button>
-            <Button
-              variant="neutral-tertiary"
-              icon={<FeatherDownload />}
-              onClick={() => {}}
-            >
-              Download
-            </Button>
-          </div>
-        </div>
-        <KanbanBoard />
-      </div>
-    </DefaultPageLayout>
+    <div className="container max-w-none flex w-full flex-col items-start gap-6 bg-default-background pt-4 pb-12">
+      {healthError ? (
+        <DataLoadError
+          title="Couldn't load sync status"
+          message={healthError}
+        />
+      ) : null}
+
+      {shouldRenderWorkshopQueue(loadError) ? (
+        <WorkshopQueue
+          heading={heading}
+          tasks={tasks}
+          currentPage={page}
+          totalPages={totalPages}
+          query={query}
+          filter={filter}
+          status={status}
+          statusCounts={counts}
+          health={health}
+        />
+      ) : (
+        <>
+          {heading}
+          <DataLoadError
+            title="Couldn't load workshop tasks"
+            message={loadError ?? "Couldn't load workshop tasks"}
+          />
+        </>
+      )}
+    </div>
   );
 }
-
-export default WorkshopPage;
