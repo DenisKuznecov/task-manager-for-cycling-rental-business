@@ -16,7 +16,7 @@ Code review of the workshop-tasks database slice (migrations + pgTAP) against st
 
 - [x] Review Group 1 (Database) vs `staging`
 - [x] Review Group 2 (Booqable ingest) — write-up `review-workshop-ingest-group.md`
-- [ ] Review Group 3 (Workshop app)
+- [x] Review Group 3 (Workshop app) — write-up `review-workshop-app-group.md`
 - [ ] Review Group 4 (Workshop UI)
 
 ### Review Findings
