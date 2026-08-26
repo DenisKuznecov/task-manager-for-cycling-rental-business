@@ -149,6 +149,15 @@ SELECT is(
   timestamptz '2026-08-26 18:00:00+02',
   'mechanic reads stops_at from workshop_tasks_view on a task order'
 );
+SELECT ok(
+  (
+    public.workshop_task_detail((
+      SELECT t.id FROM public.bike_tasks t
+      WHERE t.order_id = 'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee'
+    )) -> 'task' ->> 'stops_at'
+  ) IS NOT NULL,
+  'workshop_task_detail includes order stops_at'
+);
 SELECT is(
   (SELECT count(*)::integer FROM public.customers
     WHERE id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),

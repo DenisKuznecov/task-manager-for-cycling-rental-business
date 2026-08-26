@@ -24,7 +24,7 @@ context:
 - Date tabs in order: **All**, Today, Tomorrow, Next 7 Days (`all` / `today` / `tomorrow` / `next_7_days`). Omit `filter` from the URL when `all`. Window is rental **start** in Europe/Madrid (`madrid_start_date`).
 - Status tiles above tabs, one each: To prepare, Being prepared, Needs recheck, Ready for pickup, In rental, Returned, Prepare for storage, Completed. No Cancelled tile. Counts use the same date+search as the table (not a shop-wide total) and still show every status while a tile is selected. Click a tile → `?status=`; click it again to clear. Date/status/search changes reset `page` to 1. On `mobile` (max 767px) hide the tiles and use a Subframe `Select`: placeholder and clear row both **Select** (no counts); picking Select clears `status` (active work). Same URL rules.
 - Default table: all dates, active work only. `cancelled` never in the queue. `completed` only when `status=completed`. Search (bike id, title, order #, customer name) applies inside the date × status cut.
-- Columns: **Bike ID**, **Bike title**, **Customer**, **Order #**, **From**, **Until**, **Status**, **Warnings**. Drop **Progress**. Warnings = `hasConfigurationWarning` (Booqable tag/checklist block, not bike setup): **Warning** badge or `—`. Row click → `/workshop/[taskId]`. Queue From/Until = Madrid `Thu 27 Aug · 19:00`. Task page keeps `DD-MM-YYYY HH:mm`. Missing customer or until → `—`. Body cells `h-14` (56px) via `Table.Row` className for touch; keep the Subframe Table. Header stays default `h-8`.
+- Columns: **Bike ID**, **Bike title**, **Customer**, **Order #**, **From**, **Until**, **Status**, **Warnings**. Drop **Progress**. Warnings = `hasConfigurationWarning` (Booqable tag/checklist block, not bike setup): **Warning** badge or `—`. Row click → `/workshop/[taskId]`. Queue From/Until = Madrid `Thu 27 Aug · 19:00`. Task page uses the same clock as From–Until (`Thu 27 Aug · 19:00 – Fri 28 Aug · 10:00`). Missing customer or until → `—`. Body cells `h-14` (56px) via `Table.Row` className for touch; keep the Subframe Table. Header stays default `h-8`.
 - `WORKSHOP_PAGE_SIZE` = **15**. Reuse `TablePagination` (already hides when `totalPages <= 1`).
 - Distinct colours on **badges**: `to_prepare`=`warning`, `being_prepared`=`dark`, `needs_recheck`=`error`, `ready_for_pickup`=`info`, `in_rental`=`success`, `returned`=`mint`, `prepare_for_storage`=custom (not a Badge variant; e.g. violet/slate), `completed`=`neutral`, `cancelled`=`error` (tombstone only). Tiles use a left colour bar (same mapping), not a full fill. Count `0` is muted. Attention statuses (`to_prepare`, `being_prepared`, `needs_recheck`) get a light tint when count > 0. Selected tile: brand ring + `ring-offset-2` (louder than the bar).
 - Extend `workshop_tasks_view` + list DTO/loader with `orders.stops_at` and `customers.name`. Split id/title in the UI only. Local idempotent migration. Mechanics already SELECT those parent rows when a `bike_tasks` row exists — do not broaden DML or open `/orders`. Count tiles in Postgres (no JS `reduce` of matching rows).
@@ -91,6 +91,7 @@ context:
 
 ## Spec Change Log
 
+- 2026-08-26: Task page start line is From–Until using `formatWorkshopQueueWhen` (same Madrid clock as the list). `workshop_task_detail` includes `orders.stops_at` in the foundation function (folded in; unpublished). Missing until is `—`.
 - 2026-08-24: Mobile (max 767px) replaces status tiles with a clearable Select (placeholder/clear = Select; labels only). Tiles stay at 768+. Table may scroll horizontally.
 - 2026-08-24: Queue rows `[&>td]:h-14` (56px) for workshop touch screens; header stays `h-8`. Sync toolbar left-aligned under the title, not a right-side island.
 - 2026-08-24: Queue chrome pass with Denys (Sally). Title + secondary sync on one row; help beside buttons; tiles as accent bar + mute zeros + louder selected; queue dates `Thu 27 Aug · 19:00`; search on the tabs row.
@@ -100,7 +101,7 @@ context:
 
 ## Design Notes
 
-`runSync` is queue-scoped `useTransition`; navigating to `/workshop/[taskId]` unmounts it. Intercept row clicks while pending **or** hoist into `layout.tsx`. Tile counts include Completed in the date+search window even when the table is active-only — count in SQL. Queue splits id/title; `workshopBikeLabel` stays on the task page. Queue From/Until uses `formatWorkshopQueueWhen`; task page keeps `formatWorkshopStart`.
+`runSync` is queue-scoped `useTransition`; navigating to `/workshop/[taskId]` unmounts it. Intercept row clicks while pending **or** hoist into `layout.tsx`. Tile counts include Completed in the date+search window even when the table is active-only — count in SQL. Queue splits id/title; `workshopBikeLabel` stays on the task page. Queue From/Until uses `formatWorkshopQueueWhen`; the task page joins those clocks as From–Until.
 
 ## Verification
 

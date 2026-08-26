@@ -1242,6 +1242,7 @@ BEGIN
       'order_id', v_task.order_id,
       'order_number', v_task.order_number,
       'starts_at', v_task.starts_at,
+      'stops_at', v_order.stops_at,
       'madrid_start_date', ((v_task.starts_at AT TIME ZONE 'Europe/Madrid')::date),
       'bike_source_id', v_task.booqable_stock_item_id,
       'bike_display_id', v_task.bike_display_id,
