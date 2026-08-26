@@ -106,6 +106,13 @@ context:
 
 - 2026-08-22: Implemented CAP-10 workshop sync from this spec (one reconciler, webhook await, staff start/resume, sandbox reseed, deleted `sync.ts`). Local migration applied. Intent contract unchanged.
 
+### Review Findings
+
+- [x] [Review][Patch] Same-page sync retry does not reconcile run counters, so last-success time can be wrong [supabase/migrations/20260826120000_workshop_sync_retry_counters.sql:1]
+- [ ] [Review][Patch] Starting sync after an expired run lease leaves the previous `in_progress` run orphaned [supabase/migrations/20260822120000_workshop_sync.sql:635]
+- [ ] [Review][Patch] `record_sync_result` / `finish_sync_run` do not check the run-lease token or fence [supabase/migrations/20260822120000_workshop_sync.sql:385]
+- [ ] [Review][Patch] pgTAP misses skipped counts, mid-page `in_progress` finish, and staff `workshop_sync_health` SELECT [supabase/tests/database/workshop_sync.test.sql:417]
+
 ## Design Notes
 
 Webhook body is form-encoded (`data[id]`). A `canceled` delivery still applies (full apply). Per-task Sync is that same one-order path. `/workshop` list Sync is reserved-only; 7-day is the fast daily path, **all reserved** is recovery for later start dates (still one page per click). Sandbox lists every status for commercial catch-up; `sandboxBackfillAllowed()` is true only when `VERCEL_ENV` is unset (local). Gate for webhook/staff Sync: `workshopSyncAllowed()` is false when `VERCEL_ENV=preview` or `VERCEL_GIT_COMMIT_REF=staging`; true locally and on production `main`.

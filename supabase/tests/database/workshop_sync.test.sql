@@ -622,6 +622,101 @@ SELECT is(
   'conflict updates ok/code/error'
 );
 
+SELECT is(
+  (
+    SELECT succeeded
+    FROM public.booqable_sync_runs
+    WHERE id = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
+  ),
+  0,
+  'success-then-fail retry decrements succeeded'
+);
+
+SELECT is(
+  (
+    SELECT failed
+    FROM public.booqable_sync_runs
+    WHERE id = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
+  ),
+  1,
+  'success-then-fail retry increments failed'
+);
+
+SELECT is(
+  public.booqable_finish_sync_run(
+    'ffffffff-ffff-4fff-8fff-ffffffffffff',
+    'cursor-retry-page',
+    'retry failure',
+    false
+  )->>'state',
+  'failed',
+  'success-then-fail finish stays failed'
+);
+
+INSERT INTO public.booqable_sync_runs (id, scope, state)
+VALUES (
+  'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+  'all_reserved',
+  'in_progress'
+);
+
+SELECT is(
+  public.booqable_record_sync_result(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    'order-recovered',
+    false,
+    'SOURCE_UNAVAILABLE',
+    'first failure',
+    false
+  )->>'ok',
+  'true',
+  'fail-then-success first record'
+);
+
+SELECT is(
+  public.booqable_record_sync_result(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    'order-recovered',
+    true,
+    NULL,
+    NULL,
+    false
+  )->>'ok',
+  'true',
+  'fail-then-success retry'
+);
+
+SELECT is(
+  (
+    SELECT failed
+    FROM public.booqable_sync_runs
+    WHERE id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  ),
+  0,
+  'fail-then-success retry clears failed'
+);
+
+SELECT is(
+  (
+    SELECT succeeded
+    FROM public.booqable_sync_runs
+    WHERE id = 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa'
+  ),
+  1,
+  'fail-then-success retry increments succeeded'
+);
+
+SELECT is(
+  public.booqable_finish_sync_run(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa',
+    NULL,
+    NULL,
+    false
+  )->>'state',
+  'succeeded',
+  'recovered page can finish as succeeded'
+);
+
 -- Reserved apply through the mint_tasks wrapper mints a task
 CREATE TEMP TABLE reserved_mint_lease AS
 SELECT public.booqable_acquire_order_lease(

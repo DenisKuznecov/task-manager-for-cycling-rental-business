@@ -158,3 +158,8 @@ Residual risks:
 - Apply, leases, webhook, and workshop UI remain out of scope; queue date filters live in the TypeScript loader on SQL `madrid_start_date`
 - Four unsupplied preparation tags stay disabled
 - Client RPC transport failures map to `SOURCE_UNAVAILABLE`
+
+### Review Findings
+
+- [x] [Review][Dismiss] Tag drift after prep starts does not block M1/M2/storage completion — shop does not retag the same stock item or rename Bike ID in place
+- [ ] [Review][Patch] `bike_tasks` has no index on `order_id` [supabase/migrations/20260821120000_workshop_foundation.sql:125]

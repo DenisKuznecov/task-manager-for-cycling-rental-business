@@ -193,3 +193,6 @@ Residual risks:
 - [x] [Review][Defer] Live `SET ROLE authenticated` apply invoke — deferred, pre-existing [supabase/tests/database/workshop_source_apply.test.sql:1287]
 - [x] [Review][Defer] Adapter→apply round-trip and `verify:workshop` CI job — deferred, pre-existing [package.json:16]
 - [x] [Review][Defer] Lease release/renew RPCs — deferred, pre-existing [supabase/migrations/20260821160000_workshop_source_apply.sql:556]
+- [x] [Review][Dismiss] SQL tag resolver does not ignore `*-bundle` tags — live parser already strips bundles
+- [x] [Review][Dismiss] Add-on fingerprint can collide for two extras with the same parent and quantity — not worth doing for this shop
+- [ ] [Review][Patch] `mint_tasks=off` still increments the apply `created` count [supabase/migrations/20260821160000_workshop_source_apply.sql:948]
