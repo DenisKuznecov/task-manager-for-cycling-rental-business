@@ -1,0 +1,22 @@
+[
+  {
+    "claim": "Current API v4 relationship path for physical stock assignments",
+    "class": "version/compatibility",
+    "pub_date": "2026-08-20"
+  },
+  {
+    "claim": "Current public documentation status of order.updated and assignment-trigger semantics",
+    "class": "version/compatibility",
+    "pub_date": "2026-08-20"
+  },
+  {
+    "claim": "Human stock identifier editability and stock_items.id identity choice",
+    "class": "version/compatibility",
+    "pub_date": "2026-08-20"
+  },
+  {
+    "claim": "Current public API authentication, pagination, rate-limit, and webhook-delivery documentation",
+    "class": "version/compatibility",
+    "pub_date": "2026-08-20"
+  }
+]

@@ -1,0 +1,250 @@
+{
+  "data": {
+    "id": "order-fixture-v1",
+    "type": "orders",
+    "attributes": {
+      "number": 344,
+      "status": "reserved",
+      "starts_at": "2026-12-10T10:00:00Z",
+      "stops_at": "2026-12-12T17:00:00Z",
+      "created_at": "2026-08-01T09:00:00Z",
+      "updated_at": "2026-08-21T13:25:00Z",
+      "fulfillment_type": "pickup",
+      "amount_in_cents": 45000,
+      "discount_type": null,
+      "discount_percentage": null,
+      "coupon_discount_in_cents": null,
+      "payment_status": "paid",
+      "deposit_in_cents": 0,
+      "tax_in_cents": 0,
+      "grand_total_with_tax_in_cents": 45000,
+      "to_be_paid_in_cents": 0,
+      "item_count": 4,
+      "properties": {
+        "delivery_address": null,
+        "billing_address": null,
+        "maps_link_order": "https://maps.example.test/order-fixture-v1",
+        "partner_promo": "none"
+      }
+    },
+    "relationships": {
+      "customer": {
+        "data": { "id": "customer-fixture-v1", "type": "customers" }
+      },
+      "coupon": { "data": null },
+      "lines": {
+        "data": [
+          { "id": "line-bundle", "type": "lines" },
+          { "id": "line-bike", "type": "lines" },
+          { "id": "line-helmet", "type": "lines" },
+          { "id": "line-mount", "type": "lines" }
+        ]
+      }
+    }
+  },
+  "included": [
+    {
+      "id": "customer-fixture-v1",
+      "type": "customers",
+      "attributes": {
+        "name": "Fixture Rider",
+        "email": "rider@example.test",
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-08-01T00:00:00Z",
+        "properties": {
+          "phone": "+34000000000",
+          "birthday_date": "1990-05-17"
+        }
+      }
+    },
+    {
+      "id": "line-bundle",
+      "type": "lines",
+      "attributes": {
+        "item_id": "product-bundle",
+        "parent_line_id": null,
+        "title": "Road bike bundle",
+        "quantity": 1,
+        "line_type": "charge",
+        "charge_label": null,
+        "extra_information": null,
+        "price_each_in_cents": 0,
+        "price_in_cents": 0,
+        "position": 1,
+        "relevant": true,
+        "created_at": "2026-08-01T09:00:00Z",
+        "updated_at": "2026-08-01T09:00:00Z"
+      },
+      "relationships": {
+        "planning": {
+          "data": { "id": "planning-bundle", "type": "plannings" }
+        },
+        "item": {
+          "data": { "id": "product-bundle", "type": "bundles" }
+        }
+      }
+    },
+    {
+      "id": "line-bike",
+      "type": "lines",
+      "attributes": {
+        "item_id": "product-road",
+        "parent_line_id": "line-bundle",
+        "title": "Focus IZALCO",
+        "quantity": 1,
+        "line_type": "charge",
+        "charge_label": null,
+        "extra_information": null,
+        "price_each_in_cents": 40000,
+        "price_in_cents": 40000,
+        "position": 2,
+        "relevant": true,
+        "created_at": "2026-08-01T09:00:00Z",
+        "updated_at": "2026-08-21T13:25:00Z"
+      },
+      "relationships": {
+        "planning": {
+          "data": { "id": "planning-bike", "type": "plannings" }
+        },
+        "item": {
+          "data": { "id": "product-road", "type": "products" }
+        }
+      }
+    },
+    {
+      "id": "line-helmet",
+      "type": "lines",
+      "attributes": {
+        "item_id": "product-helmet",
+        "parent_line_id": "line-bundle",
+        "title": "Helmet",
+        "quantity": 1,
+        "line_type": "charge",
+        "charge_label": null,
+        "extra_information": null,
+        "price_each_in_cents": 5000,
+        "price_in_cents": 5000,
+        "position": 3,
+        "relevant": true,
+        "created_at": "2026-08-01T09:00:00Z",
+        "updated_at": "2026-08-01T09:00:00Z"
+      },
+      "relationships": {
+        "planning": {
+          "data": { "id": "planning-helmet", "type": "plannings" }
+        },
+        "item": {
+          "data": { "id": "product-helmet", "type": "products" }
+        }
+      }
+    },
+    {
+      "id": "line-mount",
+      "type": "lines",
+      "attributes": {
+        "item_id": "product-mount",
+        "parent_line_id": "line-bundle",
+        "title": "Computer mount",
+        "quantity": 0,
+        "line_type": "charge",
+        "charge_label": null,
+        "extra_information": null,
+        "price_each_in_cents": 0,
+        "price_in_cents": 0,
+        "position": 4,
+        "relevant": true,
+        "created_at": "2026-08-01T09:00:00Z",
+        "updated_at": "2026-08-21T13:41:00Z"
+      },
+      "relationships": {
+        "planning": {
+          "data": { "id": "planning-mount", "type": "plannings" }
+        },
+        "item": {
+          "data": { "id": "product-mount", "type": "products" }
+        }
+      }
+    },
+    {
+      "id": "planning-bundle",
+      "type": "plannings",
+      "attributes": {},
+      "relationships": {
+        "stock_item_plannings": { "data": [] }
+      }
+    },
+    {
+      "id": "planning-bike",
+      "type": "plannings",
+      "attributes": {},
+      "relationships": {
+        "stock_item_plannings": {
+          "data": [
+            { "id": "sip-road-1", "type": "stock_item_plannings" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "planning-helmet",
+      "type": "plannings",
+      "attributes": {},
+      "relationships": {
+        "stock_item_plannings": { "data": [] }
+      }
+    },
+    {
+      "id": "planning-mount",
+      "type": "plannings",
+      "attributes": {},
+      "relationships": {
+        "stock_item_plannings": { "data": [] }
+      }
+    },
+    {
+      "id": "sip-road-1",
+      "type": "stock_item_plannings",
+      "attributes": {},
+      "relationships": {
+        "stock_item": {
+          "data": { "id": "stock-road-1", "type": "stock_items" }
+        }
+      }
+    },
+    {
+      "id": "stock-road-1",
+      "type": "stock_items",
+      "attributes": {
+        "identifier": "RF89RIVXL-2"
+      }
+    },
+    {
+      "id": "product-bundle",
+      "type": "bundles",
+      "attributes": {
+        "tag_list": ["workshop-road-bike-bundle"]
+      }
+    },
+    {
+      "id": "product-road",
+      "type": "products",
+      "attributes": {
+        "tag_list": ["2025", "2026", "focus", "road", "workshop-road-bike"]
+      }
+    },
+    {
+      "id": "product-helmet",
+      "type": "products",
+      "attributes": {
+        "tag_list": ["rental"]
+      }
+    },
+    {
+      "id": "product-mount",
+      "type": "products",
+      "attributes": {
+        "tag_list": ["addon", "rental"]
+      }
+    }
+  ]
+}

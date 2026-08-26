@@ -1,104 +1,77 @@
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
-import { syncBooqableOrder } from "@/src/lib/booqable/sync";
+import { redirect } from "next/navigation";
+import { createClient } from "@/src/utils/supabase/server";
+import { fetchAllOrdersListPage } from "@/src/lib/booqable/fetch-source-snapshot";
+import { reconcileBooqableOrder } from "@/src/lib/workshop/application/reconcile-order";
+import { sandboxBackfillAllowed } from "@/src/lib/workshop/application/sync-env";
 
 export const dynamic = "force-dynamic";
 
 /**
- * One-off backfill: pages through every Booqable order and runs the same
- * syncBooqableOrder used by the webhook, so existing orders get their
- * order_items and the newer order-level fields populated.
+ * Authenticated local reseed: walks every Booqable order page, persists
+ * commercial rows for all statuses, and mints workshop tasks only for reserved.
  */
-export async function GET(_request: Request) {
-  const supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY!,
-  );
+export async function GET() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+    error: userError,
+  } = await supabase.auth.getUser();
+
+  if (userError || !user) {
+    redirect("/login?next=/api/sandbox/booqable/sync-orders");
+  }
+
+  const { data: role, error: roleError } = await supabase.rpc("get_user_role");
+  if (roleError) {
+    console.error("workshop: get_user_role:", roleError);
+    return NextResponse.json({ error: roleError.message }, { status: 500 });
+  }
+  if (role !== "admin" && role !== "manager") {
+    return NextResponse.json(
+      { ok: false, code: "FORBIDDEN", error: "Admin or manager role required." },
+      { status: 403 },
+    );
+  }
+
+  if (!sandboxBackfillAllowed()) {
+    return NextResponse.json({
+      ok: false,
+      code: "SOURCE_UNAVAILABLE",
+      error: "Sandbox reseed is local-only.",
+    });
+  }
 
   try {
-    const slug = process.env.BOOQABLE_COMPANY_SLUG;
-    const apiKey = process.env.BOOQABLE_API_KEY;
-    if (!slug || !apiKey) {
-      throw new Error(
-        "Missing BOOQABLE_COMPANY_SLUG or BOOQABLE_API_KEY env var",
-      );
-    }
-
     let page = 1;
     let hasMorePages = true;
     let totalProcessed = 0;
     const failures: Array<{ id: string; error: string }> = [];
 
     while (hasMorePages) {
-      const params = new URLSearchParams({
-        "page[size]": "50",
-        "page[number]": page.toString(),
-        "fields[orders]": "id,status,number",
-      });
-      const url = `https://${slug}.booqable.com/api/4/orders?${params.toString()}`;
-
-      const res = await fetch(url, {
-        headers: {
-          Accept: "application/vnd.api+json",
-          Authorization: `Bearer ${apiKey}`,
-        },
-        cache: "no-store",
-      });
-
-      if (!res.ok) {
-        const body = await res.text();
-        console.error(
-          "[sync-orders] non-OK list response on page",
-          page,
-          res.status,
-          body,
-        );
+      const list = await fetchAllOrdersListPage(page);
+      if (list.orders.length === 0) {
         break;
       }
 
-      const payload = (await res.json()) as {
-        data?: Array<{
-          id: string;
-          attributes?: { status?: string; number?: number | null };
-        }>;
-      };
-      const data = payload.data ?? [];
-
-      if (data.length === 0) {
-        hasMorePages = false;
-        break;
-      }
-
-      for (const order of data) {
-        // Same ghost-order filter as the webhook
-        const status = order.attributes?.status;
-        const number = order.attributes?.number;
-        if (status === "new" || status === "concept" || !number) {
+      for (const order of list.orders) {
+        const result = await reconcileBooqableOrder(order.id, "sandbox");
+        if (!result.ok) {
+          console.error("workshop: failed order", order.id, result.error);
+          failures.push({ id: order.id, error: result.error });
           continue;
         }
-
-        try {
-          await syncBooqableOrder(supabase, order.id);
-          totalProcessed++;
-        } catch (orderErr) {
-          const message =
-            orderErr instanceof Error ? orderErr.message : "Unknown error";
-          console.error("[sync-orders] failed order", order.id, orderErr);
-          failures.push({ id: order.id, error: message });
-        }
+        totalProcessed++;
       }
 
-      if (data.length < 50) {
-        hasMorePages = false;
-      } else {
-        page++;
-      }
+      hasMorePages = list.hasMore;
+      page += 1;
     }
 
     return NextResponse.json({ success: true, totalProcessed, failures });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
-    console.error("[sync-orders] fatal error:", err);
+    console.error("workshop: fatal error:", err);
     return NextResponse.json({ error: message }, { status: 500 });
   }
 }

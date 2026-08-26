@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Forge report — automating mechanics daily work</title>
+  <style>
+    :root {
+      --ink: #1c1612;
+      --paper: #f4ead8;
+      --rule: #c4b39a;
+      --wax: #6b1d2a;
+      --wax-light: #8f2a3a;
+      --muted: #5c5348;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: #2a2420;
+      color: var(--ink);
+      font: 16px/1.45 "Iowan Old Style", "Palatino Linotype", Palatino, Georgia, serif;
+    }
+    .sheet {
+      max-width: 42rem;
+      margin: 2rem auto;
+      padding: 2.25rem 2.5rem 3rem;
+      background: var(--paper);
+      box-shadow: 0 12px 40px rgba(0,0,0,.35);
+    }
+    h1 { font-size: 1.35rem; margin: 0 0 .35rem; letter-spacing: .02em; }
+    .meta { color: var(--muted); font-size: .9rem; margin-bottom: 1.5rem; }
+    h2 {
+      font-size: .78rem;
+      text-transform: uppercase;
+      letter-spacing: .14em;
+      color: var(--wax);
+      border-bottom: 1px solid var(--rule);
+      padding-bottom: .25rem;
+      margin: 1.6rem 0 .7rem;
+    }
+    ul { margin: 0; padding-left: 1.15rem; }
+    li { margin-bottom: .45rem; }
+    .seal-wrap { text-align: center; margin: 0 0 1.5rem; }
+    .stamp-label {
+      font-size: .7rem;
+      letter-spacing: .28em;
+      text-transform: uppercase;
+      color: var(--wax);
+      margin-top: .35rem;
+    }
+    .voices { list-style: none; padding: 0; }
+    .voices li {
+      display: grid;
+      grid-template-columns: 2.1rem 1fr;
+      gap: .55rem;
+      align-items: start;
+      margin-bottom: .7rem;
+    }
+    .icon {
+      width: 2.1rem; height: 2.1rem;
+      border-radius: 50%;
+      background: #e8d9c0;
+      display: grid; place-items: center;
+      font-size: 1.05rem;
+    }
+    .who { font-weight: 700; }
+    .role { color: var(--muted); font-size: .88rem; }
+    footer { margin-top: 2rem; font-size: .85rem; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <article class="sheet">
+    <div class="seal-wrap" aria-label="Outcome: Clarified">
+      <svg width="148" height="148" viewBox="0 0 148 148" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <radialGradient id="waxg" cx="40%" cy="35%" r="70%">
+            <stop offset="0%" stop-color="#a33a4a"/>
+            <stop offset="100%" stop-color="#5a1520"/>
+          </radialGradient>
+        </defs>
+        <circle cx="74" cy="74" r="68" fill="url(#waxg)"/>
+        <circle cx="74" cy="74" r="58" fill="none" stroke="#f4ead8" stroke-width="2" stroke-dasharray="4 5" opacity=".85"/>
+        <text x="74" y="70" text-anchor="middle" fill="#f4ead8" font-family="Georgia, serif" font-size="13" font-weight="700" letter-spacing="3">CLARIFIED</text>
+        <text x="74" y="90" text-anchor="middle" fill="#f4ead8" font-family="Georgia, serif" font-size="8" letter-spacing="2" opacity=".9">SESSION STOPPED</text>
+      </svg>
+      <div class="stamp-label">Stopped for time — not hardened</div>
+    </div>
+
+    <h1>Automating mechanics daily work</h1>
+    <p class="meta">20 Aug 2026 · Den · Integration slice only. Checklist, M1/M2, add-ons, and pickup/return were not forged.</p>
+
+    <h2>Outcome</h2>
+    <p>The Booqable trigger model is clearer and partly locked. The wider MVP was not pressure-tested. Session ended because there was no time left, not because the idea was killed.</p>
+
+    <h2>Locked</h2>
+    <ul>
+      <li>Assigner who sets the physical bike ID in Booqable also runs <strong>Sync</strong>. That creates first tasks and recovers silent orders.</li>
+      <li>Opening a task reconciles <em>that order</em> (siblings, add-ons, replacement).</li>
+      <li>Existing webhook, when it fires, uses the same reconciler. Belief: assignment of <code>stock_items.id</code> does not emit <code>order.updated</code>.</li>
+      <li>No automatic fetch on Today / Tomorrow / Next 7 days. Queue shows last successful sync time.</li>
+      <li>If the assigner skips Sync, a missing task is an accepted failure. No “assigned but unsynced” signal in MVP.</li>
+    </ul>
+
+    <h2>Rejected</h2>
+    <ul>
+      <li>Periodic polling / queue-open bulk sweep — extra hustle, tablet races, <code>429</code> risk; same job as the assigner’s Sync.</li>
+      <li>“API cannot see the new stock item until Sync” — false. Fetch can see it; the gap is the push event.</li>
+    </ul>
+
+    <h2>Still weak</h2>
+    <ul>
+      <li>Open-task sync does not refresh a task already on screen. Mid-work bike swap can stay invisible until leave/reopen. Unresolved when stopped.</li>
+      <li>Assignment webhook coverage is still a belief, not a tenant measurement.</li>
+      <li>Current order fetch is still <code>include=customer,coupon,lines</code> — no stock-item path in production yet.</li>
+      <li>Most of the product (gates, signatures, storage, add-on freeze after ready) was not examined.</li>
+    </ul>
+
+    <h2>Voices</h2>
+    <ul class="voices">
+      <li>
+        <span class="icon">📏</span>
+        <div><span class="who">Level</span> <span class="role">Claim checker</span><br />Separated “no webhook” from “undetectable on fetch.”</div>
+      </li>
+      <li>
+        <span class="icon">🪵</span>
+        <div><span class="who">Splinter</span> <span class="role">Consensus challenger</span><br />Internal agreement does not make a missing queue row visible.</div>
+      </li>
+      <li>
+        <span class="icon">🌶️</span>
+        <div><span class="who">Boundary</span> <span class="role">Edge-case hunter</span><br />You cannot open a task that does not exist yet.</div>
+      </li>
+      <li>
+        <span class="icon">🚢</span>
+        <div><span class="who">Dana</span> <span class="role">Pragmatist</span><br />Queue-level sweep is polling with extra steps.</div>
+      </li>
+      <li>
+        <span class="icon">🎯</span>
+        <div><span class="who">Yui</span> <span class="role">Craftsman</span><br />Three triggers, one reconciler, three different jobs.</div>
+      </li>
+      <li>
+        <span class="icon">😤</span>
+        <div><span class="who">Grumbal</span> <span class="role">Adversary</span><br />Already-open task never hears about a swap.</div>
+      </li>
+      <li>
+        <span class="icon">🔧</span>
+        <div><span class="who">Marta / Rafi</span> <span class="role">Generated shop-floor</span><br />Tablet queue vs Booqable assigner are not the same job.</div>
+      </li>
+    </ul>
+
+    <footer>
+      Record: <code>_bmad-output/forge/automating-mechanics-daily-work/.memlog.md</code><br />
+      No <code>forged-idea.md</code> — idea was not hardened.
+    </footer>
+  </article>
+</body>
+</html>

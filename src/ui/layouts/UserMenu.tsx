@@ -78,13 +78,6 @@ export function UserMenu({ userEmail, avatarInitial }: UserMenuProps) {
               </DropdownMenu.DropdownItem>
               <DropdownMenu.DropdownDivider />
               <DropdownMenu.DropdownItem
-                icon={<FeatherMail />}
-                onClick={() => router.push("/contact")}
-              >
-                Contact Us
-              </DropdownMenu.DropdownItem>
-              <DropdownMenu.DropdownDivider />
-              <DropdownMenu.DropdownItem
                 icon={<FeatherLogOut />}
                 onClick={handleLogout}
               >

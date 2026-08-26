@@ -48,3 +48,6 @@ docs/
 
 # claude
 .claude/
+
+# booqable tenant spike — raw captures may contain customer PII
+scripts/booqable-spike/captures/
