@@ -15,7 +15,7 @@ Code review of the workshop-tasks database slice (migrations + pgTAP) against st
 ## Tasks & Acceptance
 
 - [x] Review Group 1 (Database) vs `staging`
-- [ ] Review Group 2 (Booqable ingest) — start from `handover-workshop-review-group-2.md`
+- [x] Review Group 2 (Booqable ingest) — write-up `review-workshop-ingest-group.md`
 - [ ] Review Group 3 (Workshop app)
 - [ ] Review Group 4 (Workshop UI)
 

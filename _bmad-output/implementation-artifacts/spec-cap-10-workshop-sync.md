@@ -112,6 +112,9 @@ context:
 - [ ] [Review][Patch] Starting sync after an expired run lease leaves the previous `in_progress` run orphaned [supabase/migrations/20260822120000_workshop_sync.sql:635]
 - [ ] [Review][Patch] `record_sync_result` / `finish_sync_run` do not check the run-lease token or fence [supabase/migrations/20260822120000_workshop_sync.sql:385]
 - [ ] [Review][Patch] pgTAP misses skipped counts, mid-page `in_progress` finish, and staff `workshop_sync_health` SELECT [supabase/tests/database/workshop_sync.test.sql:417]
+- [x] [Review][Dismiss] Fetch merge and `fetchSourceOrderDocument` never run in tests, so a one-page fetch that strips `links` still parses — user declined this pass
+- [x] [Review][Dismiss] List `hasMore` for a full 50-row page with no `links.next` is unasserted — user declined this pass
+- [x] [Review][Dismiss] `mergeOrderDocuments` silently drops include rows that are not `{type,id}` instead of `INVALID_SNAPSHOT` — user declined this pass
 
 ## Design Notes
 
