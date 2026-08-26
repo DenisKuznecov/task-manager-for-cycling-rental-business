@@ -6,6 +6,7 @@ import { fileURLToPath } from "node:url";
 import {
   buildWorkshopQueueHref,
   formatMadridDateTime,
+  formatWorkshopFromUntil,
   formatWorkshopQueueWhen,
   formatWorkshopStart,
   isM1ItemValid,
@@ -17,6 +18,7 @@ import {
   statusBadgeVariant,
   statusFromQueueSelectValue,
   statusTileClassName,
+  workshopBikeId,
   workshopBikeLabel,
   WORKSHOP_QUEUE_STATUS_SELECT_NONE,
 } from "./app/workshop/_components/workshop-ui.ts";
@@ -67,6 +69,21 @@ test("formatWorkshopStart uses DD-MM-YYYY HH:mm in Madrid", () => {
   assert.equal(formatWorkshopStart("not-a-date", null), "—");
 });
 
+test("formatWorkshopFromUntil joins queue From and Until", () => {
+  assert.equal(
+    formatWorkshopFromUntil(
+      "2026-08-22T10:20:00.000Z",
+      "2026-08-23T08:00:00.000Z",
+      null,
+    ),
+    "Sat 22 Aug · 12:20 – Sun 23 Aug · 10:00",
+  );
+  assert.equal(
+    formatWorkshopFromUntil(null, null, "2026-08-22"),
+    "2026-08-22 – —",
+  );
+});
+
 test("formatWorkshopQueueWhen uses weekday day month · time in Madrid", () => {
   assert.equal(
     formatWorkshopQueueWhen("2026-08-22T10:20:00.000Z", null),
@@ -82,6 +99,23 @@ test("formatWorkshopQueueWhen uses weekday day month · time in Madrid", () => {
   );
   assert.equal(formatWorkshopQueueWhen(null, "2026-08-22"), "2026-08-22");
   assert.equal(formatWorkshopQueueWhen("not-a-date", null), "—");
+});
+
+test("workshopBikeId is the trail crumb without the title", () => {
+  assert.equal(
+    workshopBikeId({
+      bikeDisplayId: "RF97/L-1",
+      bikeSourceId: "src",
+    }),
+    "RF97/L-1",
+  );
+  assert.equal(
+    workshopBikeId({
+      bikeDisplayId: null,
+      bikeSourceId: "src-9",
+    }),
+    "src-9",
+  );
 });
 
 test("workshopBikeLabel falls back to Unknown bike", () => {
@@ -232,12 +266,9 @@ test("isM1ItemValid requires a finite PSI greater than zero", () => {
   );
 });
 
-test("M2 caption does not say completed when M1 outcome is missing", () => {
-  assert.equal(m2ItemCaption(item({ m1Outcome: null })), "M1 is incomplete");
-  assert.equal(
-    m2ItemCaption(item({ m1Outcome: "completed" })),
-    "M1 completed",
-  );
+test("M2 caption only carries a fact the recheck still needs", () => {
+  assert.equal(m2ItemCaption(item({ m1Outcome: null })), "Preparation incomplete");
+  assert.equal(m2ItemCaption(item({ m1Outcome: "completed" })), null);
   assert.equal(
     m2ItemCaption(
       item({
@@ -246,11 +277,11 @@ test("M2 caption does not say completed when M1 outcome is missing", () => {
         m1Psi: 80,
       }),
     ),
-    "M1 recorded 80 PSI",
+    "80 PSI",
   );
   assert.equal(
     m2ItemCaption(item({ m1Outcome: "not_applicable" })),
-    "M1 marked not applicable",
+    "Marked not applicable",
   );
 });
 
@@ -445,6 +476,8 @@ test("task page: not-found vs error vs cancelled tombstone and named actions", (
   assert.match(task, /completeStorage/);
   assert.match(task, /STALE_VERSION/);
   assert.match(task, /CONFIGURATION_BLOCKED|hasConfigurationWarning/);
+  assert.match(task, /formatWorkshopFromUntil/);
+  assert.doesNotMatch(task, /Starts /);
 });
 
 test("task page reuses all-orders drawer via ?order=", () => {

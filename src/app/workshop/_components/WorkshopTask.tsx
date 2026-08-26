@@ -28,9 +28,10 @@ import type {
 } from "@/src/lib/workshop/domain";
 import {
   formatMadridDateTime,
-  formatWorkshopStart,
+  formatWorkshopFromUntil,
   isM1ItemValid,
   m2ItemCaption,
+  workshopBikeId,
   workshopBikeLabel,
   workshopStatusBadgeProps,
   WORKSHOP_STATUS_LABELS,
@@ -90,6 +91,37 @@ function OrderDetailsButtonFallback({ label }: { label: string }) {
     <Button size="large" variant="neutral-secondary" disabled>
       {label}
     </Button>
+  );
+}
+
+function AddonsAcknowledge({
+  addonFingerprint,
+  checked,
+  disabled,
+  onCheckedChange,
+}: {
+  addonFingerprint: string | null;
+  checked: boolean;
+  disabled: boolean;
+  onCheckedChange: (checked: boolean) => void;
+}) {
+  if (addonFingerprint == null) {
+    return (
+      <Alert
+        variant="warning"
+        icon={<FeatherAlertTriangle />}
+        title="Add-ons cannot be confirmed"
+        description="Add-ons cannot be confirmed until a fingerprint exists."
+      />
+    );
+  }
+  return (
+    <Checkbox
+      label="Preparation matches these add-ons"
+      checked={checked}
+      disabled={disabled}
+      onCheckedChange={onCheckedChange}
+    />
   );
 }
 
@@ -178,6 +210,11 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
   const m1Ready = preparationItems.every(isM1ItemValid);
   const storageReady = storageItems.every(isM1ItemValid);
   const m2Ready = m2Items.every((item) => item.m2Confirmed);
+  const canCompleteM1 =
+    m1Ready &&
+    addonsAcknowledged &&
+    addonFingerprint != null &&
+    !isProfileLoading;
   const canCompleteM2 =
     m2Ready &&
     addonsAcknowledged &&
@@ -205,7 +242,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
         )
       }
     >
-      Sync order from Booqable
+      Sync order details from Booqable
     </Button>
   );
 
@@ -216,7 +253,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
           Workshop
         </Breadcrumbs.Item>
         <Breadcrumbs.Divider />
-        <Breadcrumbs.Item active={true}>{workshopBikeLabel(task)}</Breadcrumbs.Item>
+        <Breadcrumbs.Item active={true}>{workshopBikeId(task)}</Breadcrumbs.Item>
       </Breadcrumbs>
 
       <div className="flex w-full flex-wrap items-start justify-between gap-4">
@@ -231,7 +268,11 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
             </Badge>
           </div>
           <span className="text-body font-body text-subtext-color">
-            Starts {formatWorkshopStart(task.startsAt, task.madridStartDate)}
+            {formatWorkshopFromUntil(
+              task.startsAt,
+              task.stopsAt,
+              task.madridStartDate,
+            )}
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
@@ -308,19 +349,26 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
                   setOutcome(itemId, "completed", psi)
                 }
               />
+              <AddonsAcknowledge
+                addonFingerprint={addonFingerprint}
+                checked={addonsAcknowledged}
+                disabled={isPending}
+                onCheckedChange={setAddonsAcknowledged}
+              />
               <Button
                 size="large"
-                disabled={isPending || !m1Ready}
+                disabled={isPending || !canCompleteM1}
                 loading={isNamedPending("completeM1")}
-                onClick={() =>
+                onClick={() => {
+                  if (!canCompleteM1) return;
                   runCommand(
                     () =>
                       workshopActions.completeM1(task.taskId, task.version),
                     "completeM1",
-                  )
-                }
+                  );
+                }}
               >
-                Complete M1
+                Complete Bike Preparation
               </Button>
             </div>
           ) : null}
@@ -340,24 +388,15 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
                   )
                 }
               />
-              {addonFingerprint == null ? (
-                <Alert
-                  variant="warning"
-                  icon={<FeatherAlertTriangle />}
-                  title="Add-ons cannot be confirmed"
-                  description="Add-ons cannot be confirmed until a fingerprint exists."
-                />
-              ) : (
-                <Checkbox
-                  label="Preparation matches these add-ons"
-                  checked={addonsAcknowledged}
-                  disabled={isPending}
-                  onCheckedChange={setAddonsAcknowledged}
-                />
-              )}
+              <AddonsAcknowledge
+                addonFingerprint={addonFingerprint}
+                checked={addonsAcknowledged}
+                disabled={isPending}
+                onCheckedChange={setAddonsAcknowledged}
+              />
               {isSamePerson ? (
                 <Checkbox
-                  label="I confirm I am completing M2 as the same mechanic who signed M1"
+                  label="I confirm that bike verification is being completed by the same mechanic who signed bike preparation"
                   checked={samePersonConfirmed}
                   disabled={isPending}
                   onCheckedChange={setSamePersonConfirmed}
@@ -381,7 +420,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
                   );
                 }}
               >
-                Complete M2
+                Complete Bike Verification
               </Button>
             </div>
           ) : null}
@@ -399,7 +438,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
                 )
               }
             >
-              Mark picked up
+              Mark as Picked Up
             </Button>
           ) : null}
 
@@ -416,7 +455,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
                 )
               }
             >
-              Mark returned
+              Mark as Returned
             </Button>
           ) : null}
 
@@ -433,7 +472,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
                 )
               }
             >
-              Start storage
+              Start Bike Storage Preparation
             </Button>
           ) : null}
 
@@ -469,7 +508,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
                   )
                 }
               >
-                Complete storage
+                Complete Bike Storage Preparation
               </Button>
             </div>
           ) : null}
@@ -479,31 +518,119 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
   );
 }
 
+function cleanAddonText(value: string): string {
+  return value
+    .replace(/\|\s*FREE\s*\|/gi, "")
+    .replace(/\s*\|\s*/g, " · ")
+    .replace(/(?:^[\s,·]+)|(?:[\s,·]+$)/g, "")
+    .replace(/\s*,\s*,+/g, ",")
+    .replace(/\s{2,}/g, " ");
+}
+
+function parseAddonTitle(title: string | null): {
+  label: string;
+  value: string | null;
+} {
+  const raw = title?.trim() || "Add-on";
+  const separator = raw.indexOf(" - ");
+  if (separator === -1) {
+    return { label: cleanAddonText(raw) || raw, value: null };
+  }
+  const label = cleanAddonText(raw.slice(0, separator)) || raw;
+  const value = cleanAddonText(raw.slice(separator + 3));
+  return { label, value: value || null };
+}
+
+function isDeclinedAddonChoice(value: string | null): boolean {
+  return value != null && /^no\b/i.test(value);
+}
+
+function addonQuantityLabel(quantity: number | null): string {
+  return quantity != null && quantity !== 1 ? ` × ${quantity}` : "";
+}
+
 function AddonsList({
   addons,
 }: {
   addons: WorkshopTaskDetail["addons"];
 }) {
+  const rows = addons.map((addon) => {
+    const { label, value } = parseAddonTitle(addon.title);
+    const isSection = addon.lineType === "section";
+    return {
+      id: addon.id,
+      label,
+      value,
+      isSection,
+      declined: !isSection && isDeclinedAddonChoice(value),
+      quantityLabel: addonQuantityLabel(addon.quantity),
+    };
+  });
+  const included = rows.filter((row) => !row.declined);
+  const declined = rows.filter((row) => row.declined);
+
   return (
-    <div className="flex w-full flex-col items-start gap-2">
-      <span className="text-heading-3 font-heading-3 text-default-font">
-        Add-ons
-      </span>
-      <ul className="flex w-full flex-col items-start gap-1">
-        {addons.length === 0 ? (
-          <li className="text-body font-body text-subtext-color">None</li>
+    <div
+      className={
+        declined.length > 0
+          ? "grid w-full grid-cols-1 items-start gap-6 md:grid-cols-2 md:gap-10"
+          : "flex w-full flex-col items-start gap-2"
+      }
+    >
+      <div className="flex min-w-0 w-full flex-col items-start gap-2">
+        <span className="text-heading-3 font-heading-3 text-default-font">
+          What's included in the order
+        </span>
+        {included.length === 0 ? (
+          <span className="text-body font-body text-subtext-color">
+            {addons.length === 0 ? "None" : "No items to fit"}
+          </span>
         ) : (
-          addons.map((addon) => (
-            <li
-              key={addon.id}
-              className="text-body font-body text-default-font"
-            >
-              {addon.title?.trim() || "Add-on"}
-              {addon.quantity != null ? ` × ${addon.quantity}` : ""}
-            </li>
-          ))
+          <ul className="flex w-full flex-col items-start gap-2">
+            {included.map((row) => (
+              <li key={row.id} className="w-full">
+                {row.isSection ? (
+                  <span className="text-body-bold font-body-bold text-subtext-color">
+                    {row.label}
+                  </span>
+                ) : row.value ? (
+                  <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-0">
+                    <span className="text-body font-body text-subtext-color">
+                      {row.label}
+                    </span>
+                    <span className="min-w-0 break-words text-body font-medium text-default-font">
+                      {row.value}
+                      {row.quantityLabel}
+                    </span>
+                  </div>
+                ) : (
+                  <span className="text-body-bold font-body-bold text-default-font">
+                    {row.label}
+                    {row.quantityLabel}
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
-      </ul>
+      </div>
+      {declined.length > 0 ? (
+        <div className="flex min-w-0 w-full flex-col items-start gap-2 md:border-l md:border-solid md:border-neutral-border md:pl-10">
+          <span className="text-heading-3 font-heading-3 text-default-font">
+            Not included
+          </span>
+          <ul className="flex w-full flex-col items-start gap-2">
+            {declined.map((row) => (
+              <li
+                key={row.id}
+                className="text-body font-body text-subtext-color"
+              >
+                {row.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -522,18 +649,17 @@ function AttestationList({
     <div className="flex w-full flex-col items-start gap-1">
       {m1 ? (
         <span className="text-body font-body text-subtext-color">
-          M1 signed by {signerName(m1)} · {formatSignedAt(m1.signedAt)}
+          {`Bike preparation completed by ${signerName(m1)} on ${formatSignedAt(m1.signedAt)}`}
         </span>
       ) : null}
       {m2 ? (
         <span className="text-body font-body text-subtext-color">
-          M2 signed by {signerName(m2)} · {formatSignedAt(m2.signedAt)}
+          {`Recheck completed by ${signerName(m2)} on ${formatSignedAt(m2.signedAt)}`}
         </span>
       ) : null}
       {storage ? (
         <span className="text-body font-body text-subtext-color">
-          Storage signed by {signerName(storage)} ·{" "}
-          {formatSignedAt(storage.signedAt)}
+          {`Storage completed by ${signerName(storage)} on ${formatSignedAt(storage.signedAt)}`}
         </span>
       ) : null}
     </div>
@@ -557,11 +683,19 @@ function ChecklistItems({
   onNotApplicable: (itemId: string) => void;
   onSetPsi: (itemId: string, psi: number) => void;
 }) {
+  const firstPsiId = items.find(
+    (item) => item.itemType === "tyre_pressure_psi",
+  )?.itemId;
+
   return (
-    <div className="flex w-full flex-col items-start gap-2">
+    <div className="grid w-full grid-cols-1 items-stretch gap-2 md:grid-cols-2">
       {items.map((item) => {
         const isDone = item.m1Outcome === "completed";
         const isNa = item.m1Outcome === "not_applicable";
+        const hasOutcome = isDone || isNa;
+        const doneChrome = isDone
+          ? "border-brand-600 bg-brand-50"
+          : "border-neutral-border";
         if (item.itemType === "tyre_pressure_psi") {
           const draft =
             psiDrafts[item.itemId] ??
@@ -571,7 +705,9 @@ function ChecklistItems({
           return (
             <div
               key={item.itemId}
-              className="flex w-full flex-col items-start gap-2 rounded-md border border-solid border-neutral-border px-4 py-3"
+              className={`flex h-full min-w-0 w-full flex-col items-start gap-2 rounded-md border border-solid px-4 py-3 ${doneChrome}${
+                item.itemId === firstPsiId ? " md:col-start-1" : ""
+              }`}
             >
               <div className="flex w-full flex-wrap items-center gap-2">
                 {isDone ? (
@@ -585,16 +721,17 @@ function ChecklistItems({
                   <Badge variant="info">{item.m1Psi} PSI</Badge>
                 ) : null}
               </div>
-              <div className="flex w-full flex-wrap items-end gap-2">
+              <div className="flex w-full flex-wrap items-center gap-2">
                 <TextField
-                  className="w-32"
-                  label="PSI"
+                  className="w-24 [&>div]:h-10"
+                  label=""
                   helpText=""
-                  disabled={disabled}
+                  disabled={disabled || isNa}
                 >
                   <TextField.Input
                     type="number"
                     inputMode="decimal"
+                    aria-label="PSI"
                     value={draft}
                     onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
                       onPsiDraftChange(item.itemId, event.target.value)
@@ -604,16 +741,16 @@ function ChecklistItems({
                 <Button
                   size="large"
                   variant="neutral-secondary"
-                  disabled={disabled || !psiValid}
+                  disabled={disabled || isNa || !psiValid}
                   onClick={() => onSetPsi(item.itemId, parsed)}
                 >
-                  Set PSI
+                  Set
                 </Button>
                 {item.naAllowed ? (
                   <Button
                     size="large"
                     variant="neutral-tertiary"
-                    disabled={disabled || isNa}
+                    disabled={disabled || hasOutcome}
                     onClick={() => onNotApplicable(item.itemId)}
                   >
                     N/A
@@ -627,13 +764,13 @@ function ChecklistItems({
         return (
           <div
             key={item.itemId}
-            className="flex w-full items-center gap-2"
+            className={`flex h-full min-h-12 min-w-0 w-full items-stretch overflow-hidden rounded-md border border-solid ${doneChrome}`}
           >
             <button
               type="button"
-              disabled={disabled || isDone}
+              disabled={disabled || hasOutcome}
               onClick={() => onComplete(item.itemId)}
-              className="flex min-h-12 grow items-center gap-3 rounded-md border border-solid border-neutral-border px-4 py-3 text-left disabled:cursor-default"
+              className="flex min-w-0 grow items-center gap-3 px-4 py-3 text-left disabled:cursor-default"
             >
               {isDone ? (
                 <FeatherCheck className="text-body font-body text-success-700" />
@@ -643,17 +780,20 @@ function ChecklistItems({
               <span className="text-body-bold font-body-bold text-default-font">
                 {item.label}
               </span>
-              {isNa ? <Badge variant="neutral">N/A</Badge> : null}
             </button>
             {item.naAllowed ? (
-              <Button
-                size="large"
-                variant="neutral-tertiary"
-                disabled={disabled || isNa}
+              <button
+                type="button"
+                disabled={disabled || hasOutcome}
                 onClick={() => onNotApplicable(item.itemId)}
+                className={
+                  isNa
+                    ? "flex flex-none items-center border-l border-solid border-neutral-border bg-brand-100 px-4 text-body-bold font-body-bold text-brand-800 disabled:cursor-default"
+                    : "flex flex-none items-center border-l border-solid border-neutral-border px-4 text-body-bold font-body-bold text-subtext-color hover:bg-neutral-50 hover:text-default-font disabled:cursor-default"
+                }
               >
                 N/A
-              </Button>
+              </button>
             ) : null}
           </div>
         );
@@ -672,7 +812,7 @@ function M2Checklist({
   onConfirm: (itemId: string) => void;
 }) {
   return (
-    <div className="flex w-full flex-col items-start gap-2">
+    <div className="grid w-full grid-cols-1 items-stretch gap-2 md:grid-cols-2">
       {items.map((item) => {
         const m1Summary = m2ItemCaption(item);
         return (
@@ -681,7 +821,11 @@ function M2Checklist({
             type="button"
             disabled={disabled || item.m2Confirmed}
             onClick={() => onConfirm(item.itemId)}
-            className="flex min-h-12 w-full items-center gap-3 rounded-md border border-solid border-neutral-border px-4 py-3 text-left disabled:cursor-default"
+            className={
+              item.m2Confirmed
+                ? "flex h-full min-h-12 min-w-0 w-full items-center gap-3 rounded-md border border-solid border-brand-600 bg-brand-50 px-4 py-3 text-left disabled:cursor-default"
+                : "flex h-full min-h-12 min-w-0 w-full items-center gap-3 rounded-md border border-solid border-neutral-border px-4 py-3 text-left disabled:cursor-default"
+            }
           >
             {item.m2Confirmed ? (
               <FeatherCheck className="text-body font-body text-success-700" />
@@ -692,9 +836,11 @@ function M2Checklist({
               <span className="text-body-bold font-body-bold text-default-font">
                 {item.label}
               </span>
-              <span className="text-caption font-caption text-subtext-color">
-                {m1Summary}
-              </span>
+              {m1Summary ? (
+                <span className="text-caption font-caption text-subtext-color">
+                  {m1Summary}
+                </span>
+              ) : null}
             </div>
           </button>
         );

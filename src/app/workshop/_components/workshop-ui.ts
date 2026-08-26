@@ -17,13 +17,20 @@ export const WORKSHOP_STATUS_LABELS: Record<BikeTaskStatus, string> = {
   cancelled: "Cancelled",
 };
 
+export function workshopBikeId(task: {
+  bikeDisplayId: string | null;
+  bikeSourceId: string;
+}): string {
+  return task.bikeDisplayId?.trim() || task.bikeSourceId?.trim() || "Unknown bike";
+}
+
 export function workshopBikeLabel(task: {
   bikeDisplayId: string | null;
   bikeSourceId: string;
   bikeTitle: string | null;
 }): string {
-  const id = task.bikeDisplayId?.trim() || task.bikeSourceId?.trim() || "";
-  if (!id) return "Unknown bike";
+  const id = workshopBikeId(task);
+  if (id === "Unknown bike") return id;
   const title = task.bikeTitle?.trim();
   return title ? `${id} · ${title}` : id;
 }
@@ -111,6 +118,15 @@ export function formatWorkshopQueueWhen(
   return madridStartDate ?? "—";
 }
 
+/** Task page From–Until using the same Madrid clock as the queue. */
+export function formatWorkshopFromUntil(
+  startsAt: string | null,
+  stopsAt: string | null,
+  madridStartDate: string | null,
+): string {
+  return `${formatWorkshopQueueWhen(startsAt, madridStartDate)} – ${formatWorkshopQueueWhen(stopsAt, null)}`;
+}
+
 export function shouldRenderWorkshopQueue(error: string | null): boolean {
   return error === null;
 }
@@ -175,17 +191,17 @@ export function isM1ItemValid(item: WorkshopTaskItem): boolean {
 export function m2ItemCaption(item: Pick<
   WorkshopTaskItem,
   "m1Outcome" | "itemType" | "m1Psi"
->): string {
+>): string | null {
   if (item.m1Outcome === "not_applicable") {
-    return "M1 marked not applicable";
+    return "Marked not applicable";
   }
-  if (item.m1Outcome === "completed") {
-    if (item.itemType === "tyre_pressure_psi" && item.m1Psi != null) {
-      return `M1 recorded ${item.m1Psi} PSI`;
-    }
-    return "M1 completed";
+  if (item.itemType === "tyre_pressure_psi" && item.m1Psi != null) {
+    return `${item.m1Psi} PSI`;
   }
-  return "M1 is incomplete";
+  if (item.m1Outcome !== "completed") {
+    return "Preparation incomplete";
+  }
+  return null;
 }
 
 /** SSR-safe Madrid clock: ICU must not pick `at` vs `,` or `Sept` vs `Sep`. */
