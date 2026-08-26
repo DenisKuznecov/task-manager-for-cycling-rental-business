@@ -31,6 +31,7 @@ import {
   formatWorkshopFromUntil,
   isM1ItemValid,
   m2ItemCaption,
+  parseAddonTitle,
   workshopBikeId,
   workshopBikeLabel,
   workshopStatusBadgeProps,
@@ -516,29 +517,6 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
       )}
     </div>
   );
-}
-
-function cleanAddonText(value: string): string {
-  return value
-    .replace(/\|\s*FREE\s*\|/gi, "")
-    .replace(/\s*\|\s*/g, " · ")
-    .replace(/(?:^[\s,·]+)|(?:[\s,·]+$)/g, "")
-    .replace(/\s*,\s*,+/g, ",")
-    .replace(/\s{2,}/g, " ");
-}
-
-function parseAddonTitle(title: string | null): {
-  label: string;
-  value: string | null;
-} {
-  const raw = title?.trim() || "Add-on";
-  const separator = raw.indexOf(" - ");
-  if (separator === -1) {
-    return { label: cleanAddonText(raw) || raw, value: null };
-  }
-  const label = cleanAddonText(raw.slice(0, separator)) || raw;
-  const value = cleanAddonText(raw.slice(separator + 3));
-  return { label, value: value || null };
 }
 
 function isDeclinedAddonChoice(value: string | null): boolean {

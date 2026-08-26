@@ -21,6 +21,8 @@ import {
   workshopBikeId,
   workshopBikeLabel,
   WORKSHOP_QUEUE_STATUS_SELECT_NONE,
+  cleanAddonText,
+  parseAddonTitle,
 } from "./app/workshop/_components/workshop-ui.ts";
 import type { WorkshopTaskItem } from "./lib/workshop/domain/dtos.ts";
 import {
@@ -49,6 +51,36 @@ function item(
     ...overrides,
   };
 }
+
+test("cleanAddonText drops empty comma and pipe slots", () => {
+  assert.equal(
+    cleanAddonText(
+      "from 20 EUR / day | , | 1300gr | , 45mm, Racing_Parts R45_Factory, Continental GP5000 S TR 30mm, 01 | Ultra",
+    ),
+    "from 20 EUR / day · 1300gr · 45mm, Racing_Parts R45_Factory, Continental GP5000 S TR 30mm, 01 · Ultra",
+  );
+  assert.equal(
+    cleanAddonText("EUR per bike / per reservation | , 01 | Ultra, Covers 1000 EUR damage"),
+    "EUR per bike / per reservation · 01 · Ultra, Covers 1000 EUR damage",
+  );
+  assert.equal(cleanAddonText("foo | FREE | bar"), "foo · bar");
+});
+
+test("parseAddonTitle splits label from cleaned value", () => {
+  assert.deepEqual(
+    parseAddonTitle(
+      "Wheels - from 20 EUR / day | , | 1300gr | , 45mm, Racing_Parts R45_Factory",
+    ),
+    {
+      label: "Wheels",
+      value: "from 20 EUR / day · 1300gr · 45mm, Racing_Parts R45_Factory",
+    },
+  );
+  assert.deepEqual(parseAddonTitle("Saddle bag"), {
+    label: "Saddle bag",
+    value: null,
+  });
+});
 
 test("formatMadridDateTime joins date and time with a comma, not at", () => {
   const text = formatMadridDateTime("2026-08-22T10:20:00.000Z");

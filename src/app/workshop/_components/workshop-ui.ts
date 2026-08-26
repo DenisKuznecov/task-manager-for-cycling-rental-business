@@ -323,3 +323,32 @@ export function statusTileClassName(
   }
   return `${TILE_BASE} ${accent.bar} bg-default-background text-default-font`;
 }
+
+/** Booqable titles mix `|` option slots and commas; drop empty slots. */
+export function cleanAddonText(value: string): string {
+  return value
+    .split(/\s*[|·]\s*/)
+    .map((segment) =>
+      segment
+        .split(",")
+        .map((part) => part.trim().replace(/\s{2,}/g, " "))
+        .filter((part) => part.length > 0 && !/^free$/i.test(part))
+        .join(", "),
+    )
+    .filter(Boolean)
+    .join(" · ");
+}
+
+export function parseAddonTitle(title: string | null): {
+  label: string;
+  value: string | null;
+} {
+  const raw = title?.trim() || "Add-on";
+  const separator = raw.indexOf(" - ");
+  if (separator === -1) {
+    return { label: cleanAddonText(raw) || raw, value: null };
+  }
+  const label = cleanAddonText(raw.slice(0, separator)) || raw;
+  const value = cleanAddonText(raw.slice(separator + 3));
+  return { label, value: value || null };
+}
