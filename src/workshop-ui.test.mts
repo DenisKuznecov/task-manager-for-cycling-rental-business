@@ -508,6 +508,9 @@ test("task page: not-found vs error vs cancelled tombstone and named actions", (
   assert.match(task, /completeStorage/);
   assert.match(task, /STALE_VERSION/);
   assert.match(task, /CONFIGURATION_BLOCKED|hasConfigurationWarning/);
+  assert.match(task, /Start preparation is blocked until the Booqable product tag is corrected/);
+  assert.match(task, /task\.status === "to_prepare"/);
+  assert.match(task, /Correct the Booqable product tag/);
   assert.match(task, /formatWorkshopFromUntil/);
   assert.doesNotMatch(task, /Starts /);
 });

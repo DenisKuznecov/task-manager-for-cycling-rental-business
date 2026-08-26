@@ -17,7 +17,7 @@ Code review of Group 2 (Booqable ingest: fetch, parse, webhook, sandbox reseed, 
 - [x] Review Group 2 (Booqable ingest) vs `staging`
 - [x] Apply agreed ingest patches (if any) — user declined; none applied
 - [x] Review Group 3 (Workshop app) — write-up `review-workshop-app-group.md`
-- [ ] Review Group 4 (Workshop UI)
+- [x] Review Group 4 (Workshop UI) — write-up `review-workshop-ui-group.md`
 
 ### Review Findings
 

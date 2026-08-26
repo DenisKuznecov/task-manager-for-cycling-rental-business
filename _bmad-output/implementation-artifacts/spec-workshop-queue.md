@@ -89,6 +89,13 @@ context:
 - Given more than 15 matching tasks, when the page loads, then pagination is visible.
 - Given Sync all reserved in flight, when the mechanic activates a table row, then the sync request is not aborted.
 
+### Review Findings
+
+- [x] [Review][Dismiss] Resume sync is `brand-secondary`, not `neutral-secondary` — user has not seen Resume; keep louder colour
+- [x] [Review][Dismiss] Search sits under the tabs, not on the tabs row — under the tabs is fine
+- [x] [Review][Dismiss] Queue body cells are `!h-16` (64px), not spec `h-14` (56px) — taller rows are better
+- [x] [Review][Dismiss] Search debounce can `router.push` after Sync starts — only if search then Sync within ~300ms; unlikely
+
 ## Spec Change Log
 
 - 2026-08-26: Task page start line is From–Until using `formatWorkshopQueueWhen` (same Madrid clock as the list). `workshop_task_detail` includes `orders.stops_at` in the foundation function (folded in; unpublished). Missing until is `—`.

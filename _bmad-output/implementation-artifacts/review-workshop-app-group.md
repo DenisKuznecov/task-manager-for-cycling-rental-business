@@ -16,7 +16,7 @@ Code review of Group 3 (`src/lib/workshop` actions, application, data, domain) a
 
 - [x] Review Group 3 (Workshop app) vs `staging`
 - [x] Apply agreed app patches (if any) — none; clean review
-- [ ] Review Group 4 (Workshop UI)
+- [x] Review Group 4 (Workshop UI) — write-up `review-workshop-ui-group.md`
 
 ### Review Findings
 

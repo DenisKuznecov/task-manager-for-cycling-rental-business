@@ -287,7 +287,11 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
           variant="warning"
           icon={<FeatherAlertTriangle />}
           title="Configuration warning"
-          description="This bike has a missing or unrecognized workshop tag. Start preparation is blocked until the Booqable product tag is corrected."
+          description={
+            task.status === "to_prepare"
+              ? "This bike has a missing or unrecognized workshop tag. Start preparation is blocked until the Booqable product tag is corrected."
+              : "This bike has a missing or unrecognized workshop tag. Correct the Booqable product tag."
+          }
         />
       ) : null}
 

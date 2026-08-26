@@ -115,6 +115,8 @@ context:
 - [x] [Review][Dismiss] Fetch merge and `fetchSourceOrderDocument` never run in tests, so a one-page fetch that strips `links` still parses — user declined this pass
 - [x] [Review][Dismiss] List `hasMore` for a full 50-row page with no `links.next` is unasserted — user declined this pass
 - [x] [Review][Dismiss] `mergeOrderDocuments` silently drops include rows that are not `{type,id}` instead of `INVALID_SNAPSHOT` — user declined this pass
+- [x] [Review][Dismiss] Resume sync is `brand-secondary`, not `neutral-secondary` — user has not seen Resume; keep louder colour
+- [x] [Review][Dismiss] Search debounce can `router.push` after Sync starts — only if search then Sync within ~300ms; unlikely
 
 ## Design Notes
 

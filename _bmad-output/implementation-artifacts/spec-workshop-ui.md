@@ -137,6 +137,8 @@ deferred:
 - [x] [Review][Defer] Drawer host tests grep source instead of rendering OrderDetailsDrawerHost [src/workshop-ui.test.mts:203] — deferred, pre-existing
 - [x] [Review][Defer] Repo-wide npm run lint still fails on bike-fits/wiki react-hooks findings [src/app/bike-fits] — deferred, pre-existing
 - [x] [Review][Defer] Workshop layout redirect("/login") has no ?next= [src/app/workshop/layout.tsx:23] — deferred, pre-existing
+- [x] [Review][Dismiss] Successful item save clears add-on ack, same-person confirm, and PSI drafts — only if those boxes are checked, then another item is ticked; normal tick-first flow never hits it
+- [x] [Review][Patch] Configuration warning always says Start preparation is blocked [src/app/workshop/_components/WorkshopTask.tsx:285]
 
 ## Spec Change Log
 
