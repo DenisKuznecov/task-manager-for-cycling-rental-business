@@ -1,0 +1,21 @@
+---
+description: Explain in plain, simple English. No jargon unless the user uses it first.
+alwaysApply: true
+---
+
+# Plain English
+
+Explain in plain, simple English. Do not use jargon unless the user uses it first.
+
+- Prefer everyday words over specialist terms.
+- If a technical name is needed and the user has not used it, say what it means in simple words first.
+- Mirror the user's own words. If they say "RPC" or "RLS", you may use those terms.
+- Keep sentences short. Lead with the point.
+
+```
+❌ The mutation is gated by a discriminated union from the withAuth HOF.
+✅ The save function returns success or an error message. The page shows that message.
+
+❌ Hydrate the URL-derived pagination state.
+✅ The page number lives in the URL, like ?page=2.
+```
