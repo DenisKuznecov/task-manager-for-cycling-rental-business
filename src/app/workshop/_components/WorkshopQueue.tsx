@@ -13,7 +13,6 @@ import { Tabs } from "@/ui/components/Tabs";
 import { TextField } from "@/ui/components/TextField";
 import { TablePagination } from "@/src/components/TablePagination";
 import * as workshopActions from "@/src/lib/workshop/actions";
-import { WorkshopSyncAllConfirmDialog } from "./WorkshopSyncAllConfirmDialog";
 import type { WorkshopSyncHealth } from "@/src/lib/workshop/data";
 import {
   WORKSHOP_QUEUE_STATUSES,
@@ -80,7 +79,7 @@ function WorkshopQueueSyncOverlay({ listed }: { listed: number }) {
     <div
       aria-live="polite"
       aria-busy
-      className="pointer-events-none absolute inset-0 z-10 flex items-center justify-center bg-default-background/20"
+      className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-default-background/20"
     >
       <div className="relative flex min-w-[16rem] max-w-sm flex-col items-start gap-2 rounded-md border border-solid border-neutral-border bg-default-background px-4 py-3 pb-4 shadow-sm">
         <div className="flex items-center gap-2">
@@ -147,7 +146,6 @@ export function WorkshopQueue({
   const [pendingScope, setPendingScope] = useState<ManualSyncScope | "resume" | null>(
     null,
   );
-  const [confirmAllOpen, setConfirmAllOpen] = useState(false);
   if (query !== prevQuery) {
     setPrevQuery(query);
     setSearch(query);
@@ -155,10 +153,6 @@ export function WorkshopQueue({
 
   const syncInFlight = shouldBlockQueueNavigation(isPending, health);
   const overlayListed = workshopSyncOverlayListed(health);
-
-  useEffect(() => {
-    if (syncInFlight) setConfirmAllOpen(false);
-  }, [syncInFlight]);
 
   useEffect(() => {
     const supabase = createClient();
@@ -297,18 +291,6 @@ export function WorkshopQueue({
               >
                 Sync next 7 days
               </Button>
-              <Button
-                size="large"
-                variant="neutral-secondary"
-                disabled={syncInFlight}
-                loading={pendingScope === "all_reserved"}
-                onClick={() => {
-                  if (syncInFlight) return;
-                  setConfirmAllOpen(true);
-                }}
-              >
-                Sync all reserved
-              </Button>
               {resumable && health.cursor ? (
                 <Button
                   size="large"
@@ -331,8 +313,7 @@ export function WorkshopQueue({
                 Last full sync: {formatSyncTime(health.lastSuccessAt)}
               </span>
               <span className="text-body font-body text-subtext-color">
-                Pulls Booqable changes onto this list. Next 7 days = this week.
-                All reserved = every reserved order (slow).
+                Pulls reserved orders starting in the next 7 days onto this list.
                 {resumable
                   ? " Each click fetches 50 orders. Use Resume sync if more remain."
                   : null}
@@ -549,17 +530,6 @@ export function WorkshopQueue({
       {syncInFlight ? (
         <WorkshopQueueSyncOverlay listed={overlayListed} />
       ) : null}
-      <WorkshopSyncAllConfirmDialog
-        open={confirmAllOpen}
-        onOpenChange={setConfirmAllOpen}
-        onConfirm={() => {
-          if (syncInFlight) return;
-          runSync(
-            () => workshopActions.startManualSync("all_reserved"),
-            "all_reserved",
-          );
-        }}
-      />
     </div>
   );
 }

@@ -662,48 +662,27 @@ test("queue I/O matrix: empty today, status isolate/clear, completed, page clamp
   assert.match(queue, /if \(syncInFlight\) return/);
   assert.match(queue, /pushQueue/);
   assert.match(queue, /Stay on this page until it finishes/);
-  assert.match(queue, /Pulls Booqable changes onto this list/);
+  assert.match(queue, /Pulls reserved orders starting in the next 7 days onto this list/);
   assert.match(queue, /syncStatusLabel && !syncInFlight/);
 });
 
-test("queue sync overlay and all-reserved confirm lock the I/O matrix", () => {
+test("queue sync overlay locks next-7-days and resume I/O", () => {
   const queue = readFileSync(
     join(root, "src/app/workshop/_components/WorkshopQueue.tsx"),
     "utf8",
   );
-  const dialog = readFileSync(
-    join(root, "src/app/workshop/_components/WorkshopSyncAllConfirmDialog.tsx"),
-    "utf8",
-  );
 
-  assert.match(dialog, /DialogLayout/);
-  assert.match(dialog, /Sync all reserved orders\?/);
-  assert.match(dialog, /This can take several minutes\. Stay on this page until it finishes\./);
-  assert.match(dialog, />\s*Cancel\s*</);
-  assert.match(dialog, />\s*Start sync\s*</);
-  assert.match(dialog, /onOpenChange\(false\)/);
-  assert.match(dialog, /onConfirm\(\)/);
+  assert.doesNotMatch(queue, /Sync all reserved/);
+  assert.doesNotMatch(queue, /WorkshopSyncAllConfirmDialog/);
+  assert.doesNotMatch(queue, /all_reserved/);
+  assert.doesNotMatch(queue, /DialogLayout/);
 
-  assert.match(queue, /WorkshopSyncAllConfirmDialog/);
-  assert.match(queue, /setConfirmAllOpen\(true\)/);
   const next7Button = queue.slice(
     queue.indexOf('pendingScope === "next_7_days"'),
     queue.indexOf("Sync next 7 days"),
   );
   assert.match(next7Button, /runSync/);
   assert.match(next7Button, /startManualSync\("next_7_days"\)/);
-  assert.doesNotMatch(next7Button, /setConfirmAllOpen/);
-  const allReservedButton = queue.slice(
-    queue.indexOf('pendingScope === "all_reserved"'),
-    queue.indexOf("Sync all reserved"),
-  );
-  assert.doesNotMatch(allReservedButton, /runSync/);
-  assert.match(allReservedButton, /setConfirmAllOpen\(true\)/);
-  assert.match(
-    queue,
-    /onConfirm=\{\(\) => \{\s+if \(syncInFlight\) return;\s+runSync\(\s+\(\) => workshopActions\.startManualSync\("all_reserved"\)/,
-  );
-  assert.match(dialog, /onOpenChange\(false\);\s+onConfirm\(\)/);
 
   const resumeButton = queue.slice(
     queue.indexOf('pendingScope === "resume"'),
@@ -711,24 +690,21 @@ test("queue sync overlay and all-reserved confirm lock the I/O matrix", () => {
   );
   assert.match(resumeButton, /runSync/);
   assert.match(resumeButton, /resumeManualSync/);
-  assert.doesNotMatch(resumeButton, /setConfirmAllOpen/);
   assert.match(queue, /resumable && health\.cursor/);
   assert.match(queue, /syncStatusLabel && !syncInFlight/);
 
   assert.match(queue, /WorkshopQueueSyncOverlay/);
+  assert.match(queue, /fixed inset-0 z-50 flex items-center justify-center/);
   assert.match(queue, /syncInFlight \? \(/);
   assert.match(queue, /workshopSyncOverlayListed\(health\)/);
   assert.match(queue, /inert=\{syncInFlight \|\| undefined\}/);
   assert.match(queue, /disabled=\{syncInFlight\}/);
-  assert.match(queue, /if \(syncInFlight\) setConfirmAllOpen\(false\)/);
   assert.match(queue, /Stay on this page until it finishes/);
   assert.match(queue, /\{listed\} orders processed/);
   assert.match(queue, /listed > 0/);
   assert.match(queue, /animate-\[nav-progress_1\.1s_ease-in-out_infinite\]/);
   assert.match(queue, /aria-busy/);
   assert.match(queue, /<Loader size="small" \/>/);
-  assert.match(dialog, /if \(starting\) return/);
-  assert.match(dialog, /setStarting\(true\)/);
   assert.doesNotMatch(queue, /title="Updating from Booqable"/);
   assert.doesNotMatch(
     queue,
@@ -754,7 +730,9 @@ test("queue surface: All-first tabs, status tiles, columns, sync help, load erro
   assert.match(page, /loadWorkshopTaskStatusCounts/);
   assert.match(page, /heading=\{heading\}/);
   assert.match(queue, /text-body font-body text-subtext-color/);
-  const helpStart = queue.indexOf("Pulls Booqable changes onto this list");
+  const helpStart = queue.indexOf(
+    "Pulls reserved orders starting in the next 7 days onto this list",
+  );
   assert.notEqual(helpStart, -1);
   assert.doesNotMatch(
     queue.slice(helpStart - 120, helpStart),
@@ -772,7 +750,8 @@ test("queue surface: All-first tabs, status tiles, columns, sync help, load erro
   assert.doesNotMatch(queue, /@\/ui\/components\/Progress/);
   assert.doesNotMatch(queue, /<Progress[\s>]/);
   assert.match(queue, /Updating from Booqable/);
-  assert.match(queue, /every reserved order \(slow\)/);
+  assert.doesNotMatch(queue, /every reserved order \(slow\)/);
+  assert.doesNotMatch(queue, /Sync all reserved/);
   assert.doesNotMatch(queue, /bg-warning-100/);
   assert.doesNotMatch(queue, /text-warning-800/);
   assert.match(queue, /text-heading-3 font-heading-3 text-default-font/);

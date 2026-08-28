@@ -36,3 +36,7 @@
 - Drawer wiring tests still grep layout/task source for `OrderDetailsDrawerHost` / `useOpenOrderDetails` and never render the host, so a missing host in the tree would not fail `test:workshop-ui`.
 - Repo-wide `npm run lint` still fails on pre-existing bike-fits/wiki `react-hooks` findings from the Next.js 16 upgrade; workshop eslint is clean.
 - Workshop layout `redirect("/login")` has no `?next=`, matching the other role layouts; session expiry on a task page does not resume at that task.
+
+- source_spec: `_bmad-output/implementation-artifacts/handover-workshop-sync-auto-page.md`
+  summary: One **Sync next 7 days** click should walk Booqable reserved pages until the 7-day scan is done; remove **Resume sync**.
+  evidence: Staff dropped **Sync all reserved**. Resume only exists because list sync stops after 50 reserved rows (shop-wide, not 7-day). User chose auto-paging over keeping Resume.

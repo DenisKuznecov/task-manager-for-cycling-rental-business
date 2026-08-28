@@ -288,10 +288,10 @@ test("task page exposes a large Sync order from Booqable control", () => {
   assert.match(source, /size="large"/);
 });
 
-test("workshop queue exposes next 7 days and all reserved sync", () => {
+test("workshop queue exposes next 7 days sync", () => {
   const source = readSrc("app/workshop/_components/WorkshopQueue.tsx");
   assert.match(source, /Sync next 7 days/);
-  assert.match(source, /Sync all reserved/);
+  assert.doesNotMatch(source, /Sync all reserved/);
   assert.match(source, /startManualSync/);
   assert.match(source, /resumeManualSync/);
   assert.match(source, /booqable_sync_runs/);
