@@ -17,6 +17,7 @@ import {
   shouldLockChecklistForPending,
   queueStatusSelectValue,
   shouldBlockQueueNavigation,
+  workshopSyncOverlayListed,
   shouldRenderWorkshopQueue,
   statusBadgeVariant,
   statusFromQueueSelectValue,
@@ -241,6 +242,30 @@ test("in-flight sync blocks queue navigation", () => {
   assert.equal(
     shouldBlockQueueNavigation(false, { state: "failed", cursor: null }),
     false,
+  );
+});
+
+test("overlay listed count ignores prior runs", () => {
+  assert.equal(
+    workshopSyncOverlayListed({
+      state: "succeeded",
+      counts: { listed: 29 },
+    }),
+    0,
+  );
+  assert.equal(
+    workshopSyncOverlayListed({
+      state: "in_progress",
+      counts: { listed: 0 },
+    }),
+    0,
+  );
+  assert.equal(
+    workshopSyncOverlayListed({
+      state: "in_progress",
+      counts: { listed: 12 },
+    }),
+    12,
   );
 });
 
@@ -636,9 +661,82 @@ test("queue I/O matrix: empty today, status isolate/clear, completed, page clamp
 
   assert.match(queue, /if \(syncInFlight\) return/);
   assert.match(queue, /pushQueue/);
-  assert.match(queue, /Updating from Booqable… stay on this page until it finishes/);
+  assert.match(queue, /Stay on this page until it finishes/);
   assert.match(queue, /Pulls Booqable changes onto this list/);
   assert.match(queue, /syncStatusLabel && !syncInFlight/);
+});
+
+test("queue sync overlay and all-reserved confirm lock the I/O matrix", () => {
+  const queue = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopQueue.tsx"),
+    "utf8",
+  );
+  const dialog = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopSyncAllConfirmDialog.tsx"),
+    "utf8",
+  );
+
+  assert.match(dialog, /DialogLayout/);
+  assert.match(dialog, /Sync all reserved orders\?/);
+  assert.match(dialog, /This can take several minutes\. Stay on this page until it finishes\./);
+  assert.match(dialog, />\s*Cancel\s*</);
+  assert.match(dialog, />\s*Start sync\s*</);
+  assert.match(dialog, /onOpenChange\(false\)/);
+  assert.match(dialog, /onConfirm\(\)/);
+
+  assert.match(queue, /WorkshopSyncAllConfirmDialog/);
+  assert.match(queue, /setConfirmAllOpen\(true\)/);
+  const next7Button = queue.slice(
+    queue.indexOf('pendingScope === "next_7_days"'),
+    queue.indexOf("Sync next 7 days"),
+  );
+  assert.match(next7Button, /runSync/);
+  assert.match(next7Button, /startManualSync\("next_7_days"\)/);
+  assert.doesNotMatch(next7Button, /setConfirmAllOpen/);
+  const allReservedButton = queue.slice(
+    queue.indexOf('pendingScope === "all_reserved"'),
+    queue.indexOf("Sync all reserved"),
+  );
+  assert.doesNotMatch(allReservedButton, /runSync/);
+  assert.match(allReservedButton, /setConfirmAllOpen\(true\)/);
+  assert.match(
+    queue,
+    /onConfirm=\{\(\) => \{\s+if \(syncInFlight\) return;\s+runSync\(\s+\(\) => workshopActions\.startManualSync\("all_reserved"\)/,
+  );
+  assert.match(dialog, /onOpenChange\(false\);\s+onConfirm\(\)/);
+
+  const resumeButton = queue.slice(
+    queue.indexOf('pendingScope === "resume"'),
+    queue.indexOf("Resume sync"),
+  );
+  assert.match(resumeButton, /runSync/);
+  assert.match(resumeButton, /resumeManualSync/);
+  assert.doesNotMatch(resumeButton, /setConfirmAllOpen/);
+  assert.match(queue, /resumable && health\.cursor/);
+  assert.match(queue, /syncStatusLabel && !syncInFlight/);
+
+  assert.match(queue, /WorkshopQueueSyncOverlay/);
+  assert.match(queue, /syncInFlight \? \(/);
+  assert.match(queue, /workshopSyncOverlayListed\(health\)/);
+  assert.match(queue, /inert=\{syncInFlight \|\| undefined\}/);
+  assert.match(queue, /disabled=\{syncInFlight\}/);
+  assert.match(queue, /if \(syncInFlight\) setConfirmAllOpen\(false\)/);
+  assert.match(queue, /Stay on this page until it finishes/);
+  assert.match(queue, /\{listed\} orders processed/);
+  assert.match(queue, /listed > 0/);
+  assert.match(queue, /animate-\[nav-progress_1\.1s_ease-in-out_infinite\]/);
+  assert.match(queue, /aria-busy/);
+  assert.match(queue, /<Loader size="small" \/>/);
+  assert.match(dialog, /if \(starting\) return/);
+  assert.match(dialog, /setStarting\(true\)/);
+  assert.doesNotMatch(queue, /title="Updating from Booqable"/);
+  assert.doesNotMatch(
+    queue,
+    /Updating from Booqable… stay on this page until it finishes/,
+  );
+  assert.doesNotMatch(queue, /@\/ui\/components\/Progress/);
+  assert.doesNotMatch(queue, /<Progress[\s>]/);
+  assert.match(queue, /syncError && !syncInFlight/);
 });
 
 test("queue surface: All-first tabs, status tiles, columns, sync help, load error banner", () => {
@@ -671,7 +769,8 @@ test("queue surface: All-first tabs, status tiles, columns, sync help, load erro
   assert.match(queue, /Customer/);
   assert.match(queue, /Until/);
   assert.match(queue, /Warnings/);
-  assert.doesNotMatch(queue, /Progress/);
+  assert.doesNotMatch(queue, /@\/ui\/components\/Progress/);
+  assert.doesNotMatch(queue, /<Progress[\s>]/);
   assert.match(queue, /Updating from Booqable/);
   assert.match(queue, /every reserved order \(slow\)/);
   assert.doesNotMatch(queue, /bg-warning-100/);

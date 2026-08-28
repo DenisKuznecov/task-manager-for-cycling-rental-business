@@ -175,6 +175,15 @@ export function shouldBlockQueueNavigation(
   return isPending || (health.state === "in_progress" && !health.cursor);
 }
 
+/** Live overlay count: current in-progress run only, never a prior succeeded/paused listed. */
+export function workshopSyncOverlayListed(health: {
+  state: string | null;
+  counts: { listed: number };
+}): number {
+  if (health.state !== "in_progress") return 0;
+  return health.counts.listed > 0 ? health.counts.listed : 0;
+}
+
 /** Chain item-command versions: success payload, otherwise the last good value. */
 export function nextWorkshopTaskVersion(
   current: number,
