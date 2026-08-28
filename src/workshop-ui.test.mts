@@ -10,6 +10,7 @@ import {
   formatWorkshopQueueWhen,
   formatWorkshopStart,
   isM1ItemValid,
+  isM2RecheckItem,
   m2ItemCaption,
   PREPARE_FOR_STORAGE_BADGE_CLASS,
   queueStatusSelectValue,
@@ -317,6 +318,83 @@ test("M2 caption only carries a fact the recheck still needs", () => {
   );
 });
 
+test("isM2RecheckItem is true only for designated items M1 did not mark N/A", () => {
+  assert.equal(
+    isM2RecheckItem(item({ m2Verifies: true, m1Outcome: "completed" })),
+    true,
+  );
+  assert.equal(
+    isM2RecheckItem(item({ m2Verifies: true, m1Outcome: null })),
+    true,
+  );
+  assert.equal(
+    isM2RecheckItem(item({ m2Verifies: true, m1Outcome: "not_applicable" })),
+    false,
+  );
+  assert.equal(
+    isM2RecheckItem(item({ m2Verifies: false, m1Outcome: "completed" })),
+    false,
+  );
+  assert.equal(
+    isM2RecheckItem(item({ m2Verifies: false, m1Outcome: "not_applicable" })),
+    false,
+  );
+});
+
+test("empty M2 recheck list is ready when every designated item is N/A", () => {
+  const items = [
+    item({ itemId: "na-1", m2Verifies: true, m1Outcome: "not_applicable" }),
+    item({ itemId: "na-2", m2Verifies: true, m1Outcome: "not_applicable" }),
+  ];
+  const visible = items.filter(isM2RecheckItem);
+  assert.equal(visible.length, 0);
+  assert.equal(
+    visible.every((row) => row.m2Confirmed),
+    true,
+  );
+});
+
+test("mixed M2 list hides N/A and is ready from the filtered rows only", () => {
+  const items = [
+    item({
+      itemId: "road-16",
+      itemKey: "ROAD-16",
+      m2Verifies: true,
+      m1Outcome: "not_applicable",
+      m2Confirmed: false,
+    }),
+    item({
+      itemId: "road-07",
+      itemKey: "ROAD-07",
+      m2Verifies: true,
+      m1Outcome: "completed",
+      m2Confirmed: true,
+    }),
+    item({
+      itemId: "road-02",
+      itemKey: "ROAD-02",
+      m2Verifies: false,
+      m1Outcome: "completed",
+      m2Confirmed: false,
+    }),
+  ];
+  const m2Items = items.filter(isM2RecheckItem);
+  assert.deepEqual(
+    m2Items.map((row) => row.itemId),
+    ["road-07"],
+  );
+  assert.equal(
+    m2Items.every((row) => row.m2Confirmed),
+    true,
+  );
+  assert.equal(
+    items
+      .filter((row) => row.m2Verifies)
+      .every((row) => row.m2Confirmed),
+    false,
+  );
+});
+
 test("mobile status select is clearable and label-only", () => {
   assert.equal(queueStatusSelectValue(null), WORKSHOP_QUEUE_STATUS_SELECT_NONE);
   assert.equal(queueStatusSelectValue("to_prepare"), "to_prepare");
@@ -502,6 +580,7 @@ test("task page: not-found vs error vs cancelled tombstone and named actions", (
   assert.match(task, /startPreparation/);
   assert.match(task, /completeM1/);
   assert.match(task, /completeM2/);
+  assert.match(task, /isM2RecheckItem/);
   assert.match(task, /samePersonConfirmed/);
   assert.match(task, /markPickedUp/);
   assert.match(task, /markReturned/);

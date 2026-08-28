@@ -30,6 +30,7 @@ import {
   formatMadridDateTime,
   formatWorkshopFromUntil,
   isM1ItemValid,
+  isM2RecheckItem,
   m2ItemCaption,
   parseAddonTitle,
   workshopBikeId,
@@ -202,7 +203,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
   const storageItems = sortItems(
     items.filter((item) => item.stage === "storage"),
   );
-  const m2Items = preparationItems.filter((item) => item.m2Verifies);
+  const m2Items = preparationItems.filter(isM2RecheckItem);
   const m1Attestation = attestations.find((row) => row.stage === "m1");
   const m2Attestation = attestations.find((row) => row.stage === "m2");
   const storageAttestation = attestations.find((row) => row.stage === "storage");

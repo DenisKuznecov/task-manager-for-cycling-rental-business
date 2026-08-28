@@ -188,6 +188,13 @@ export function isM1ItemValid(item: WorkshopTaskItem): boolean {
   return item.m1Outcome === "completed";
 }
 
+/** M2 re-check rows: designated items that M1 did not mark N/A. */
+export function isM2RecheckItem(
+  item: Pick<WorkshopTaskItem, "m2Verifies" | "m1Outcome">,
+): boolean {
+  return item.m2Verifies && item.m1Outcome !== "not_applicable";
+}
+
 export function m2ItemCaption(item: Pick<
   WorkshopTaskItem,
   "m1Outcome" | "itemType" | "m1Psi"
