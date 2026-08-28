@@ -188,6 +188,7 @@ BEGIN
     WHERE i.task_id = p_task_id
       AND i.stage = 'preparation'
       AND i.m2_verifies
+      AND i.m1_outcome IS DISTINCT FROM 'not_applicable'
     ORDER BY i.sort_order
   LOOP
     v_result := public.workshop_confirm_m2_item(p_task_id, v_version, v_item.id);
@@ -1018,7 +1019,7 @@ SELECT is(
 );
 RESET ROLE;
 
--- Item outcome guards (PSI, disallowed N/A, allowed N/A + M2 confirm)
+-- Item outcome guards (PSI, disallowed N/A, allowed N/A skipped by M2)
 CREATE TEMP TABLE ws_item_task AS
   SELECT pg_temp.make_task('workshop-road-bike', false, true, 'fp-v1') AS id;
 GRANT SELECT ON ws_item_task TO authenticated;
@@ -1075,13 +1076,25 @@ SELECT public.workshop_complete_m1(
   (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_item_task))
 );
 SELECT is(
-  public.workshop_confirm_m2_item(
+  public.workshop_complete_m2(
     (SELECT id FROM ws_item_task),
     (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_item_task)),
-    (SELECT i.id FROM public.bike_task_items i WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-16')
-  ) ->> 'ok',
-  'true',
-  'M2 can confirm an allowed N/A item'
+    'fp-v1',
+    true
+  ) ->> 'code',
+  'INCOMPLETE_CHECKLIST',
+  'complete M2 with ROAD-16 N/A but other M2 items unconfirmed → INCOMPLETE_CHECKLIST'
+);
+SELECT pg_temp.fill_m2((SELECT id FROM ws_item_task));
+SELECT is(
+  public.workshop_complete_m2(
+    (SELECT id FROM ws_item_task),
+    (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_item_task)),
+    'fp-v1',
+    true
+  ) ->> 'status',
+  'ready_for_pickup',
+  'complete M2 without confirming ROAD-16 N/A → ready_for_pickup'
 );
 SELECT is(
   (
@@ -1090,16 +1103,52 @@ SELECT is(
     WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-16'
   ),
   'not_applicable',
-  'M2 confirm keeps ROAD-16 N/A outcome'
+  'ROAD-16 stays not_applicable after complete M2'
 );
 SELECT is(
   (
-    SELECT i.m1_psi
+    SELECT i.m2_confirmed
     FROM public.bike_task_items i
     WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-16'
   ),
-  NULL,
-  'M2 confirm of N/A does not write m1_psi'
+  false,
+  'ROAD-16 stays unconfirmed after complete M2'
+);
+RESET ROLE;
+
+-- Empty M2 list: every designated item is valid N/A
+CREATE TEMP TABLE ws_empty_m2 AS
+  SELECT pg_temp.make_task('workshop-road-bike', false, true, 'fp-v1') AS id;
+GRANT SELECT ON ws_empty_m2 TO authenticated;
+SELECT pg_temp.become((SELECT mechanic FROM ws_ids));
+SET ROLE authenticated;
+SELECT public.workshop_start_preparation((SELECT id FROM ws_empty_m2), 1);
+SELECT pg_temp.fill_m1((SELECT id FROM ws_empty_m2));
+RESET ROLE;
+UPDATE public.bike_task_items
+SET
+  na_allowed = true,
+  m1_outcome = 'not_applicable',
+  m1_psi = NULL,
+  m2_confirmed = false
+WHERE task_id = (SELECT id FROM ws_empty_m2)
+  AND stage = 'preparation'
+  AND m2_verifies;
+SELECT pg_temp.become((SELECT mechanic FROM ws_ids));
+SET ROLE authenticated;
+SELECT public.workshop_complete_m1(
+  (SELECT id FROM ws_empty_m2),
+  (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_empty_m2))
+);
+SELECT is(
+  public.workshop_complete_m2(
+    (SELECT id FROM ws_empty_m2),
+    (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_empty_m2)),
+    'fp-v1',
+    true
+  ) ->> 'status',
+  'ready_for_pickup',
+  'complete M2 with every designated item N/A → ready_for_pickup'
 );
 RESET ROLE;
 

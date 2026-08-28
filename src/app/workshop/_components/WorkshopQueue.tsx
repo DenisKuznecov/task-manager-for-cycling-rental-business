@@ -6,6 +6,7 @@ import { FeatherAlertTriangle, FeatherSearch } from "@subframe/core";
 import { Alert } from "@/ui/components/Alert";
 import { Badge } from "@/ui/components/Badge";
 import { Button } from "@/ui/components/Button";
+import { Loader } from "@/ui/components/Loader";
 import { Select } from "@/ui/components/Select";
 import { Table } from "@/ui/components/Table";
 import { Tabs } from "@/ui/components/Tabs";
@@ -28,13 +29,17 @@ import {
   formatMadridDateTime,
   formatWorkshopQueueWhen,
   queueStatusSelectValue,
+  isLiveQueueSyncInProgress,
   shouldBlockQueueNavigation,
+  WORKSHOP_QUEUE_REALTIME_REFRESH_MS,
+  workshopSyncOverlayListed,
   statusFromQueueSelectValue,
   statusTileClassName,
   workshopStatusBadgeProps,
   WORKSHOP_QUEUE_STATUS_SELECT_NONE,
   WORKSHOP_STATUS_LABELS,
 } from "./workshop-ui";
+import { useWorkshopTabletMode } from "./WorkshopTabletModeProvider";
 
 interface WorkshopQueueProps {
   heading: React.ReactNode;
@@ -55,6 +60,14 @@ const QUEUE_HEADER_CELL_CLASS =
   "[&_span]:!text-body-bold [&_span]:!font-body-bold";
 const QUEUE_BADGE_CLASS = "h-7 [&_span]:!text-body [&_span]:!font-body";
 const QUEUE_TAB_CLASS = "[&_span]:!text-heading-3 [&_span]:!font-heading-3";
+const QUEUE_SEARCH_CLASS =
+  "w-full max-w-md [&>div]:h-10 [&_input]:text-heading-3 [&_input]:font-heading-3";
+const QUEUE_SELECT_CLASS = "w-full [&_span]:text-heading-3 [&_span]:font-heading-3";
+
+function queueCopyClass(tabletMode: boolean, bold = false): string {
+  if (tabletMode) return "text-heading-3 font-heading-3";
+  return bold ? "text-body-bold font-body-bold" : "text-body font-body";
+}
 
 const FILTER_TABS: { value: WorkshopQueueFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -72,16 +85,52 @@ function bikeIdCell(task: WorkshopTaskListRow): string {
   return task.bikeDisplayId?.trim() || task.bikeSourceId?.trim() || "Unknown bike";
 }
 
+function WorkshopQueueSyncOverlay({ listed }: { listed: number }) {
+  return (
+    <div
+      aria-live="polite"
+      aria-busy
+      className="pointer-events-none fixed inset-0 z-50 flex items-center justify-center bg-default-background/20"
+    >
+      <div className="relative flex min-w-[16rem] max-w-sm flex-col items-start gap-2 rounded-md border border-solid border-neutral-border bg-default-background px-4 py-3 pb-4 shadow-sm">
+        <div className="flex items-center gap-2">
+          <Loader size="small" />
+          <span className="text-heading-3 font-heading-3 text-default-font">
+            Updating from Booqable
+          </span>
+        </div>
+        <span className="text-body font-body text-subtext-color">
+          Stay on this page until it finishes.
+        </span>
+        {listed > 0 ? (
+          <span className="text-body font-body text-subtext-color">
+            {listed} orders processed
+          </span>
+        ) : null}
+        <div
+          aria-hidden
+          className="pointer-events-none absolute inset-x-0 bottom-0 h-0.5 overflow-hidden bg-brand-100"
+        >
+          <div className="h-full w-1/3 animate-[nav-progress_1.1s_ease-in-out_infinite] bg-brand-600" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function QueueStatusBadge({
   status,
 }: {
   status: WorkshopTaskListRow["status"];
 }) {
+  const { tabletMode } = useWorkshopTabletMode();
   const props = workshopStatusBadgeProps(status);
   return (
     <Badge
       {...props}
-      className={[QUEUE_BADGE_CLASS, props.className].filter(Boolean).join(" ")}
+      className={[tabletMode ? QUEUE_BADGE_CLASS : "", props.className]
+        .filter(Boolean)
+        .join(" ")}
     >
       {WORKSHOP_STATUS_LABELS[status]}
     </Badge>
@@ -101,6 +150,8 @@ export function WorkshopQueue({
 }: WorkshopQueueProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { tabletMode } = useWorkshopTabletMode();
+  const buttonSize = tabletMode ? "large" : "medium";
   const [search, setSearch] = useState(query);
   const [prevQuery, setPrevQuery] = useState(query);
   const [isPending, startTransition] = useTransition();
@@ -108,44 +159,46 @@ export function WorkshopQueue({
     code: WorkshopErrorCode;
     error: string;
   } | null>(null);
-  const [pendingScope, setPendingScope] = useState<ManualSyncScope | "resume" | null>(
-    null,
-  );
+  const [pendingScope, setPendingScope] = useState<ManualSyncScope | null>(null);
   if (query !== prevQuery) {
     setPrevQuery(query);
     setSearch(query);
   }
 
   const syncInFlight = shouldBlockQueueNavigation(isPending, health);
+  const overlayListed = workshopSyncOverlayListed(health);
 
   useEffect(() => {
     const supabase = createClient();
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (refreshTimer != null) return;
+      refreshTimer = setTimeout(() => {
+        refreshTimer = null;
+        router.refresh();
+      }, WORKSHOP_QUEUE_REALTIME_REFRESH_MS);
+    };
     const channel = supabase
       .channel("workshop-tasks-realtime")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bike_tasks" },
-        () => {
-          router.refresh();
-        },
+        scheduleRefresh,
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "booqable_sync_runs" },
-        () => {
-          router.refresh();
-        },
+        scheduleRefresh,
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "booqable_sync_health" },
-        () => {
-          router.refresh();
-        },
+        scheduleRefresh,
       )
       .subscribe();
 
     return () => {
+      if (refreshTimer != null) clearTimeout(refreshTimer);
       supabase.removeChannel(channel);
     };
   }, [router]);
@@ -179,12 +232,8 @@ export function WorkshopQueue({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, query, filter, status, pathname, router]);
 
-  const resumable = Boolean(health.cursor);
   const syncStatusLabel = (() => {
-    if (health.state === "in_progress" && !health.cursor) return "Sync in progress";
-    if (health.state === "in_progress" && health.cursor) {
-      return "Sync paused — more reserved orders remain";
-    }
+    if (isLiveQueueSyncInProgress(health)) return "Sync in progress";
     if (health.state === "failed" && health.cursor) {
       return health.lastError
         ? `Partial sync failed: ${health.lastError}`
@@ -198,9 +247,9 @@ export function WorkshopQueue({
 
   const runSync = (
     fn: () => Promise<{ ok: true } | { ok: false; code: WorkshopErrorCode; error: string }>,
-    pending: ManualSyncScope | "resume",
+    pending: ManualSyncScope,
   ) => {
-    if (isPending) return;
+    if (syncInFlight) return;
     setSyncError(null);
     setPendingScope(pending);
     startTransition(async () => {
@@ -208,13 +257,13 @@ export function WorkshopQueue({
         const result = await fn();
         if (!result.ok) {
           setSyncError({ code: result.code, error: result.error });
-          return;
         }
         router.refresh();
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Workshop sync failed.";
         setSyncError({ code: "SOURCE_UNAVAILABLE", error: message });
+        router.refresh();
       } finally {
         setPendingScope(null);
       }
@@ -227,283 +276,269 @@ export function WorkshopQueue({
   };
 
   return (
-    <div className="flex w-full min-w-0 flex-col items-start gap-5">
-      <div className="flex w-full flex-col items-start gap-3">
-        {heading}
-        <div className="mt-3 mb-4 flex w-full min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <Button
-              size="large"
-              variant="neutral-secondary"
-              disabled={isPending}
-              loading={pendingScope === "next_7_days"}
-              onClick={() =>
-                runSync(
-                  () => workshopActions.startManualSync("next_7_days"),
-                  "next_7_days",
-                )
-              }
-            >
-              Sync next 7 days
-            </Button>
-            <Button
-              size="large"
-              variant="neutral-secondary"
-              disabled={isPending}
-              loading={pendingScope === "all_reserved"}
-              onClick={() =>
-                runSync(
-                  () => workshopActions.startManualSync("all_reserved"),
-                  "all_reserved",
-                )
-              }
-            >
-              Sync all reserved
-            </Button>
-            {resumable && health.cursor ? (
+    <div className="relative flex w-full min-w-0 flex-col">
+      <div
+        inert={syncInFlight || undefined}
+        className={[
+          "flex w-full min-w-0 flex-col items-start gap-5 transition-opacity duration-150",
+          syncInFlight ? "pointer-events-none opacity-60" : "",
+        ]
+          .filter(Boolean)
+          .join(" ")}
+      >
+        <div className="flex w-full flex-col items-start gap-3">
+          {heading}
+          <div className="mt-3 mb-4 flex w-full min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Button
-                size="large"
-                variant="brand-secondary"
-                disabled={isPending}
-                loading={pendingScope === "resume"}
+                size={buttonSize}
+                variant="neutral-secondary"
+                disabled={syncInFlight}
+                loading={pendingScope === "next_7_days"}
                 onClick={() =>
                   runSync(
-                    () => workshopActions.resumeManualSync(health.cursor as string),
-                    "resume",
+                    () => workshopActions.startManualSync("next_7_days"),
+                    "next_7_days",
                   )
                 }
               >
-                Resume sync
+                Sync next 7 days
               </Button>
-            ) : null}
-          </div>
-          <div className="flex min-w-0 flex-col gap-0.5">
-            <span className="text-heading-3 font-heading-3 text-default-font">
-              Last full sync: {formatSyncTime(health.lastSuccessAt)}
-            </span>
-            <span className="text-body font-body text-subtext-color">
-              Pulls Booqable changes onto this list. Next 7 days = this week.
-              All reserved = every reserved order (slow).
-              {resumable
-                ? " Each click fetches 50 orders. Use Resume sync if more remain."
-                : null}
-            </span>
+            </div>
+            <div className="flex min-w-0 flex-col gap-0.5">
+              <span
+                className={`${queueCopyClass(tabletMode)} text-default-font`}
+              >
+                Last full sync: {formatSyncTime(health.lastSuccessAt)}
+              </span>
+              <span className="text-body font-body text-subtext-color">
+                Pulls reserved orders starting in the next 7 days onto this list.
+              </span>
+            </div>
           </div>
         </div>
-      </div>
 
-      {syncStatusLabel && !syncInFlight ? (
-        <Alert
-          variant={health.state === "failed" ? "error" : "warning"}
-          icon={<FeatherAlertTriangle />}
-          title={health.state === "failed" ? "Sync did not finish" : "Sync in progress"}
-          description={syncStatusLabel}
-        />
-      ) : null}
-      {syncError ? (
-        <Alert
-          variant="error"
-          icon={<FeatherAlertTriangle />}
-          title={syncError.code}
-          description={syncError.error}
-        />
-      ) : null}
-      {syncInFlight ? (
-        <Alert
-          variant="warning"
-          icon={<FeatherAlertTriangle />}
-          title="Updating from Booqable"
-          description="Updating from Booqable… stay on this page until it finishes."
-        />
-      ) : null}
+        {syncStatusLabel && !syncInFlight ? (
+          <Alert
+            variant={health.state === "failed" ? "error" : "warning"}
+            icon={<FeatherAlertTriangle />}
+            title={health.state === "failed" ? "Sync did not finish" : "Sync in progress"}
+            description={syncStatusLabel}
+          />
+        ) : null}
+        {syncError && !syncInFlight ? (
+          <Alert
+            variant="error"
+            icon={<FeatherAlertTriangle />}
+            title={syncError.code}
+            description={syncError.error}
+          />
+        ) : null}
 
-      <div className="hidden w-full mobile:block">
-        <Select
-          className="w-full [&_span]:text-heading-3 [&_span]:font-heading-3"
-          placeholder="Select"
-          disabled={syncInFlight}
-          value={queueStatusSelectValue(status)}
-          onValueChange={(value) => {
-            pushQueue(query, 1, filter, statusFromQueueSelectValue(value));
-          }}
-        >
-          <Select.Item value={WORKSHOP_QUEUE_STATUS_SELECT_NONE}>
-            Select
-          </Select.Item>
-          {WORKSHOP_QUEUE_STATUSES.map((tileStatus) => (
-            <Select.Item key={tileStatus} value={tileStatus}>
-              {WORKSHOP_STATUS_LABELS[tileStatus]}
-            </Select.Item>
-          ))}
-        </Select>
-      </div>
-
-      <div className="flex w-full flex-wrap items-stretch gap-2 mobile:hidden">
-        {WORKSHOP_QUEUE_STATUSES.map((tileStatus) => {
-          const selected = status === tileStatus;
-          return (
-            <button
-              key={tileStatus}
-              type="button"
-              aria-pressed={selected}
-              className={statusTileClassName(
-                tileStatus,
-                selected,
-                statusCounts[tileStatus],
-              )}
-              onClick={() => {
-                const nextStatus = selected ? null : tileStatus;
-                pushQueue(query, 1, filter, nextStatus);
-              }}
-            >
-              <span className="text-heading-2 font-heading-2">
-                {statusCounts[tileStatus]}
-              </span>
-              <span className="text-body font-body">
-                {WORKSHOP_STATUS_LABELS[tileStatus]}
-              </span>
-            </button>
-          );
-        })}
-      </div>
-
-      <Tabs>
-        {FILTER_TABS.map((tab) => (
-          <Tabs.Item
-            key={tab.value}
-            className={QUEUE_TAB_CLASS}
-            active={filter === tab.value}
-            onClick={() => {
-              if (tab.value === filter) return;
-              pushQueue(query, 1, tab.value, status);
+        <div className="hidden w-full mobile:block">
+          <Select
+            className={tabletMode ? QUEUE_SELECT_CLASS : "w-full"}
+            placeholder="Select"
+            disabled={syncInFlight}
+            value={queueStatusSelectValue(status)}
+            onValueChange={(value) => {
+              pushQueue(query, 1, filter, statusFromQueueSelectValue(value));
             }}
           >
-            {tab.label}
-          </Tabs.Item>
-        ))}
-      </Tabs>
+            <Select.Item value={WORKSHOP_QUEUE_STATUS_SELECT_NONE}>
+              Select
+            </Select.Item>
+            {WORKSHOP_QUEUE_STATUSES.map((tileStatus) => (
+              <Select.Item key={tileStatus} value={tileStatus}>
+                {WORKSHOP_STATUS_LABELS[tileStatus]}
+              </Select.Item>
+            ))}
+          </Select>
+        </div>
 
-      <TextField
-        className="w-full max-w-md [&>div]:h-10 [&_input]:text-heading-3 [&_input]:font-heading-3"
-        label=""
-        helpText=""
-        icon={<FeatherSearch />}
-      >
-        <TextField.Input
-          placeholder="Search by bike, title, order #, or customer"
-          value={search}
-          onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
-            setSearch(event.target.value)
+        <div className="flex w-full flex-wrap items-stretch gap-2 mobile:hidden">
+          {WORKSHOP_QUEUE_STATUSES.map((tileStatus) => {
+            const selected = status === tileStatus;
+            return (
+              <button
+                key={tileStatus}
+                type="button"
+                aria-pressed={selected}
+                className={statusTileClassName(
+                  tileStatus,
+                  selected,
+                  statusCounts[tileStatus],
+                  tabletMode,
+                )}
+                onClick={() => {
+                  const nextStatus = selected ? null : tileStatus;
+                  pushQueue(query, 1, filter, nextStatus);
+                }}
+              >
+                <span
+                  className={
+                    tabletMode
+                      ? "text-heading-2 font-heading-2"
+                      : "text-body-bold font-body-bold"
+                  }
+                >
+                  {statusCounts[tileStatus]}
+                </span>
+                <span className="text-body font-body">
+                  {WORKSHOP_STATUS_LABELS[tileStatus]}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <Tabs>
+          {FILTER_TABS.map((tab) => (
+            <Tabs.Item
+              key={tab.value}
+              className={tabletMode ? QUEUE_TAB_CLASS : undefined}
+              active={filter === tab.value}
+              onClick={() => {
+                if (tab.value === filter) return;
+                pushQueue(query, 1, tab.value, status);
+              }}
+            >
+              {tab.label}
+            </Tabs.Item>
+          ))}
+        </Tabs>
+
+        <TextField
+          className={
+            tabletMode ? QUEUE_SEARCH_CLASS : "w-full max-w-md [&>div]:h-10"
+          }
+          label=""
+          helpText=""
+          icon={<FeatherSearch />}
+        >
+          <TextField.Input
+            placeholder="Search by bike, title, order #, or customer"
+            value={search}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+              setSearch(event.target.value)
+            }
+          />
+        </TextField>
+
+        <div className="flex w-full flex-col items-start gap-6 overflow-hidden overflow-x-auto mobile:overflow-auto mobile:max-w-full">
+          {tasks.length === 0 ? (
+            <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-solid border-neutral-border bg-default-background py-12">
+              <span
+                className={`${queueCopyClass(tabletMode, true)} text-default-font text-center`}
+              >
+                No tasks found
+              </span>
+              <span
+                className={`${queueCopyClass(tabletMode)} text-subtext-color text-center`}
+              >
+                {query.trim()
+                  ? "Try adjusting your search."
+                  : "No bikes need work in this filter."}
+              </span>
+            </div>
+          ) : (
+            <Table
+              header={
+                <Table.HeaderRow>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
+                    Bike ID
+                  </Table.HeaderCell>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
+                    Bike title
+                  </Table.HeaderCell>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
+                    Customer
+                  </Table.HeaderCell>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
+                    Order #
+                  </Table.HeaderCell>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
+                    From
+                  </Table.HeaderCell>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
+                    Until
+                  </Table.HeaderCell>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
+                    Status
+                  </Table.HeaderCell>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
+                    Warnings
+                  </Table.HeaderCell>
+                </Table.HeaderRow>
+              }
+            >
+              {tasks.map((task) => (
+                <Table.Row
+                  key={task.taskId}
+                  clickable={true}
+                  className="cursor-pointer"
+                  onClick={() => openTask(task.taskId)}
+                >
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <span className={`${queueCopyClass(tabletMode, true)} text-default-font`}>
+                      {bikeIdCell(task)}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <span className={`${queueCopyClass(tabletMode, true)} text-default-font`}>
+                      {task.bikeTitle?.trim() || "—"}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <span className={`whitespace-nowrap ${queueCopyClass(tabletMode, true)} text-default-font`}>
+                      {task.customerName?.trim() || "—"}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <span className={`whitespace-nowrap ${queueCopyClass(tabletMode, true)} text-default-font`}>
+                      {task.orderNumber != null ? `#${task.orderNumber}` : "—"}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <span className={`whitespace-nowrap ${queueCopyClass(tabletMode)} text-neutral-500`}>
+                      {formatWorkshopQueueWhen(task.startsAt, task.madridStartDate)}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <span className={`whitespace-nowrap ${queueCopyClass(tabletMode)} text-neutral-500`}>
+                      {formatWorkshopQueueWhen(task.stopsAt, null)}
+                    </span>
+                  </Table.Cell>
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <QueueStatusBadge status={task.status} />
+                  </Table.Cell>
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    {task.hasConfigurationWarning ? (
+                      <Badge variant="warning" className={tabletMode ? QUEUE_BADGE_CLASS : undefined}>
+                        Warning
+                      </Badge>
+                    ) : (
+                      <span className={`${queueCopyClass(tabletMode)} text-neutral-500`}>
+                        —
+                      </span>
+                    )}
+                  </Table.Cell>
+                </Table.Row>
+              ))}
+            </Table>
+          )}
+        </div>
+        <TablePagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={(nextPage) =>
+            pushQueue(query, nextPage, filter, status)
           }
         />
-      </TextField>
-
-      <div className="flex w-full flex-col items-start gap-6 overflow-hidden overflow-x-auto mobile:overflow-auto mobile:max-w-full">
-        {tasks.length === 0 ? (
-          <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-solid border-neutral-border bg-default-background py-12">
-            <span className="text-heading-3 font-heading-3 text-default-font text-center">
-              No tasks found
-            </span>
-            <span className="text-heading-3 font-heading-3 text-subtext-color text-center">
-              {query.trim()
-                ? "Try adjusting your search."
-                : "No bikes need work in this filter."}
-            </span>
-          </div>
-        ) : (
-          <Table
-            header={
-              <Table.HeaderRow>
-                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
-                  Bike ID
-                </Table.HeaderCell>
-                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
-                  Bike title
-                </Table.HeaderCell>
-                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
-                  Customer
-                </Table.HeaderCell>
-                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
-                  Order #
-                </Table.HeaderCell>
-                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
-                  From
-                </Table.HeaderCell>
-                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
-                  Until
-                </Table.HeaderCell>
-                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
-                  Status
-                </Table.HeaderCell>
-                <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
-                  Warnings
-                </Table.HeaderCell>
-              </Table.HeaderRow>
-            }
-          >
-            {tasks.map((task) => (
-              <Table.Row
-                key={task.taskId}
-                clickable={true}
-                className="cursor-pointer"
-                onClick={() => openTask(task.taskId)}
-              >
-                <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <span className="text-heading-3 font-heading-3 text-default-font">
-                    {bikeIdCell(task)}
-                  </span>
-                </Table.Cell>
-                <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <span className="text-heading-3 font-heading-3 text-default-font">
-                    {task.bikeTitle?.trim() || "—"}
-                  </span>
-                </Table.Cell>
-                <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <span className="whitespace-nowrap text-heading-3 font-heading-3 text-default-font">
-                    {task.customerName?.trim() || "—"}
-                  </span>
-                </Table.Cell>
-                <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <span className="whitespace-nowrap text-heading-3 font-heading-3 text-default-font">
-                    {task.orderNumber != null ? `#${task.orderNumber}` : "—"}
-                  </span>
-                </Table.Cell>
-                <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <span className="whitespace-nowrap text-heading-3 font-heading-3 text-neutral-500">
-                    {formatWorkshopQueueWhen(task.startsAt, task.madridStartDate)}
-                  </span>
-                </Table.Cell>
-                <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <span className="whitespace-nowrap text-heading-3 font-heading-3 text-neutral-500">
-                    {formatWorkshopQueueWhen(task.stopsAt, null)}
-                  </span>
-                </Table.Cell>
-                <Table.Cell className={QUEUE_CELL_CLASS}>
-                  <QueueStatusBadge status={task.status} />
-                </Table.Cell>
-                <Table.Cell className={QUEUE_CELL_CLASS}>
-                  {task.hasConfigurationWarning ? (
-                    <Badge variant="warning" className={QUEUE_BADGE_CLASS}>
-                      Warning
-                    </Badge>
-                  ) : (
-                    <span className="text-heading-3 font-heading-3 text-neutral-500">
-                      —
-                    </span>
-                  )}
-                </Table.Cell>
-              </Table.Row>
-            ))}
-          </Table>
-        )}
       </div>
-      <TablePagination
-        currentPage={currentPage}
-        totalPages={totalPages}
-        onPageChange={(nextPage) =>
-          pushQueue(query, nextPage, filter, status)
-        }
-      />
+      {syncInFlight ? (
+        <WorkshopQueueSyncOverlay listed={overlayListed} />
+      ) : null}
     </div>
   );
 }

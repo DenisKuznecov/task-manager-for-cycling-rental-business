@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { OrderDetailsDrawerHost } from "@/src/components/orders/OrderDetailsDrawerHost";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 import { createClient } from "@/src/utils/supabase/server";
+import { WorkshopTabletModeProvider } from "./_components/WorkshopTabletModeProvider";
 
 const ALLOWED_ROLES = ["admin", "manager", "mechanic"] as const;
 type AllowedRole = (typeof ALLOWED_ROLES)[number];
@@ -43,7 +44,7 @@ export default async function WorkshopLayout({
       <Suspense fallback={null}>
         <OrderDetailsDrawerHost />
       </Suspense>
-      {children}
+      <WorkshopTabletModeProvider>{children}</WorkshopTabletModeProvider>
     </DefaultPageLayout>
   );
 }

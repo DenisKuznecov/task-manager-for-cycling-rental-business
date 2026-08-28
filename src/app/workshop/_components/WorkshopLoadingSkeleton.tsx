@@ -27,7 +27,7 @@ export function WorkshopLoadingSkeleton() {
           <SkeletonText
             key={index}
             size="default"
-            className="h-16 min-w-28 grow basis-0"
+            className="h-12 min-w-28 grow basis-0"
           />
         ))}
       </div>

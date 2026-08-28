@@ -10,10 +10,16 @@ import {
   formatWorkshopQueueWhen,
   formatWorkshopStart,
   isM1ItemValid,
+  isM2RecheckItem,
   m2ItemCaption,
+  nextWorkshopTaskVersion,
   PREPARE_FOR_STORAGE_BADGE_CLASS,
+  shouldLockChecklistForPending,
   queueStatusSelectValue,
   shouldBlockQueueNavigation,
+  WORKSHOP_QUEUE_REALTIME_REFRESH_MS,
+  WORKSHOP_SYNC_IN_PROGRESS_STALE_MS,
+  workshopSyncOverlayListed,
   shouldRenderWorkshopQueue,
   statusBadgeVariant,
   statusFromQueueSelectValue,
@@ -24,6 +30,12 @@ import {
   cleanAddonText,
   parseAddonTitle,
 } from "./app/workshop/_components/workshop-ui.ts";
+import {
+  readWorkshopTabletMode,
+  writeWorkshopTabletMode,
+  WORKSHOP_TABLET_MODE_KEY,
+} from "./app/workshop/_components/workshop-tablet-mode.ts";
+import type { WorkshopCommandResult } from "./lib/workshop/domain/results.ts";
 import type { WorkshopTaskItem } from "./lib/workshop/domain/dtos.ts";
 import {
   resolveWorkshopQueueFilter,
@@ -219,24 +231,74 @@ test("queue href omits filter=all and keeps filter=today", () => {
 });
 
 test("in-flight sync blocks queue navigation", () => {
+  const recent = new Date().toISOString();
+  const stale = new Date(
+    Date.now() - WORKSHOP_SYNC_IN_PROGRESS_STALE_MS - 1,
+  ).toISOString();
+
   assert.equal(
     shouldBlockQueueNavigation(true, { state: "idle", cursor: null }),
     true,
   );
   assert.equal(
-    shouldBlockQueueNavigation(false, { state: "in_progress", cursor: null }),
+    shouldBlockQueueNavigation(false, {
+      state: "in_progress",
+      cursor: null,
+      lastAttemptAt: recent,
+    }),
     true,
   );
   assert.equal(
     shouldBlockQueueNavigation(false, {
       state: "in_progress",
+      cursor: null,
+      lastAttemptAt: stale,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldBlockQueueNavigation(false, {
+      state: "in_progress",
+      cursor: null,
+      lastAttemptAt: null,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldBlockQueueNavigation(false, {
+      state: "in_progress",
       cursor: "cursor-1",
+      lastAttemptAt: recent,
     }),
     false,
   );
   assert.equal(
     shouldBlockQueueNavigation(false, { state: "failed", cursor: null }),
     false,
+  );
+});
+
+test("overlay listed count ignores prior runs", () => {
+  assert.equal(
+    workshopSyncOverlayListed({
+      state: "succeeded",
+      counts: { listed: 29 },
+    }),
+    0,
+  );
+  assert.equal(
+    workshopSyncOverlayListed({
+      state: "in_progress",
+      counts: { listed: 0 },
+    }),
+    0,
+  );
+  assert.equal(
+    workshopSyncOverlayListed({
+      state: "in_progress",
+      counts: { listed: 12 },
+    }),
+    12,
   );
 });
 
@@ -298,6 +360,123 @@ test("isM1ItemValid requires a finite PSI greater than zero", () => {
   );
 });
 
+test("task page I/O matrix: checklist stays clickable while item saves chain", () => {
+  const task = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopTask.tsx"),
+    "utf8",
+  );
+  const enqueueStart = task.indexOf("const enqueueItemCommand");
+  const runStart = task.indexOf("const runCommand");
+  assert.notEqual(enqueueStart, -1);
+  assert.notEqual(runStart, -1);
+  assert.ok(enqueueStart < runStart);
+  const enqueue = task.slice(enqueueStart, runStart);
+  const run = task.slice(runStart, task.indexOf("const isNamedPending"));
+
+  // Rapid M1 taps: both go through the item queue; lists are not page-locked
+  assert.match(task, /const setOutcome[\s\S]*enqueueItemCommand/);
+  assert.match(
+    task,
+    /onComplete=\{\(itemId\) => setOutcome\(itemId, "completed"\)\}/,
+  );
+  const checklistInvocations = [
+    ...task.matchAll(/<ChecklistItems[\s\S]*?\/>/g),
+    ...task.matchAll(/<M2Checklist[\s\S]*?\/>/g),
+  ].map((match) => match[0]);
+  assert.equal(checklistInvocations.length, 3);
+  for (const invocation of checklistInvocations) {
+    assert.doesNotMatch(invocation, /disabled=\{isPending\}/);
+  }
+  assert.doesNotMatch(enqueue, /if \(isPending\) return/);
+  assert.doesNotMatch(enqueue, /startTransition/);
+  for (const invocation of checklistInvocations) {
+    assert.match(invocation, /shouldLockChecklistForPending\(isPending\)/);
+    assert.doesNotMatch(invocation, /itemSavesPending/);
+  }
+
+  // PSI during save
+  assert.match(
+    task,
+    /onSetPsi=\{\(itemId, psi\) =>\s+setOutcome\(itemId, "completed", psi\)/,
+  );
+
+  // Rapid M2
+  assert.match(
+    task,
+    /enqueueItemCommand\(\s*itemId,\s*\{\s*m2Confirmed: true/,
+  );
+  assert.match(enqueue, /command\(taskVersionRef\.current\)/);
+  assert.match(task, /confirmM2Item/);
+
+  // Add-ons / same-person / PSI drafts survive item success
+  assert.doesNotMatch(enqueue, /setAddonsAcknowledged/);
+  assert.doesNotMatch(enqueue, /setSamePersonConfirmed/);
+  assert.doesNotMatch(enqueue, /setPsiDrafts/);
+  assert.match(run, /setAddonsAcknowledged\(false\)/);
+
+  // Item command fails: revert, log, banner
+  assert.match(enqueue, /revertItemOverrideIfCurrent\(itemId, override\)/);
+  assert.match(enqueue, /console\.error\("workshop:"/);
+  assert.match(enqueue, /setCommandError/);
+
+  // Own-version race: stage waits for the item queue, then latest version
+  assert.match(run, /await itemQueueRef\.current/);
+  assert.match(
+    task,
+    /completeM1\(\s*task\.taskId,\s*taskVersionRef\.current/,
+  );
+  assert.match(enqueue, /nextWorkshopTaskVersion/);
+  assert.match(task, /disabled=\{isPending \|\| itemSavesPending \|\| !canCompleteM1\}/);
+  assert.match(task, /disabled=\{isPending \|\| itemSavesPending \|\| !canCompleteM2\}/);
+  assert.match(
+    task,
+    /disabled=\{isPending \|\| itemSavesPending \|\| !storageReady\}/,
+  );
+
+  // Saving cue while in flight; hidden when `saving` is false
+  assert.equal(
+    [...task.matchAll(/<StageCompleteRow saving=\{itemSavesPending\}>/g)]
+      .length,
+    3,
+  );
+  assert.match(task, /Complete Bike Preparation/);
+  assert.match(task, /Complete Bike Verification/);
+  assert.match(task, /Complete Bike Storage Preparation/);
+  assert.match(task, /saving \? \(/);
+  assert.match(task, /Saving…/);
+
+  // Real stale: banner + refresh on item and stage paths
+  assert.match(enqueue, /STALE_VERSION/);
+  assert.match(enqueue, /router\.refresh\(\)/);
+  assert.match(run, /STALE_VERSION/);
+});
+
+test("shouldLockChecklistForPending is only true for named stage actions", () => {
+  assert.equal(shouldLockChecklistForPending(false), false);
+  assert.equal(shouldLockChecklistForPending(true), true);
+});
+
+test("nextWorkshopTaskVersion chains successes and keeps last good on failure", () => {
+  const ok = (
+    version: number,
+  ): WorkshopCommandResult => ({
+    ok: true,
+    taskId: "task-1",
+    version,
+    status: "being_prepared",
+  });
+  const fail: WorkshopCommandResult = {
+    ok: false,
+    code: "SOURCE_UNAVAILABLE",
+    error: "save failed",
+  };
+  const afterFirst = nextWorkshopTaskVersion(3, ok(4));
+  const afterSecond = nextWorkshopTaskVersion(afterFirst, ok(5));
+  assert.equal(afterFirst, 4);
+  assert.equal(afterSecond, 5);
+  assert.equal(nextWorkshopTaskVersion(afterSecond, fail), 5);
+});
+
 test("M2 caption only carries a fact the recheck still needs", () => {
   assert.equal(m2ItemCaption(item({ m1Outcome: null })), "Preparation incomplete");
   assert.equal(m2ItemCaption(item({ m1Outcome: "completed" })), null);
@@ -314,6 +493,83 @@ test("M2 caption only carries a fact the recheck still needs", () => {
   assert.equal(
     m2ItemCaption(item({ m1Outcome: "not_applicable" })),
     "Marked not applicable",
+  );
+});
+
+test("isM2RecheckItem is true only for designated items M1 did not mark N/A", () => {
+  assert.equal(
+    isM2RecheckItem(item({ m2Verifies: true, m1Outcome: "completed" })),
+    true,
+  );
+  assert.equal(
+    isM2RecheckItem(item({ m2Verifies: true, m1Outcome: null })),
+    true,
+  );
+  assert.equal(
+    isM2RecheckItem(item({ m2Verifies: true, m1Outcome: "not_applicable" })),
+    false,
+  );
+  assert.equal(
+    isM2RecheckItem(item({ m2Verifies: false, m1Outcome: "completed" })),
+    false,
+  );
+  assert.equal(
+    isM2RecheckItem(item({ m2Verifies: false, m1Outcome: "not_applicable" })),
+    false,
+  );
+});
+
+test("empty M2 recheck list is ready when every designated item is N/A", () => {
+  const items = [
+    item({ itemId: "na-1", m2Verifies: true, m1Outcome: "not_applicable" }),
+    item({ itemId: "na-2", m2Verifies: true, m1Outcome: "not_applicable" }),
+  ];
+  const visible = items.filter(isM2RecheckItem);
+  assert.equal(visible.length, 0);
+  assert.equal(
+    visible.every((row) => row.m2Confirmed),
+    true,
+  );
+});
+
+test("mixed M2 list hides N/A and is ready from the filtered rows only", () => {
+  const items = [
+    item({
+      itemId: "road-16",
+      itemKey: "ROAD-16",
+      m2Verifies: true,
+      m1Outcome: "not_applicable",
+      m2Confirmed: false,
+    }),
+    item({
+      itemId: "road-07",
+      itemKey: "ROAD-07",
+      m2Verifies: true,
+      m1Outcome: "completed",
+      m2Confirmed: true,
+    }),
+    item({
+      itemId: "road-02",
+      itemKey: "ROAD-02",
+      m2Verifies: false,
+      m1Outcome: "completed",
+      m2Confirmed: false,
+    }),
+  ];
+  const m2Items = items.filter(isM2RecheckItem);
+  assert.deepEqual(
+    m2Items.map((row) => row.itemId),
+    ["road-07"],
+  );
+  assert.equal(
+    m2Items.every((row) => row.m2Confirmed),
+    true,
+  );
+  assert.equal(
+    items
+      .filter((row) => row.m2Verifies)
+      .every((row) => row.m2Confirmed),
+    false,
   );
 });
 
@@ -377,6 +633,9 @@ test("queue statuses use distinct badge colours", () => {
     statusTileClassName("to_prepare", false, 0),
     /shadow-\[inset_4px_0_0_0_rgb\(253_230_138\)\]/,
   );
+  assert.match(statusTileClassName("to_prepare", false, 1), /min-h-12/);
+  assert.doesNotMatch(statusTileClassName("to_prepare", false, 1), /min-h-16/);
+  assert.match(statusTileClassName("to_prepare", false, 1, true), /min-h-16/);
 });
 
 test("workshop page is a server component that reads URL filters", () => {
@@ -438,9 +697,61 @@ test("queue I/O matrix: empty today, status isolate/clear, completed, page clamp
 
   assert.match(queue, /if \(syncInFlight\) return/);
   assert.match(queue, /pushQueue/);
-  assert.match(queue, /Updating from Booqable… stay on this page until it finishes/);
-  assert.match(queue, /Pulls Booqable changes onto this list/);
+  assert.match(queue, /Stay on this page until it finishes/);
+  assert.match(queue, /Pulls reserved orders starting in the next 7 days onto this list/);
   assert.match(queue, /syncStatusLabel && !syncInFlight/);
+});
+
+test("queue sync overlay locks next-7-days without Resume", () => {
+  const queue = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopQueue.tsx"),
+    "utf8",
+  );
+
+  assert.doesNotMatch(queue, /Sync all reserved/);
+  assert.doesNotMatch(queue, /WorkshopSyncAllConfirmDialog/);
+  assert.doesNotMatch(queue, /all_reserved/);
+  assert.doesNotMatch(queue, /DialogLayout/);
+
+  const next7Button = queue.slice(
+    queue.indexOf('pendingScope === "next_7_days"'),
+    queue.indexOf("Sync next 7 days"),
+  );
+  assert.match(next7Button, /runSync/);
+  assert.match(next7Button, /startManualSync\("next_7_days"\)/);
+
+  assert.doesNotMatch(queue, /Resume sync/);
+  assert.doesNotMatch(queue, /resumeManualSync/);
+  assert.doesNotMatch(queue, /pendingScope === "resume"/);
+  assert.doesNotMatch(queue, /resumable/);
+  assert.doesNotMatch(queue, /more reserved orders remain/);
+  assert.doesNotMatch(queue, /Use Resume/);
+  assert.doesNotMatch(queue, /Each click fetches 50/);
+  assert.match(queue, /syncStatusLabel && !syncInFlight/);
+  assert.match(queue, /if \(syncInFlight\) return/);
+  assert.match(queue, /WORKSHOP_QUEUE_REALTIME_REFRESH_MS/);
+  assert.equal(WORKSHOP_QUEUE_REALTIME_REFRESH_MS, 1000);
+
+  assert.match(queue, /WorkshopQueueSyncOverlay/);
+  assert.match(queue, /fixed inset-0 z-50 flex items-center justify-center/);
+  assert.match(queue, /syncInFlight \? \(/);
+  assert.match(queue, /workshopSyncOverlayListed\(health\)/);
+  assert.match(queue, /inert=\{syncInFlight \|\| undefined\}/);
+  assert.match(queue, /disabled=\{syncInFlight\}/);
+  assert.match(queue, /Stay on this page until it finishes/);
+  assert.match(queue, /\{listed\} orders processed/);
+  assert.match(queue, /listed > 0/);
+  assert.match(queue, /animate-\[nav-progress_1\.1s_ease-in-out_infinite\]/);
+  assert.match(queue, /aria-busy/);
+  assert.match(queue, /<Loader size="small" \/>/);
+  assert.doesNotMatch(queue, /title="Updating from Booqable"/);
+  assert.doesNotMatch(
+    queue,
+    /Updating from Booqable… stay on this page until it finishes/,
+  );
+  assert.doesNotMatch(queue, /@\/ui\/components\/Progress/);
+  assert.doesNotMatch(queue, /<Progress[\s>]/);
+  assert.match(queue, /syncError && !syncInFlight/);
 });
 
 test("queue surface: All-first tabs, status tiles, columns, sync help, load error banner", () => {
@@ -458,7 +769,9 @@ test("queue surface: All-first tabs, status tiles, columns, sync help, load erro
   assert.match(page, /loadWorkshopTaskStatusCounts/);
   assert.match(page, /heading=\{heading\}/);
   assert.match(queue, /text-body font-body text-subtext-color/);
-  const helpStart = queue.indexOf("Pulls Booqable changes onto this list");
+  const helpStart = queue.indexOf(
+    "Pulls reserved orders starting in the next 7 days onto this list",
+  );
   assert.notEqual(helpStart, -1);
   assert.doesNotMatch(
     queue.slice(helpStart - 120, helpStart),
@@ -467,15 +780,17 @@ test("queue surface: All-first tabs, status tiles, columns, sync help, load erro
   assert.match(queue, /value: "all".*Today/s);
   assert.match(queue, /buildWorkshopQueueHref/);
   assert.match(queue, /QUEUE_CELL_CLASS = "!h-16"/);
-  assert.match(queue, /className=\{QUEUE_CELL_CLASS\}/);
+  assert.match(queue, /tabletMode \? QUEUE_CELL_CLASS/);
   assert.match(queue, /Bike ID/);
   assert.match(queue, /Bike title/);
   assert.match(queue, /Customer/);
   assert.match(queue, /Until/);
   assert.match(queue, /Warnings/);
-  assert.doesNotMatch(queue, /Progress/);
+  assert.doesNotMatch(queue, /@\/ui\/components\/Progress/);
+  assert.doesNotMatch(queue, /<Progress[\s>]/);
   assert.match(queue, /Updating from Booqable/);
-  assert.match(queue, /every reserved order \(slow\)/);
+  assert.doesNotMatch(queue, /every reserved order \(slow\)/);
+  assert.doesNotMatch(queue, /Sync all reserved/);
   assert.doesNotMatch(queue, /bg-warning-100/);
   assert.doesNotMatch(queue, /text-warning-800/);
   assert.match(queue, /text-heading-3 font-heading-3 text-default-font/);
@@ -502,6 +817,7 @@ test("task page: not-found vs error vs cancelled tombstone and named actions", (
   assert.match(task, /startPreparation/);
   assert.match(task, /completeM1/);
   assert.match(task, /completeM2/);
+  assert.match(task, /isM2RecheckItem/);
   assert.match(task, /samePersonConfirmed/);
   assert.match(task, /markPickedUp/);
   assert.match(task, /markReturned/);
@@ -513,6 +829,16 @@ test("task page: not-found vs error vs cancelled tombstone and named actions", (
   assert.match(task, /Correct the Booqable product tag/);
   assert.match(task, /formatWorkshopFromUntil/);
   assert.doesNotMatch(task, /Starts /);
+  assert.match(page, /key=\{item\.task\.taskId\}/);
+  const checklistInvocations = [
+    ...task.matchAll(/<ChecklistItems[\s\S]*?\/>/g),
+    ...task.matchAll(/<M2Checklist[\s\S]*?\/>/g),
+  ].map((match) => match[0]);
+  assert.equal(checklistInvocations.length, 3);
+  for (const invocation of checklistInvocations) {
+    assert.doesNotMatch(invocation, /disabled=\{isPending\}/);
+  }
+  assert.match(task, /Saving…/);
 });
 
 test("task page reuses all-orders drawer via ?order=", () => {
@@ -526,4 +852,81 @@ test("task page reuses all-orders drawer via ?order=", () => {
   assert.match(task, /useOpenOrderDetails/);
   assert.match(task, /openOrderDetails\(orderId\)/);
   assert.match(task, /OrderDetailsButtonFallback/);
+});
+
+test("tablet mode storage is off unless the stored value is on", () => {
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+  };
+
+  assert.equal(WORKSHOP_TABLET_MODE_KEY, "workshop.tabletMode");
+  assert.equal(readWorkshopTabletMode(storage), false);
+
+  writeWorkshopTabletMode(storage, true);
+  assert.equal(store.get(WORKSHOP_TABLET_MODE_KEY), "on");
+  assert.equal(readWorkshopTabletMode(storage), true);
+
+  writeWorkshopTabletMode(storage, false);
+  assert.equal(store.get(WORKSHOP_TABLET_MODE_KEY), "off");
+  assert.equal(readWorkshopTabletMode(storage), false);
+
+  store.set(WORKSHOP_TABLET_MODE_KEY, "yes");
+  assert.equal(readWorkshopTabletMode(storage), false);
+
+  const blocked = {
+    getItem: () => {
+      throw new Error("blocked");
+    },
+    setItem: () => {
+      throw new Error("blocked");
+    },
+  };
+  assert.equal(readWorkshopTabletMode(blocked), false);
+  writeWorkshopTabletMode(blocked, true);
+});
+
+test("tablet mode switch is on list and task; density classes are conditional", () => {
+  const page = readFileSync(join(root, "src/app/workshop/page.tsx"), "utf8");
+  const layout = readFileSync(join(root, "src/app/workshop/layout.tsx"), "utf8");
+  const provider = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopTabletModeProvider.tsx"),
+    "utf8",
+  );
+  const queue = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopQueue.tsx"),
+    "utf8",
+  );
+  const task = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopTask.tsx"),
+    "utf8",
+  );
+  const skeleton = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopLoadingSkeleton.tsx"),
+    "utf8",
+  );
+
+  assert.match(layout, /WorkshopTabletModeProvider/);
+  assert.match(provider, /writeWorkshopTabletMode\(window\.localStorage/);
+  assert.match(provider, /try \{\s*return readWorkshopTabletMode\(window\.localStorage\)/s);
+  assert.match(page, /WorkshopTabletModeSwitch/);
+  assert.match(
+    page,
+    /shouldRenderWorkshopQueue\(loadError\)[\s\S]*: \(\s*<>\s*\{heading\}/,
+  );
+  assert.match(task, /WorkshopTabletModeSwitch/);
+  assert.match(task, /useWorkshopTabletMode/);
+  assert.match(queue, /useWorkshopTabletMode/);
+  assert.match(task, /taskCopyClass/);
+  assert.match(
+    task,
+    /TABLET_BADGE_CLASS = "h-7 \[&_span\]:!text-body \[&_span\]:!font-body"/,
+  );
+  assert.match(queue, /tabletMode \? QUEUE_CELL_CLASS/);
+  assert.match(task, /tabletMode \? "large" : "medium"/);
+  assert.match(task, /tabletMode \? "min-h-16" : "min-h-12"/);
+  assert.match(skeleton, /h-12 min-w-28/);
 });

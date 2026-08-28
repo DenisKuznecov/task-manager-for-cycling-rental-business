@@ -24,6 +24,12 @@ export function UserMenu({ userEmail, avatarInitial }: UserMenuProps) {
   // The Wiki is internal-only: visible to staff, never to partners.
   const canViewWiki = useHasRole("admin", "manager", "mechanic");
   const canViewHq = useHasRole("admin", "manager");
+  const canViewContact = useHasRole(
+    "admin",
+    "manager",
+    "mechanic",
+    "partner",
+  );
   // Use the context signOut so the auth listener treats this as an explicit
   // logout (plain /login) rather than session expiry (/login?next=...).
   const { signOut } = useUser();
@@ -70,13 +76,15 @@ export function UserMenu({ userEmail, avatarInitial }: UserMenuProps) {
                   Wiki
                 </DropdownMenu.DropdownItem>
               ) : null}
-              <DropdownMenu.DropdownItem
-                icon={<FeatherMail />}
-                onClick={() => router.push("/contact")}
-              >
-                Contact Us
-              </DropdownMenu.DropdownItem>
-              <DropdownMenu.DropdownDivider />
+              {canViewContact ? (
+                <DropdownMenu.DropdownItem
+                  icon={<FeatherMail />}
+                  onClick={() => router.push("/contact")}
+                >
+                  Contact Us
+                </DropdownMenu.DropdownItem>
+              ) : null}
+              {canViewContact ? <DropdownMenu.DropdownDivider /> : null}
               <DropdownMenu.DropdownItem
                 icon={<FeatherLogOut />}
                 onClick={handleLogout}
