@@ -315,11 +315,11 @@ test("next 7 days start walks reserved pages until done", () => {
     /async function walkNext7DaysReservedPages[\s\S]*const nextCursor = pageFailed\s*\?\s*encodeSyncCursor\([\s\S]*?\)\s*:\s*null/,
   );
   assert.match(manual, /return continueManualSync\(data, scope, 1\)/);
+  assert.match(manual, /seenIds/);
+  assert.match(manual, /Booqable reserved list repeated a page/);
   assert.doesNotMatch(queue, /resumeManualSync/);
-  assert.match(
-    queue,
-    /if \(isPending \|\| \(health\.state === "in_progress" && !health\.cursor\)\) return/,
-  );
+  assert.match(queue, /if \(syncInFlight\) return/);
+  assert.match(queue, /WORKSHOP_QUEUE_REALTIME_REFRESH_MS/);
   assert.match(queue, /if \(!result\.ok\) \{\s*setSyncError\([\s\S]*?\}\s*router\.refresh\(\)/);
 });
 

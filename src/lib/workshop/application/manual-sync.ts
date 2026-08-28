@@ -144,6 +144,7 @@ type PageProcessOutcome = {
   listingFailed: boolean;
   lastError: string | null;
   hasMore: boolean;
+  orderIds: string[];
 };
 
 async function processReservedPageOrders(
@@ -155,10 +156,12 @@ async function processReservedPageOrders(
   let listingFailed = false;
   let lastError: string | null = null;
   let hasMore = false;
+  let orderIds: string[] = [];
 
   try {
     const list = await fetchReservedOrderListPage(page);
     hasMore = list.hasMore;
+    orderIds = list.orders.map((order) => order.id);
 
     for (const order of list.orders) {
       const skip = skipReason(order, scope);
@@ -193,7 +196,7 @@ async function processReservedPageOrders(
     console.error("workshop:", error);
   }
 
-  return { listingFailed, lastError, hasMore };
+  return { listingFailed, lastError, hasMore, orderIds };
 }
 
 async function finishAndReleaseRun(
@@ -289,6 +292,7 @@ async function walkNext7DaysReservedPages(
   let lastError: string | null = null;
   let page = 1;
   let hasMore = true;
+  const seenIds = new Set<string>();
 
   const stopRenew = startLeaseRenewLoop(
     () => renewRunLease(supabase, started.token, started.fence),
@@ -311,6 +315,19 @@ async function walkNext7DaysReservedPages(
       if (pageFailed) {
         hasMore = false;
         break;
+      }
+      if (
+        outcome.orderIds.length > 0 &&
+        outcome.orderIds.every((id) => seenIds.has(id))
+      ) {
+        listingFailed = true;
+        lastError =
+          "Booqable reserved list repeated a page; stopping sync.";
+        hasMore = false;
+        break;
+      }
+      for (const id of outcome.orderIds) {
+        seenIds.add(id);
       }
       hasMore = outcome.hasMore;
       if (hasMore) {

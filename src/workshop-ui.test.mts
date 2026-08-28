@@ -17,6 +17,8 @@ import {
   shouldLockChecklistForPending,
   queueStatusSelectValue,
   shouldBlockQueueNavigation,
+  WORKSHOP_QUEUE_REALTIME_REFRESH_MS,
+  WORKSHOP_SYNC_IN_PROGRESS_STALE_MS,
   workshopSyncOverlayListed,
   shouldRenderWorkshopQueue,
   statusBadgeVariant,
@@ -229,18 +231,44 @@ test("queue href omits filter=all and keeps filter=today", () => {
 });
 
 test("in-flight sync blocks queue navigation", () => {
+  const recent = new Date().toISOString();
+  const stale = new Date(
+    Date.now() - WORKSHOP_SYNC_IN_PROGRESS_STALE_MS - 1,
+  ).toISOString();
+
   assert.equal(
     shouldBlockQueueNavigation(true, { state: "idle", cursor: null }),
     true,
   );
   assert.equal(
-    shouldBlockQueueNavigation(false, { state: "in_progress", cursor: null }),
+    shouldBlockQueueNavigation(false, {
+      state: "in_progress",
+      cursor: null,
+      lastAttemptAt: recent,
+    }),
     true,
   );
   assert.equal(
     shouldBlockQueueNavigation(false, {
       state: "in_progress",
+      cursor: null,
+      lastAttemptAt: stale,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldBlockQueueNavigation(false, {
+      state: "in_progress",
+      cursor: null,
+      lastAttemptAt: null,
+    }),
+    false,
+  );
+  assert.equal(
+    shouldBlockQueueNavigation(false, {
+      state: "in_progress",
       cursor: "cursor-1",
+      lastAttemptAt: recent,
     }),
     false,
   );
@@ -700,10 +728,9 @@ test("queue sync overlay locks next-7-days without Resume", () => {
   assert.doesNotMatch(queue, /Use Resume/);
   assert.doesNotMatch(queue, /Each click fetches 50/);
   assert.match(queue, /syncStatusLabel && !syncInFlight/);
-  assert.match(
-    queue,
-    /if \(isPending \|\| \(health\.state === "in_progress" && !health\.cursor\)\) return/,
-  );
+  assert.match(queue, /if \(syncInFlight\) return/);
+  assert.match(queue, /WORKSHOP_QUEUE_REALTIME_REFRESH_MS/);
+  assert.equal(WORKSHOP_QUEUE_REALTIME_REFRESH_MS, 1000);
 
   assert.match(queue, /WorkshopQueueSyncOverlay/);
   assert.match(queue, /fixed inset-0 z-50 flex items-center justify-center/);

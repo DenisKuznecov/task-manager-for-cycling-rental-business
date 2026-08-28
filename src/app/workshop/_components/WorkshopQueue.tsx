@@ -29,7 +29,9 @@ import {
   formatMadridDateTime,
   formatWorkshopQueueWhen,
   queueStatusSelectValue,
+  isLiveQueueSyncInProgress,
   shouldBlockQueueNavigation,
+  WORKSHOP_QUEUE_REALTIME_REFRESH_MS,
   workshopSyncOverlayListed,
   statusFromQueueSelectValue,
   statusTileClassName,
@@ -168,32 +170,35 @@ export function WorkshopQueue({
 
   useEffect(() => {
     const supabase = createClient();
+    let refreshTimer: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (refreshTimer != null) return;
+      refreshTimer = setTimeout(() => {
+        refreshTimer = null;
+        router.refresh();
+      }, WORKSHOP_QUEUE_REALTIME_REFRESH_MS);
+    };
     const channel = supabase
       .channel("workshop-tasks-realtime")
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "bike_tasks" },
-        () => {
-          router.refresh();
-        },
+        scheduleRefresh,
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "booqable_sync_runs" },
-        () => {
-          router.refresh();
-        },
+        scheduleRefresh,
       )
       .on(
         "postgres_changes",
         { event: "*", schema: "public", table: "booqable_sync_health" },
-        () => {
-          router.refresh();
-        },
+        scheduleRefresh,
       )
       .subscribe();
 
     return () => {
+      if (refreshTimer != null) clearTimeout(refreshTimer);
       supabase.removeChannel(channel);
     };
   }, [router]);
@@ -228,7 +233,7 @@ export function WorkshopQueue({
   }, [search, query, filter, status, pathname, router]);
 
   const syncStatusLabel = (() => {
-    if (health.state === "in_progress" && !health.cursor) return "Sync in progress";
+    if (isLiveQueueSyncInProgress(health)) return "Sync in progress";
     if (health.state === "failed" && health.cursor) {
       return health.lastError
         ? `Partial sync failed: ${health.lastError}`
@@ -244,7 +249,7 @@ export function WorkshopQueue({
     fn: () => Promise<{ ok: true } | { ok: false; code: WorkshopErrorCode; error: string }>,
     pending: ManualSyncScope,
   ) => {
-    if (isPending || (health.state === "in_progress" && !health.cursor)) return;
+    if (syncInFlight) return;
     setSyncError(null);
     setPendingScope(pending);
     startTransition(async () => {

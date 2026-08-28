@@ -167,12 +167,46 @@ export function buildWorkshopQueueHref(
   return queryString ? `${pathname}?${queryString}` : pathname;
 }
 
+/** Coalesce realtime `/workshop` refreshes so a next-7-days walk cannot remount the page per order. */
+export const WORKSHOP_QUEUE_REALTIME_REFRESH_MS = 1000;
+
+/**
+ * A leftover `in_progress` run with no cursor blocks the queue. After two lease
+ * windows with no heartbeat, treat it as dead so a killed walk cannot freeze `/workshop`.
+ */
+export const WORKSHOP_SYNC_IN_PROGRESS_STALE_MS = 4 * 60 * 1000;
+
+export function isStaleInProgressRun(
+  lastAttemptAt: string | null | undefined,
+): boolean {
+  if (!lastAttemptAt) return true;
+  const at = Date.parse(lastAttemptAt);
+  if (Number.isNaN(at)) return true;
+  return Date.now() - at >= WORKSHOP_SYNC_IN_PROGRESS_STALE_MS;
+}
+
+export function isLiveQueueSyncInProgress(health: {
+  state: string | null;
+  cursor: string | null;
+  lastAttemptAt?: string | null;
+}): boolean {
+  return (
+    health.state === "in_progress" &&
+    !health.cursor &&
+    !isStaleInProgressRun(health.lastAttemptAt)
+  );
+}
+
 /** Block list→task (and other queue URL changes) while this run is in flight. */
 export function shouldBlockQueueNavigation(
   isPending: boolean,
-  health: { state: string | null; cursor: string | null },
+  health: {
+    state: string | null;
+    cursor: string | null;
+    lastAttemptAt?: string | null;
+  },
 ): boolean {
-  return isPending || (health.state === "in_progress" && !health.cursor);
+  return isPending || isLiveQueueSyncInProgress(health);
 }
 
 /** Live overlay count: current in-progress run only, never a prior succeeded/paused listed. */
