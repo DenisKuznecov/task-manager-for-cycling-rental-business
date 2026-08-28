@@ -674,7 +674,7 @@ test("queue I/O matrix: empty today, status isolate/clear, completed, page clamp
   assert.match(queue, /syncStatusLabel && !syncInFlight/);
 });
 
-test("queue sync overlay locks next-7-days and resume I/O", () => {
+test("queue sync overlay locks next-7-days without Resume", () => {
   const queue = readFileSync(
     join(root, "src/app/workshop/_components/WorkshopQueue.tsx"),
     "utf8",
@@ -691,7 +691,19 @@ test("queue sync overlay locks next-7-days and resume I/O", () => {
   );
   assert.match(next7Button, /runSync/);
   assert.match(next7Button, /startManualSync\("next_7_days"\)/);
+
+  assert.doesNotMatch(queue, /Resume sync/);
+  assert.doesNotMatch(queue, /resumeManualSync/);
+  assert.doesNotMatch(queue, /pendingScope === "resume"/);
+  assert.doesNotMatch(queue, /resumable/);
+  assert.doesNotMatch(queue, /more reserved orders remain/);
+  assert.doesNotMatch(queue, /Use Resume/);
+  assert.doesNotMatch(queue, /Each click fetches 50/);
   assert.match(queue, /syncStatusLabel && !syncInFlight/);
+  assert.match(
+    queue,
+    /if \(isPending \|\| \(health\.state === "in_progress" && !health\.cursor\)\) return/,
+  );
 
   assert.match(queue, /WorkshopQueueSyncOverlay/);
   assert.match(queue, /fixed inset-0 z-50 flex items-center justify-center/);

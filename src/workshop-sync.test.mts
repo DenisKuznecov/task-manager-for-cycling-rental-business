@@ -293,8 +293,34 @@ test("workshop queue exposes next 7 days sync", () => {
   assert.match(source, /Sync next 7 days/);
   assert.doesNotMatch(source, /Sync all reserved/);
   assert.match(source, /startManualSync/);
+  assert.doesNotMatch(source, /resumeManualSync/);
+  assert.doesNotMatch(source, /Resume sync/);
   assert.match(source, /booqable_sync_runs/);
   assert.match(source, /Last full sync/);
+});
+
+test("next 7 days start walks reserved pages until done", () => {
+  const manual = readSrc("lib/workshop/application/manual-sync.ts");
+  const queue = readSrc("app/workshop/_components/WorkshopQueue.tsx");
+
+  assert.match(manual, /if \(scope === "next_7_days"\)/);
+  assert.match(manual, /return withStartedManualSync\(data, walkNext7DaysReservedPages\)/);
+  assert.match(manual, /walkNext7DaysReservedPages/);
+  assert.match(manual, /while \(hasMore\)/);
+  assert.match(manual, /booqable_finish_sync_run/);
+  assert.match(manual, /startLeaseRenewLoop/);
+  assert.match(manual, /workshop_start_manual_sync/);
+  assert.match(
+    manual,
+    /async function walkNext7DaysReservedPages[\s\S]*const nextCursor = pageFailed\s*\?\s*encodeSyncCursor\([\s\S]*?\)\s*:\s*null/,
+  );
+  assert.match(manual, /return continueManualSync\(data, scope, 1\)/);
+  assert.doesNotMatch(queue, /resumeManualSync/);
+  assert.match(
+    queue,
+    /if \(isPending \|\| \(health\.state === "in_progress" && !health\.cursor\)\) return/,
+  );
+  assert.match(queue, /if \(!result\.ok\) \{\s*setSyncError\([\s\S]*?\}\s*router\.refresh\(\)/);
 });
 
 test("webhook maps busy to 200 and other reconcile failures to 500", () => {

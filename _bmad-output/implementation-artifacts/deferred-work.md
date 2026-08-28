@@ -40,3 +40,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/handover-workshop-sync-auto-page.md`
   summary: One **Sync next 7 days** click should walk Booqable reserved pages until the 7-day scan is done; remove **Resume sync**.
   evidence: Staff dropped **Sync all reserved**. Resume only exists because list sync stops after 50 reserved rows (shop-wide, not 7-day). User chose auto-paging over keeping Resume.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-workshop-sync-auto-page.md`
+  summary: A killed or timed-out next-7-days walk can leave the run `in_progress` with no cursor, which keeps the overlay and blocks Sync.
+  evidence: Review of the auto-page walk; `booqable_finish_sync_run` never runs if the server action dies, and the spec forbids inventing `maxDuration` or a hidden continue.

@@ -252,13 +252,13 @@ export function WorkshopQueue({
         const result = await fn();
         if (!result.ok) {
           setSyncError({ code: result.code, error: result.error });
-          return;
         }
         router.refresh();
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Workshop sync failed.";
         setSyncError({ code: "SOURCE_UNAVAILABLE", error: message });
+        router.refresh();
       } finally {
         setPendingScope(null);
       }
