@@ -32,7 +32,7 @@ export default async function WorkshopTaskPage({
 
   return (
     <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background pt-4 pb-12">
-      <WorkshopTask detail={item} />
+      <WorkshopTask key={item.task.taskId} detail={item} />
     </div>
   );
 }

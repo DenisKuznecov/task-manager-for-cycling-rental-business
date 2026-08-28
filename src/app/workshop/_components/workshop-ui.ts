@@ -183,6 +183,13 @@ export function nextWorkshopTaskVersion(
   return result.ok ? result.version : current;
 }
 
+/** List rows lock only for named stage actions, never for background item saves. */
+export function shouldLockChecklistForPending(
+  namedActionPending: boolean,
+): boolean {
+  return namedActionPending;
+}
+
 export function isM1ItemValid(item: WorkshopTaskItem): boolean {
   if (!item.required) return true;
   if (item.m1Outcome === "not_applicable") return item.naAllowed;

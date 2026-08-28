@@ -14,6 +14,7 @@ import {
   m2ItemCaption,
   nextWorkshopTaskVersion,
   PREPARE_FOR_STORAGE_BADGE_CLASS,
+  shouldLockChecklistForPending,
   queueStatusSelectValue,
   shouldBlockQueueNavigation,
   shouldRenderWorkshopQueue,
@@ -299,6 +300,102 @@ test("isM1ItemValid requires a finite PSI greater than zero", () => {
     ),
     false,
   );
+});
+
+test("task page I/O matrix: checklist stays clickable while item saves chain", () => {
+  const task = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopTask.tsx"),
+    "utf8",
+  );
+  const enqueueStart = task.indexOf("const enqueueItemCommand");
+  const runStart = task.indexOf("const runCommand");
+  assert.notEqual(enqueueStart, -1);
+  assert.notEqual(runStart, -1);
+  assert.ok(enqueueStart < runStart);
+  const enqueue = task.slice(enqueueStart, runStart);
+  const run = task.slice(runStart, task.indexOf("const isNamedPending"));
+
+  // Rapid M1 taps: both go through the item queue; lists are not page-locked
+  assert.match(task, /const setOutcome[\s\S]*enqueueItemCommand/);
+  assert.match(
+    task,
+    /onComplete=\{\(itemId\) => setOutcome\(itemId, "completed"\)\}/,
+  );
+  const checklistInvocations = [
+    ...task.matchAll(/<ChecklistItems[\s\S]*?\/>/g),
+    ...task.matchAll(/<M2Checklist[\s\S]*?\/>/g),
+  ].map((match) => match[0]);
+  assert.equal(checklistInvocations.length, 3);
+  for (const invocation of checklistInvocations) {
+    assert.doesNotMatch(invocation, /disabled=\{isPending\}/);
+  }
+  assert.doesNotMatch(enqueue, /if \(isPending\) return/);
+  assert.doesNotMatch(enqueue, /startTransition/);
+  for (const invocation of checklistInvocations) {
+    assert.match(invocation, /shouldLockChecklistForPending\(isPending\)/);
+    assert.doesNotMatch(invocation, /itemSavesPending/);
+  }
+
+  // PSI during save
+  assert.match(
+    task,
+    /onSetPsi=\{\(itemId, psi\) =>\s+setOutcome\(itemId, "completed", psi\)/,
+  );
+
+  // Rapid M2
+  assert.match(
+    task,
+    /enqueueItemCommand\(\s*itemId,\s*\{\s*m2Confirmed: true/,
+  );
+  assert.match(enqueue, /command\(taskVersionRef\.current\)/);
+  assert.match(task, /confirmM2Item/);
+
+  // Add-ons / same-person / PSI drafts survive item success
+  assert.doesNotMatch(enqueue, /setAddonsAcknowledged/);
+  assert.doesNotMatch(enqueue, /setSamePersonConfirmed/);
+  assert.doesNotMatch(enqueue, /setPsiDrafts/);
+  assert.match(run, /setAddonsAcknowledged\(false\)/);
+
+  // Item command fails: revert, log, banner
+  assert.match(enqueue, /revertItemOverrideIfCurrent\(itemId, override\)/);
+  assert.match(enqueue, /console\.error\("workshop:"/);
+  assert.match(enqueue, /setCommandError/);
+
+  // Own-version race: stage waits for the item queue, then latest version
+  assert.match(run, /await itemQueueRef\.current/);
+  assert.match(
+    task,
+    /completeM1\(\s*task\.taskId,\s*taskVersionRef\.current/,
+  );
+  assert.match(enqueue, /nextWorkshopTaskVersion/);
+  assert.match(task, /disabled=\{isPending \|\| itemSavesPending \|\| !canCompleteM1\}/);
+  assert.match(task, /disabled=\{isPending \|\| itemSavesPending \|\| !canCompleteM2\}/);
+  assert.match(
+    task,
+    /disabled=\{isPending \|\| itemSavesPending \|\| !storageReady\}/,
+  );
+
+  // Saving cue while in flight; hidden when `saving` is false
+  assert.equal(
+    [...task.matchAll(/<StageCompleteRow saving=\{itemSavesPending\}>/g)]
+      .length,
+    3,
+  );
+  assert.match(task, /Complete Bike Preparation/);
+  assert.match(task, /Complete Bike Verification/);
+  assert.match(task, /Complete Bike Storage Preparation/);
+  assert.match(task, /saving \? \(/);
+  assert.match(task, /Saving…/);
+
+  // Real stale: banner + refresh on item and stage paths
+  assert.match(enqueue, /STALE_VERSION/);
+  assert.match(enqueue, /router\.refresh\(\)/);
+  assert.match(run, /STALE_VERSION/);
+});
+
+test("shouldLockChecklistForPending is only true for named stage actions", () => {
+  assert.equal(shouldLockChecklistForPending(false), false);
+  assert.equal(shouldLockChecklistForPending(true), true);
 });
 
 test("nextWorkshopTaskVersion chains successes and keeps last good on failure", () => {
@@ -615,6 +712,7 @@ test("task page: not-found vs error vs cancelled tombstone and named actions", (
   assert.match(task, /Correct the Booqable product tag/);
   assert.match(task, /formatWorkshopFromUntil/);
   assert.doesNotMatch(task, /Starts /);
+  assert.match(page, /key=\{item\.task\.taskId\}/);
   const checklistInvocations = [
     ...task.matchAll(/<ChecklistItems[\s\S]*?\/>/g),
     ...task.matchAll(/<M2Checklist[\s\S]*?\/>/g),
