@@ -283,19 +283,44 @@ test("sandbox reseed stays on the new reconciler and requires a session", () => 
 
 test("task page exposes a large Sync order from Booqable control", () => {
   const source = readSrc("app/workshop/_components/WorkshopTask.tsx");
-  assert.match(source, /Sync order from Booqable/);
+  assert.match(source, /Sync order details from Booqable/);
   assert.match(source, /syncOrderFromBooqable/);
-  assert.match(source, /size="large"/);
+  assert.match(source, /tabletMode \? "large" : "medium"/);
 });
 
-test("workshop queue exposes next 7 days and all reserved sync", () => {
+test("workshop queue exposes next 7 days sync", () => {
   const source = readSrc("app/workshop/_components/WorkshopQueue.tsx");
   assert.match(source, /Sync next 7 days/);
-  assert.match(source, /Sync all reserved/);
+  assert.doesNotMatch(source, /Sync all reserved/);
   assert.match(source, /startManualSync/);
-  assert.match(source, /resumeManualSync/);
+  assert.doesNotMatch(source, /resumeManualSync/);
+  assert.doesNotMatch(source, /Resume sync/);
   assert.match(source, /booqable_sync_runs/);
   assert.match(source, /Last full sync/);
+});
+
+test("next 7 days start walks reserved pages until done", () => {
+  const manual = readSrc("lib/workshop/application/manual-sync.ts");
+  const queue = readSrc("app/workshop/_components/WorkshopQueue.tsx");
+
+  assert.match(manual, /if \(scope === "next_7_days"\)/);
+  assert.match(manual, /return withStartedManualSync\(data, walkNext7DaysReservedPages\)/);
+  assert.match(manual, /walkNext7DaysReservedPages/);
+  assert.match(manual, /while \(hasMore\)/);
+  assert.match(manual, /booqable_finish_sync_run/);
+  assert.match(manual, /startLeaseRenewLoop/);
+  assert.match(manual, /workshop_start_manual_sync/);
+  assert.match(
+    manual,
+    /async function walkNext7DaysReservedPages[\s\S]*const nextCursor = pageFailed\s*\?\s*encodeSyncCursor\([\s\S]*?\)\s*:\s*null/,
+  );
+  assert.match(manual, /return continueManualSync\(data, scope, 1\)/);
+  assert.match(manual, /seenIds/);
+  assert.match(manual, /Booqable reserved list repeated a page/);
+  assert.doesNotMatch(queue, /resumeManualSync/);
+  assert.match(queue, /if \(syncInFlight\) return/);
+  assert.match(queue, /WORKSHOP_QUEUE_REALTIME_REFRESH_MS/);
+  assert.match(queue, /if \(!result\.ok\) \{\s*setSyncError\([\s\S]*?\}\s*router\.refresh\(\)/);
 });
 
 test("webhook maps busy to 200 and other reconcile failures to 500", () => {

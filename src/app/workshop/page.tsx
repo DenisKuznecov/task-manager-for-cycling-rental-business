@@ -2,6 +2,10 @@ import React from "react";
 import { DataLoadError } from "@/src/components/DataLoadError";
 import { workshopData, workshopDomain } from "@/src/lib/workshop";
 import { WorkshopQueue } from "./_components/WorkshopQueue";
+import {
+  WorkshopPageSubtitle,
+  WorkshopTabletModeSwitch,
+} from "./_components/WorkshopTabletModeSwitch";
 import { shouldRenderWorkshopQueue } from "./_components/workshop-ui";
 
 export default async function WorkshopPage({
@@ -49,13 +53,14 @@ export default async function WorkshopPage({
   );
 
   const heading = (
-    <div className="flex min-w-0 flex-col items-start gap-2">
-      <span className="text-heading-1 font-heading-1 text-default-font">
-        Workshop
-      </span>
-      <span className="text-heading-3 font-heading-3 text-subtext-color">
-        Bike preparation, pickup, return, and storage.
-      </span>
+    <div className="flex w-full min-w-0 flex-wrap items-start justify-between gap-4">
+      <div className="flex min-w-0 flex-col items-start gap-2">
+        <span className="text-heading-1 font-heading-1 text-default-font">
+          Workshop
+        </span>
+        <WorkshopPageSubtitle />
+      </div>
+      <WorkshopTabletModeSwitch />
     </div>
   );
 

@@ -1,5 +1,6 @@
 import type {
   BikeTaskStatus,
+  WorkshopCommandResult,
   WorkshopQueueFilter,
   WorkshopQueueStatus,
   WorkshopTaskItem,
@@ -166,12 +167,70 @@ export function buildWorkshopQueueHref(
   return queryString ? `${pathname}?${queryString}` : pathname;
 }
 
+/** Coalesce realtime `/workshop` refreshes so a next-7-days walk cannot remount the page per order. */
+export const WORKSHOP_QUEUE_REALTIME_REFRESH_MS = 1000;
+
+/**
+ * A leftover `in_progress` run with no cursor blocks the queue. After two lease
+ * windows with no heartbeat, treat it as dead so a killed walk cannot freeze `/workshop`.
+ */
+export const WORKSHOP_SYNC_IN_PROGRESS_STALE_MS = 4 * 60 * 1000;
+
+export function isStaleInProgressRun(
+  lastAttemptAt: string | null | undefined,
+): boolean {
+  if (!lastAttemptAt) return true;
+  const at = Date.parse(lastAttemptAt);
+  if (Number.isNaN(at)) return true;
+  return Date.now() - at >= WORKSHOP_SYNC_IN_PROGRESS_STALE_MS;
+}
+
+export function isLiveQueueSyncInProgress(health: {
+  state: string | null;
+  cursor: string | null;
+  lastAttemptAt?: string | null;
+}): boolean {
+  return (
+    health.state === "in_progress" &&
+    !health.cursor &&
+    !isStaleInProgressRun(health.lastAttemptAt)
+  );
+}
+
 /** Block list→task (and other queue URL changes) while this run is in flight. */
 export function shouldBlockQueueNavigation(
   isPending: boolean,
-  health: { state: string | null; cursor: string | null },
+  health: {
+    state: string | null;
+    cursor: string | null;
+    lastAttemptAt?: string | null;
+  },
 ): boolean {
-  return isPending || (health.state === "in_progress" && !health.cursor);
+  return isPending || isLiveQueueSyncInProgress(health);
+}
+
+/** Live overlay count: current in-progress run only, never a prior succeeded/paused listed. */
+export function workshopSyncOverlayListed(health: {
+  state: string | null;
+  counts: { listed: number };
+}): number {
+  if (health.state !== "in_progress") return 0;
+  return health.counts.listed > 0 ? health.counts.listed : 0;
+}
+
+/** Chain item-command versions: success payload, otherwise the last good value. */
+export function nextWorkshopTaskVersion(
+  current: number,
+  result: WorkshopCommandResult,
+): number {
+  return result.ok ? result.version : current;
+}
+
+/** List rows lock only for named stage actions, never for background item saves. */
+export function shouldLockChecklistForPending(
+  namedActionPending: boolean,
+): boolean {
+  return namedActionPending;
 }
 
 export function isM1ItemValid(item: WorkshopTaskItem): boolean {
@@ -186,6 +245,13 @@ export function isM1ItemValid(item: WorkshopTaskItem): boolean {
     );
   }
   return item.m1Outcome === "completed";
+}
+
+/** M2 re-check rows: designated items that M1 did not mark N/A. */
+export function isM2RecheckItem(
+  item: Pick<WorkshopTaskItem, "m2Verifies" | "m1Outcome">,
+): boolean {
+  return item.m2Verifies && item.m1Outcome !== "not_applicable";
 }
 
 export function m2ItemCaption(item: Pick<
@@ -304,24 +370,26 @@ const TILE_ACCENTS: Record<
 };
 
 const TILE_BASE =
-  "flex min-h-16 min-w-28 grow basis-0 flex-col items-start justify-center gap-1 rounded-md border border-solid border-neutral-200 px-3 py-2 text-left";
+  "flex min-w-28 grow basis-0 flex-col items-start justify-center gap-1 rounded-md border border-solid border-neutral-200 px-3 py-2 text-left";
 
 export function statusTileClassName(
   status: WorkshopQueueStatus,
   selected: boolean,
   count: number,
+  tabletMode = false,
 ): string {
+  const tileBase = `${TILE_BASE} ${tabletMode ? "min-h-16" : "min-h-12"}`;
   const accent = TILE_ACCENTS[status];
   if (selected) {
-    return `${TILE_BASE} ${accent.bar} bg-brand-50 text-default-font ring-2 ring-brand-600 ring-offset-2`;
+    return `${tileBase} ${accent.bar} bg-brand-50 text-default-font ring-2 ring-brand-600 ring-offset-2`;
   }
   if (count <= 0) {
-    return `${TILE_BASE} ${accent.barMuted} bg-default-background text-neutral-400`;
+    return `${tileBase} ${accent.barMuted} bg-default-background text-neutral-400`;
   }
   if (ATTENTION_TILES.has(status)) {
-    return `${TILE_BASE} ${accent.bar} ${accent.tint}`;
+    return `${tileBase} ${accent.bar} ${accent.tint}`;
   }
-  return `${TILE_BASE} ${accent.bar} bg-default-background text-default-font`;
+  return `${tileBase} ${accent.bar} bg-default-background text-default-font`;
 }
 
 /** Booqable titles mix `|` option slots and commas; drop empty slots. */

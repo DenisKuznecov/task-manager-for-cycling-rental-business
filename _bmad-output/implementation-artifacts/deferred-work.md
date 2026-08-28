@@ -36,3 +36,27 @@
 - Drawer wiring tests still grep layout/task source for `OrderDetailsDrawerHost` / `useOpenOrderDetails` and never render the host, so a missing host in the tree would not fail `test:workshop-ui`.
 - Repo-wide `npm run lint` still fails on pre-existing bike-fits/wiki `react-hooks` findings from the Next.js 16 upgrade; workshop eslint is clean.
 - Workshop layout `redirect("/login")` has no `?next=`, matching the other role layouts; session expiry on a task page does not resume at that task.
+
+- source_spec: `_bmad-output/implementation-artifacts/handover-workshop-sync-auto-page.md`
+  summary: One **Sync next 7 days** click should walk Booqable reserved pages until the 7-day scan is done; remove **Resume sync**.
+  evidence: Staff dropped **Sync all reserved**. Resume only exists because list sync stops after 50 reserved rows (shop-wide, not 7-day). User chose auto-paging over keeping Resume.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-workshop-sync-auto-page.md`
+  summary: A killed or timed-out next-7-days walk can leave the run `in_progress` with no cursor, which keeps the overlay and blocks Sync.
+  evidence: Review of the auto-page walk; `booqable_finish_sync_run` never runs if the server action dies, and the spec forbids inventing `maxDuration` or a hidden continue.
+
+- source_spec: `/Users/denyskuznetsov/Documents/echelon-cycling-hub-admin/echelon-cycling-hub-admin/_bmad-output/implementation-artifacts/spec-pending-page-navbar.md`
+  summary: Approved users who bookmark or land on `/pending` via `?next=` stay on the waiting-room copy instead of being sent to their role home.
+  evidence: Pre-existing — the page never redirected users who already have a role; this run only added chrome.
+
+- source_spec: `/Users/denyskuznetsov/Documents/echelon-cycling-hub-admin/echelon-cycling-hub-admin/_bmad-output/implementation-artifacts/spec-pending-page-navbar.md`
+  summary: `/pending` always says the account is awaiting approval, including when the profile query failed rather than the role being missing.
+  evidence: Pre-existing copy; every role layout already dumps both “no role” and profile-load failure onto this page.
+
+- source_spec: `/Users/denyskuznetsov/Documents/echelon-cycling-hub-admin/echelon-cycling-hub-admin/_bmad-output/implementation-artifacts/spec-pending-page-navbar.md`
+  summary: The topbar logo on `/pending` goes to `/`, which immediately sends a no-role user back to `/pending`.
+  evidence: `AppTopbar` uses `/` for non-staff; fixing it needs a pending-aware logo href on shared chrome.
+
+- source_spec: `/Users/denyskuznetsov/Documents/echelon-cycling-hub-admin/echelon-cycling-hub-admin/_bmad-output/implementation-artifacts/spec-pending-page-navbar.md`
+  summary: `test:pending-layout` is not part of an aggregate `test` script or CI job.
+  evidence: Pre-existing repo pattern — each `node --test` file has its own npm script and is not wired into GitHub Actions.

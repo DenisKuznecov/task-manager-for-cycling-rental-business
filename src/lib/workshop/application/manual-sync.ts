@@ -140,25 +140,28 @@ function parseStartedRun(data: unknown): WorkshopSyncResult | (StartedRun & { ok
   };
 }
 
-async function processReservedPage(
+type PageProcessOutcome = {
+  listingFailed: boolean;
+  lastError: string | null;
+  hasMore: boolean;
+  orderIds: string[];
+};
+
+async function processReservedPageOrders(
   supabase: SupabaseClient,
   started: StartedRun,
   scope: ManualSyncScope,
   page: number,
-): Promise<WorkshopSyncResult> {
+): Promise<PageProcessOutcome> {
   let listingFailed = false;
   let lastError: string | null = null;
   let hasMore = false;
-
-  const stopRenew = startLeaseRenewLoop(
-    () => renewRunLease(supabase, started.token, started.fence),
-    "workshop:",
-  );
+  let orderIds: string[] = [];
 
   try {
-    await renewRunLease(supabase, started.token, started.fence);
     const list = await fetchReservedOrderListPage(page);
     hasMore = list.hasMore;
+    orderIds = list.orders.map((order) => order.id);
 
     for (const order of list.orders) {
       const skip = skipReason(order, scope);
@@ -191,22 +194,18 @@ async function processReservedPage(
     listingFailed = true;
     lastError = error instanceof Error ? error.message : "Booqable list failed.";
     console.error("workshop:", error);
-  } finally {
-    stopRenew();
   }
 
-  const pageFailed = listingFailed || lastError != null;
-  const nextCursor = pageFailed
-    ? encodeSyncCursor({ v: 1, scope, page, runId: started.runId })
-    : hasMore
-      ? encodeSyncCursor({
-          v: 1,
-          scope,
-          page: page + 1,
-          runId: started.runId,
-        })
-      : null;
+  return { listingFailed, lastError, hasMore, orderIds };
+}
 
+async function finishAndReleaseRun(
+  supabase: SupabaseClient,
+  started: StartedRun,
+  nextCursor: string | null,
+  lastError: string | null,
+  listingFailed: boolean,
+): Promise<WorkshopSyncResult> {
   let finished: unknown;
   try {
     finished = await rpcJson(supabase, "booqable_finish_sync_run", {
@@ -229,10 +228,140 @@ async function processReservedPage(
   return parseWorkshopSyncResult(finished);
 }
 
-async function continueManualSync(
-  data: unknown,
+async function processReservedPage(
+  supabase: SupabaseClient,
+  started: StartedRun,
   scope: ManualSyncScope,
   page: number,
+): Promise<WorkshopSyncResult> {
+  let listingFailed = false;
+  let lastError: string | null = null;
+  let hasMore = false;
+
+  const stopRenew = startLeaseRenewLoop(
+    () => renewRunLease(supabase, started.token, started.fence),
+    "workshop:",
+  );
+
+  try {
+    await renewRunLease(supabase, started.token, started.fence);
+    const outcome = await processReservedPageOrders(
+      supabase,
+      started,
+      scope,
+      page,
+    );
+    listingFailed = outcome.listingFailed;
+    lastError = outcome.lastError;
+    hasMore = outcome.hasMore;
+  } catch (error) {
+    listingFailed = true;
+    lastError = error instanceof Error ? error.message : "Booqable list failed.";
+    console.error("workshop:", error);
+  } finally {
+    stopRenew();
+  }
+
+  const pageFailed = listingFailed || lastError != null;
+  const nextCursor = pageFailed
+    ? encodeSyncCursor({ v: 1, scope, page, runId: started.runId })
+    : hasMore
+      ? encodeSyncCursor({
+          v: 1,
+          scope,
+          page: page + 1,
+          runId: started.runId,
+        })
+      : null;
+
+  return finishAndReleaseRun(
+    supabase,
+    started,
+    nextCursor,
+    lastError,
+    listingFailed,
+  );
+}
+
+async function walkNext7DaysReservedPages(
+  supabase: SupabaseClient,
+  started: StartedRun,
+): Promise<WorkshopSyncResult> {
+  const scope = "next_7_days" as const;
+  let listingFailed = false;
+  let lastError: string | null = null;
+  let page = 1;
+  let hasMore = true;
+  const seenIds = new Set<string>();
+
+  const stopRenew = startLeaseRenewLoop(
+    () => renewRunLease(supabase, started.token, started.fence),
+    "workshop:",
+  );
+
+  try {
+    await renewRunLease(supabase, started.token, started.fence);
+
+    while (hasMore) {
+      const outcome = await processReservedPageOrders(
+        supabase,
+        started,
+        scope,
+        page,
+      );
+      listingFailed = outcome.listingFailed;
+      lastError = outcome.lastError;
+      const pageFailed = listingFailed || lastError != null;
+      if (pageFailed) {
+        hasMore = false;
+        break;
+      }
+      if (
+        outcome.orderIds.length > 0 &&
+        outcome.orderIds.every((id) => seenIds.has(id))
+      ) {
+        listingFailed = true;
+        lastError =
+          "Booqable reserved list repeated a page; stopping sync.";
+        hasMore = false;
+        break;
+      }
+      for (const id of outcome.orderIds) {
+        seenIds.add(id);
+      }
+      hasMore = outcome.hasMore;
+      if (hasMore) {
+        page += 1;
+      }
+    }
+  } catch (error) {
+    listingFailed = true;
+    lastError = error instanceof Error ? error.message : "Booqable list failed.";
+    console.error("workshop:", error);
+  } finally {
+    stopRenew();
+  }
+
+  const pageFailed = listingFailed || lastError != null;
+  const nextCursor = pageFailed
+    ? encodeSyncCursor({ v: 1, scope, page, runId: started.runId })
+    : null;
+
+  return finishAndReleaseRun(
+    supabase,
+    started,
+    nextCursor,
+    lastError,
+    listingFailed,
+  );
+}
+
+async function withStartedManualSync(
+  data: unknown,
+  work: (
+    supabase: SupabaseClient,
+    started: StartedRun,
+  ) => Promise<WorkshopSyncResult>,
 ): Promise<WorkshopSyncResult> {
   const lease = extractRunLease(data);
   const started = parseStartedRun(data);
@@ -257,7 +386,17 @@ async function continueManualSync(
     };
   }
 
-  return processReservedPage(supabase, started, scope, page);
+  return work(supabase, started);
+}
+
+async function continueManualSync(
+  data: unknown,
+  scope: ManualSyncScope,
+  page: number,
+): Promise<WorkshopSyncResult> {
+  return withStartedManualSync(data, (supabase, started) =>
+    processReservedPage(supabase, started, scope, page),
+  );
 }
 
 export async function runManualSyncStart(
@@ -280,6 +419,9 @@ export async function runManualSyncStart(
     return { ok: false, code: "SOURCE_UNAVAILABLE", error: error.message };
   }
 
+  if (scope === "next_7_days") {
+    return withStartedManualSync(data, walkNext7DaysReservedPages);
+  }
   return continueManualSync(data, scope, 1);
 }
 
