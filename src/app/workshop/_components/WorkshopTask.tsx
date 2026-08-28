@@ -1,10 +1,11 @@
 "use client";
 
-import React, { Suspense, useState, useTransition } from "react";
+import React, { Suspense, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
   FeatherAlertTriangle,
   FeatherCheck,
+  FeatherLoader,
   FeatherWrench,
 } from "@subframe/core";
 import { Alert } from "@/ui/components/Alert";
@@ -32,6 +33,7 @@ import {
   isM1ItemValid,
   isM2RecheckItem,
   m2ItemCaption,
+  nextWorkshopTaskVersion,
   parseAddonTitle,
   workshopBikeId,
   workshopBikeLabel,
@@ -67,6 +69,41 @@ function signerName(attestation: WorkshopAttestation): string {
 
 function sortItems(items: WorkshopTaskItem[]): WorkshopTaskItem[] {
   return [...items].sort((a, b) => a.sortOrder - b.sortOrder);
+}
+
+type ItemOverride = Partial<
+  Pick<WorkshopTaskItem, "m1Outcome" | "m1Psi" | "m2Confirmed">
+>;
+
+function applyItemOverrides(
+  items: WorkshopTaskItem[],
+  overrides: Record<string, ItemOverride>,
+): WorkshopTaskItem[] {
+  if (Object.keys(overrides).length === 0) return items;
+  return items.map((item) => {
+    const override = overrides[item.itemId];
+    return override ? { ...item, ...override } : item;
+  });
+}
+
+function StageCompleteRow({
+  children,
+  saving,
+}: {
+  children: React.ReactNode;
+  saving: boolean;
+}) {
+  return (
+    <div className="flex flex-wrap items-center gap-3">
+      {children}
+      {saving ? (
+        <span className="inline-flex items-center gap-1 text-caption font-caption text-subtext-color">
+          <FeatherLoader className="h-3 w-3 animate-spin" />
+          Saving…
+        </span>
+      ) : null}
+    </div>
+  );
 }
 
 function OrderDetailsButton({
@@ -141,19 +178,130 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
   const [pendingAction, setPendingAction] = useState<WorkshopNamedAction | null>(
     null,
   );
+  const [itemOverrides, setItemOverrides] = useState<
+    Record<string, ItemOverride>
+  >({});
+  const [itemSavesInFlight, setItemSavesInFlight] = useState(0);
 
-  const { task, items, addons, addonFingerprint, attestations } = detail;
+  const { task, items: serverItems, addons, addonFingerprint, attestations } =
+    detail;
+  const items = applyItemOverrides(serverItems, itemOverrides);
   const isTombstone = task.status === "cancelled";
+  const itemSavesPending = itemSavesInFlight > 0;
+
+  const taskIdRef = useRef(task.taskId);
+  const taskVersionRef = useRef(task.version);
+  const itemQueueRef = useRef(Promise.resolve());
+  const itemSavesInFlightRef = useRef(0);
+  const itemSuccessPendingRefreshRef = useRef(false);
+  const queueGenerationRef = useRef(0);
+  const namedActionLockRef = useRef(false);
+
+  useEffect(() => {
+    taskIdRef.current = task.taskId;
+    taskVersionRef.current = task.version;
+    queueGenerationRef.current += 1;
+    itemQueueRef.current = Promise.resolve();
+    itemSavesInFlightRef.current = 0;
+    itemSuccessPendingRefreshRef.current = false;
+    namedActionLockRef.current = false;
+    setItemSavesInFlight(0);
+    setItemOverrides({});
+  }, [task.taskId]);
+
+  useEffect(() => {
+    if (itemSavesInFlightRef.current > 0) return;
+    if (task.version >= taskVersionRef.current) {
+      taskVersionRef.current = task.version;
+      setItemOverrides((current) =>
+        Object.keys(current).length === 0 ? current : {},
+      );
+    }
+  }, [task.version]);
+
+  const revertItemOverride = (itemId: string) => {
+    setItemOverrides((current) => {
+      if (!(itemId in current)) return current;
+      const next = { ...current };
+      delete next[itemId];
+      return next;
+    });
+  };
+
+  const finishItemSave = (commandTaskId: string) => {
+    if (commandTaskId !== taskIdRef.current) return;
+    itemSavesInFlightRef.current = Math.max(0, itemSavesInFlightRef.current - 1);
+    setItemSavesInFlight(itemSavesInFlightRef.current);
+    if (
+      itemSavesInFlightRef.current === 0 &&
+      itemSuccessPendingRefreshRef.current
+    ) {
+      itemSuccessPendingRefreshRef.current = false;
+      router.refresh();
+    }
+  };
+
+  const enqueueItemCommand = (
+    itemId: string,
+    override: ItemOverride,
+    command: (expectedVersion: number) => Promise<WorkshopCommandResult>,
+  ) => {
+    if (namedActionLockRef.current) return;
+
+    const generation = queueGenerationRef.current;
+    const commandTaskId = task.taskId;
+    setCommandError(null);
+    setItemOverrides((current) => ({ ...current, [itemId]: override }));
+    itemSavesInFlightRef.current += 1;
+    setItemSavesInFlight(itemSavesInFlightRef.current);
+
+    itemQueueRef.current = itemQueueRef.current.then(async () => {
+      try {
+        if (generation !== queueGenerationRef.current) {
+          revertItemOverride(itemId);
+          return;
+        }
+
+        const result = await command(taskVersionRef.current);
+        if (commandTaskId !== taskIdRef.current) return;
+        if (!result.ok) {
+          console.error("workshop:", result.code, result.error);
+          setCommandError({ code: result.code, error: result.error });
+          revertItemOverride(itemId);
+          if (result.code === "STALE_VERSION") {
+            queueGenerationRef.current += 1;
+            router.refresh();
+          }
+          return;
+        }
+        taskVersionRef.current = nextWorkshopTaskVersion(
+          taskVersionRef.current,
+          result,
+        );
+        itemSuccessPendingRefreshRef.current = true;
+      } catch (error) {
+        console.error("workshop:", error);
+        const message =
+          error instanceof Error ? error.message : "Workshop command failed.";
+        setCommandError({ code: "SOURCE_UNAVAILABLE", error: message });
+        revertItemOverride(itemId);
+      } finally {
+        finishItemSave(commandTaskId);
+      }
+    });
+  };
 
   const runCommand = (
     fn: () => Promise<WorkshopCommandResult | WorkshopSyncResult>,
     namedAction?: WorkshopNamedAction,
   ) => {
-    if (isPending) return;
+    if (isPending || namedActionLockRef.current) return;
     setCommandError(null);
+    namedActionLockRef.current = true;
     if (namedAction) setPendingAction(namedAction);
     startTransition(async () => {
       try {
+        await itemQueueRef.current;
         const result = await fn();
         if (!result.ok) {
           console.error("workshop:", result.code, result.error);
@@ -162,6 +310,12 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
             router.refresh();
           }
           return;
+        }
+        if ("version" in result) {
+          taskVersionRef.current = nextWorkshopTaskVersion(
+            taskVersionRef.current,
+            result,
+          );
         }
         setAddonsAcknowledged(false);
         setSamePersonConfirmed(false);
@@ -173,6 +327,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
           error instanceof Error ? error.message : "Workshop command failed.";
         setCommandError({ code: "SOURCE_UNAVAILABLE", error: message });
       } finally {
+        namedActionLockRef.current = false;
         setPendingAction(null);
       }
     });
@@ -186,14 +341,20 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
     outcome: ChecklistItemOutcome,
     psi: number | null = null,
   ) => {
-    runCommand(() =>
-      workshopActions.setItemOutcome(
-        task.taskId,
-        task.version,
-        itemId,
-        outcome,
-        psi,
-      ),
+    enqueueItemCommand(
+      itemId,
+      {
+        m1Outcome: outcome,
+        m1Psi: outcome === "not_applicable" ? null : psi,
+      },
+      (expectedVersion) =>
+        workshopActions.setItemOutcome(
+          task.taskId,
+          expectedVersion,
+          itemId,
+          outcome,
+          psi,
+        ),
     );
   };
 
@@ -329,7 +490,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
               onClick={() =>
                 runCommand(
                   () =>
-                    workshopActions.startPreparation(task.taskId, task.version),
+                    workshopActions.startPreparation(task.taskId, taskVersionRef.current),
                   "startPreparation",
                 )
               }
@@ -342,7 +503,6 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
             <div className="flex w-full flex-col items-start gap-4">
               <ChecklistItems
                 items={preparationItems}
-                disabled={isPending}
                 psiDrafts={psiDrafts}
                 onPsiDraftChange={(itemId, value) =>
                   setPsiDrafts((current) => ({ ...current, [itemId]: value }))
@@ -361,21 +521,26 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
                 disabled={isPending}
                 onCheckedChange={setAddonsAcknowledged}
               />
-              <Button
-                size="large"
-                disabled={isPending || !canCompleteM1}
-                loading={isNamedPending("completeM1")}
-                onClick={() => {
-                  if (!canCompleteM1) return;
-                  runCommand(
-                    () =>
-                      workshopActions.completeM1(task.taskId, task.version),
-                    "completeM1",
-                  );
-                }}
-              >
-                Complete Bike Preparation
-              </Button>
+              <StageCompleteRow saving={itemSavesPending}>
+                <Button
+                  size="large"
+                  disabled={isPending || !canCompleteM1}
+                  loading={isNamedPending("completeM1")}
+                  onClick={() => {
+                    if (!canCompleteM1) return;
+                    runCommand(
+                      () =>
+                        workshopActions.completeM1(
+                          task.taskId,
+                          taskVersionRef.current,
+                        ),
+                      "completeM1",
+                    );
+                  }}
+                >
+                  Complete Bike Preparation
+                </Button>
+              </StageCompleteRow>
             </div>
           ) : null}
 
@@ -383,14 +548,16 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
             <div className="flex w-full flex-col items-start gap-4">
               <M2Checklist
                 items={m2Items}
-                disabled={isPending}
                 onConfirm={(itemId) =>
-                  runCommand(() =>
-                    workshopActions.confirmM2Item(
-                      task.taskId,
-                      task.version,
-                      itemId,
-                    ),
+                  enqueueItemCommand(
+                    itemId,
+                    { m2Confirmed: true },
+                    (expectedVersion) =>
+                      workshopActions.confirmM2Item(
+                        task.taskId,
+                        expectedVersion,
+                        itemId,
+                      ),
                   )
                 }
               />
@@ -408,26 +575,28 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
                   onCheckedChange={setSamePersonConfirmed}
                 />
               ) : null}
-              <Button
-                size="large"
-                disabled={isPending || !canCompleteM2}
-                loading={isNamedPending("completeM2")}
-                onClick={() => {
-                  if (!canCompleteM2 || addonFingerprint == null) return;
-                  runCommand(
-                    () =>
-                      workshopActions.completeM2(
-                        task.taskId,
-                        task.version,
-                        addonFingerprint,
-                        isSamePerson && samePersonConfirmed,
-                      ),
-                    "completeM2",
-                  );
-                }}
-              >
-                Complete Bike Verification
-              </Button>
+              <StageCompleteRow saving={itemSavesPending}>
+                <Button
+                  size="large"
+                  disabled={isPending || !canCompleteM2}
+                  loading={isNamedPending("completeM2")}
+                  onClick={() => {
+                    if (!canCompleteM2 || addonFingerprint == null) return;
+                    runCommand(
+                      () =>
+                        workshopActions.completeM2(
+                          task.taskId,
+                          taskVersionRef.current,
+                          addonFingerprint,
+                          isSamePerson && samePersonConfirmed,
+                        ),
+                      "completeM2",
+                    );
+                  }}
+                >
+                  Complete Bike Verification
+                </Button>
+              </StageCompleteRow>
             </div>
           ) : null}
 
@@ -439,7 +608,10 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
               onClick={() =>
                 runCommand(
                   () =>
-                    workshopActions.markPickedUp(task.taskId, task.version),
+                    workshopActions.markPickedUp(
+                      task.taskId,
+                      taskVersionRef.current,
+                    ),
                   "markPickedUp",
                 )
               }
@@ -456,7 +628,10 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
               onClick={() =>
                 runCommand(
                   () =>
-                    workshopActions.markReturned(task.taskId, task.version),
+                    workshopActions.markReturned(
+                      task.taskId,
+                      taskVersionRef.current,
+                    ),
                   "markReturned",
                 )
               }
@@ -473,7 +648,10 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
               onClick={() =>
                 runCommand(
                   () =>
-                    workshopActions.startStorage(task.taskId, task.version),
+                    workshopActions.startStorage(
+                      task.taskId,
+                      taskVersionRef.current,
+                    ),
                   "startStorage",
                 )
               }
@@ -486,7 +664,6 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
             <div className="flex w-full flex-col items-start gap-4">
               <ChecklistItems
                 items={storageItems}
-                disabled={isPending}
                 psiDrafts={psiDrafts}
                 onPsiDraftChange={(itemId, value) =>
                   setPsiDrafts((current) => ({ ...current, [itemId]: value }))
@@ -499,23 +676,25 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
                   setOutcome(itemId, "completed", psi)
                 }
               />
-              <Button
-                size="large"
-                disabled={isPending || !storageReady}
-                loading={isNamedPending("completeStorage")}
-                onClick={() =>
-                  runCommand(
-                    () =>
-                      workshopActions.completeStorage(
-                        task.taskId,
-                        task.version,
-                      ),
-                    "completeStorage",
-                  )
-                }
-              >
-                Complete Bike Storage Preparation
-              </Button>
+              <StageCompleteRow saving={itemSavesPending}>
+                <Button
+                  size="large"
+                  disabled={isPending || !storageReady}
+                  loading={isNamedPending("completeStorage")}
+                  onClick={() =>
+                    runCommand(
+                      () =>
+                        workshopActions.completeStorage(
+                          task.taskId,
+                          taskVersionRef.current,
+                        ),
+                      "completeStorage",
+                    )
+                  }
+                >
+                  Complete Bike Storage Preparation
+                </Button>
+              </StageCompleteRow>
             </div>
           ) : null}
         </>
@@ -651,7 +830,6 @@ function AttestationList({
 
 function ChecklistItems({
   items,
-  disabled,
   psiDrafts,
   onPsiDraftChange,
   onComplete,
@@ -659,7 +837,6 @@ function ChecklistItems({
   onSetPsi,
 }: {
   items: WorkshopTaskItem[];
-  disabled: boolean;
   psiDrafts: Record<string, string>;
   onPsiDraftChange: (itemId: string, value: string) => void;
   onComplete: (itemId: string) => void;
@@ -709,7 +886,7 @@ function ChecklistItems({
                   className="w-24 [&>div]:h-10"
                   label=""
                   helpText=""
-                  disabled={disabled || isNa}
+                  disabled={isNa}
                 >
                   <TextField.Input
                     type="number"
@@ -724,7 +901,7 @@ function ChecklistItems({
                 <Button
                   size="large"
                   variant="neutral-secondary"
-                  disabled={disabled || isNa || !psiValid}
+                  disabled={isNa || !psiValid}
                   onClick={() => onSetPsi(item.itemId, parsed)}
                 >
                   Set
@@ -733,7 +910,7 @@ function ChecklistItems({
                   <Button
                     size="large"
                     variant="neutral-tertiary"
-                    disabled={disabled || hasOutcome}
+                    disabled={hasOutcome}
                     onClick={() => onNotApplicable(item.itemId)}
                   >
                     N/A
@@ -751,7 +928,7 @@ function ChecklistItems({
           >
             <button
               type="button"
-              disabled={disabled || hasOutcome}
+              disabled={hasOutcome}
               onClick={() => onComplete(item.itemId)}
               className="flex min-w-0 grow items-center gap-3 px-4 py-3 text-left disabled:cursor-default"
             >
@@ -767,7 +944,7 @@ function ChecklistItems({
             {item.naAllowed ? (
               <button
                 type="button"
-                disabled={disabled || hasOutcome}
+                disabled={hasOutcome}
                 onClick={() => onNotApplicable(item.itemId)}
                 className={
                   isNa
@@ -787,11 +964,9 @@ function ChecklistItems({
 
 function M2Checklist({
   items,
-  disabled,
   onConfirm,
 }: {
   items: WorkshopTaskItem[];
-  disabled: boolean;
   onConfirm: (itemId: string) => void;
 }) {
   return (
@@ -802,7 +977,7 @@ function M2Checklist({
           <button
             key={item.itemId}
             type="button"
-            disabled={disabled || item.m2Confirmed}
+            disabled={item.m2Confirmed}
             onClick={() => onConfirm(item.itemId)}
             className={
               item.m2Confirmed

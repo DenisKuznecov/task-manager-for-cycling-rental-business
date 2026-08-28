@@ -12,6 +12,7 @@ import {
   isM1ItemValid,
   isM2RecheckItem,
   m2ItemCaption,
+  nextWorkshopTaskVersion,
   PREPARE_FOR_STORAGE_BADGE_CLASS,
   queueStatusSelectValue,
   shouldBlockQueueNavigation,
@@ -25,6 +26,7 @@ import {
   cleanAddonText,
   parseAddonTitle,
 } from "./app/workshop/_components/workshop-ui.ts";
+import type { WorkshopCommandResult } from "./lib/workshop/domain/results.ts";
 import type { WorkshopTaskItem } from "./lib/workshop/domain/dtos.ts";
 import {
   resolveWorkshopQueueFilter,
@@ -297,6 +299,27 @@ test("isM1ItemValid requires a finite PSI greater than zero", () => {
     ),
     false,
   );
+});
+
+test("nextWorkshopTaskVersion chains successes and keeps last good on failure", () => {
+  const ok = (
+    version: number,
+  ): WorkshopCommandResult => ({
+    ok: true,
+    taskId: "task-1",
+    version,
+    status: "being_prepared",
+  });
+  const fail: WorkshopCommandResult = {
+    ok: false,
+    code: "SOURCE_UNAVAILABLE",
+    error: "save failed",
+  };
+  const afterFirst = nextWorkshopTaskVersion(3, ok(4));
+  const afterSecond = nextWorkshopTaskVersion(afterFirst, ok(5));
+  assert.equal(afterFirst, 4);
+  assert.equal(afterSecond, 5);
+  assert.equal(nextWorkshopTaskVersion(afterSecond, fail), 5);
 });
 
 test("M2 caption only carries a fact the recheck still needs", () => {
@@ -592,6 +615,15 @@ test("task page: not-found vs error vs cancelled tombstone and named actions", (
   assert.match(task, /Correct the Booqable product tag/);
   assert.match(task, /formatWorkshopFromUntil/);
   assert.doesNotMatch(task, /Starts /);
+  const checklistInvocations = [
+    ...task.matchAll(/<ChecklistItems[\s\S]*?\/>/g),
+    ...task.matchAll(/<M2Checklist[\s\S]*?\/>/g),
+  ].map((match) => match[0]);
+  assert.equal(checklistInvocations.length, 3);
+  for (const invocation of checklistInvocations) {
+    assert.doesNotMatch(invocation, /disabled=\{isPending\}/);
+  }
+  assert.match(task, /Saving…/);
 });
 
 test("task page reuses all-orders drawer via ?order=", () => {

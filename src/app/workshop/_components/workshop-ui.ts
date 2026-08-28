@@ -1,5 +1,6 @@
 import type {
   BikeTaskStatus,
+  WorkshopCommandResult,
   WorkshopQueueFilter,
   WorkshopQueueStatus,
   WorkshopTaskItem,
@@ -172,6 +173,14 @@ export function shouldBlockQueueNavigation(
   health: { state: string | null; cursor: string | null },
 ): boolean {
   return isPending || (health.state === "in_progress" && !health.cursor);
+}
+
+/** Chain item-command versions: success payload, otherwise the last good value. */
+export function nextWorkshopTaskVersion(
+  current: number,
+  result: WorkshopCommandResult,
+): number {
+  return result.ok ? result.version : current;
 }
 
 export function isM1ItemValid(item: WorkshopTaskItem): boolean {
