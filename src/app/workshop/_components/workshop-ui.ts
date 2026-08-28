@@ -336,24 +336,26 @@ const TILE_ACCENTS: Record<
 };
 
 const TILE_BASE =
-  "flex min-h-16 min-w-28 grow basis-0 flex-col items-start justify-center gap-1 rounded-md border border-solid border-neutral-200 px-3 py-2 text-left";
+  "flex min-w-28 grow basis-0 flex-col items-start justify-center gap-1 rounded-md border border-solid border-neutral-200 px-3 py-2 text-left";
 
 export function statusTileClassName(
   status: WorkshopQueueStatus,
   selected: boolean,
   count: number,
+  tabletMode = false,
 ): string {
+  const tileBase = `${TILE_BASE} ${tabletMode ? "min-h-16" : "min-h-12"}`;
   const accent = TILE_ACCENTS[status];
   if (selected) {
-    return `${TILE_BASE} ${accent.bar} bg-brand-50 text-default-font ring-2 ring-brand-600 ring-offset-2`;
+    return `${tileBase} ${accent.bar} bg-brand-50 text-default-font ring-2 ring-brand-600 ring-offset-2`;
   }
   if (count <= 0) {
-    return `${TILE_BASE} ${accent.barMuted} bg-default-background text-neutral-400`;
+    return `${tileBase} ${accent.barMuted} bg-default-background text-neutral-400`;
   }
   if (ATTENTION_TILES.has(status)) {
-    return `${TILE_BASE} ${accent.bar} ${accent.tint}`;
+    return `${tileBase} ${accent.bar} ${accent.tint}`;
   }
-  return `${TILE_BASE} ${accent.bar} bg-default-background text-default-font`;
+  return `${tileBase} ${accent.bar} bg-default-background text-default-font`;
 }
 
 /** Booqable titles mix `|` option slots and commas; drop empty slots. */

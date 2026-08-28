@@ -283,9 +283,9 @@ test("sandbox reseed stays on the new reconciler and requires a session", () => 
 
 test("task page exposes a large Sync order from Booqable control", () => {
   const source = readSrc("app/workshop/_components/WorkshopTask.tsx");
-  assert.match(source, /Sync order from Booqable/);
+  assert.match(source, /Sync order details from Booqable/);
   assert.match(source, /syncOrderFromBooqable/);
-  assert.match(source, /size="large"/);
+  assert.match(source, /tabletMode \? "large" : "medium"/);
 });
 
 test("workshop queue exposes next 7 days sync", () => {
@@ -293,7 +293,6 @@ test("workshop queue exposes next 7 days sync", () => {
   assert.match(source, /Sync next 7 days/);
   assert.doesNotMatch(source, /Sync all reserved/);
   assert.match(source, /startManualSync/);
-  assert.match(source, /resumeManualSync/);
   assert.match(source, /booqable_sync_runs/);
   assert.match(source, /Last full sync/);
 });

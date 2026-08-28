@@ -17,6 +17,8 @@ import { TextField } from "@/ui/components/TextField";
 import { useOpenOrderDetails } from "@/src/components/orders/useOpenOrderDetails";
 import { useUser } from "@/src/context/UserContext";
 import * as workshopActions from "@/src/lib/workshop/actions";
+import { useWorkshopTabletMode } from "./WorkshopTabletModeProvider";
+import { WorkshopTabletModeSwitch } from "./WorkshopTabletModeSwitch";
 import type {
   ChecklistItemOutcome,
   WorkshopAttestation,
@@ -87,6 +89,13 @@ function applyItemOverrides(
   });
 }
 
+const TABLET_BADGE_CLASS = "h-7 [&_span]:!text-body [&_span]:!font-body";
+
+function taskCopyClass(tabletMode: boolean, bold = false): string {
+  if (tabletMode) return "text-heading-3 font-heading-3";
+  return bold ? "text-body-bold font-body-bold" : "text-body font-body";
+}
+
 function StageCompleteRow({
   children,
   saving,
@@ -115,9 +124,10 @@ function OrderDetailsButton({
   label: string;
 }) {
   const openOrderDetails = useOpenOrderDetails();
+  const { tabletMode } = useWorkshopTabletMode();
   return (
     <Button
-      size="large"
+      size={tabletMode ? "large" : "medium"}
       variant="neutral-secondary"
       onClick={() => openOrderDetails(orderId)}
     >
@@ -127,8 +137,13 @@ function OrderDetailsButton({
 }
 
 function OrderDetailsButtonFallback({ label }: { label: string }) {
+  const { tabletMode } = useWorkshopTabletMode();
   return (
-    <Button size="large" variant="neutral-secondary" disabled>
+    <Button
+      size={tabletMode ? "large" : "medium"}
+      variant="neutral-secondary"
+      disabled
+    >
       {label}
     </Button>
   );
@@ -167,6 +182,8 @@ function AddonsAcknowledge({
 
 export function WorkshopTask({ detail }: WorkshopTaskProps) {
   const router = useRouter();
+  const { tabletMode } = useWorkshopTabletMode();
+  const buttonSize = tabletMode ? "large" : "medium";
   const { profile, isLoading: isProfileLoading } = useUser();
   const [isPending, startTransition] = useTransition();
   const [commandError, setCommandError] = useState<{
@@ -411,6 +428,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
     (!isSamePerson || samePersonConfirmed);
 
   const orderLabel = orderButtonLabel(task);
+  const statusBadge = workshopStatusBadgeProps(task.status);
   const orderButton = (
     <Suspense fallback={<OrderDetailsButtonFallback label={orderLabel} />}>
       <OrderDetailsButton orderId={task.orderId} label={orderLabel} />
@@ -419,7 +437,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
 
   const syncButton = (
     <Button
-      size="large"
+      size={buttonSize}
       variant="neutral-secondary"
       disabled={isPending}
       loading={isNamedPending("syncOrder")}
@@ -451,11 +469,16 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
             <span className="text-heading-2 font-heading-2 text-default-font">
               {workshopBikeLabel(task)}
             </span>
-            <Badge {...workshopStatusBadgeProps(task.status)}>
+            <Badge
+              {...statusBadge}
+              className={[tabletMode ? TABLET_BADGE_CLASS : "", statusBadge.className]
+                .filter(Boolean)
+                .join(" ")}
+            >
               {WORKSHOP_STATUS_LABELS[task.status]}
             </Badge>
           </div>
-          <span className="text-body font-body text-subtext-color">
+          <span className={`${taskCopyClass(tabletMode)} text-subtext-color`}>
             {formatWorkshopFromUntil(
               task.startsAt,
               task.stopsAt,
@@ -464,6 +487,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
           </span>
         </div>
         <div className="flex flex-wrap items-center gap-2">
+          <WorkshopTabletModeSwitch />
           {orderButton}
           {syncButton}
         </div>
@@ -500,16 +524,17 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
         />
       ) : (
         <>
-          <AddonsList addons={addons} />
+          <AddonsList addons={addons} tabletMode={tabletMode} />
           <AttestationList
             m1={m1Attestation}
             m2={m2Attestation}
             storage={storageAttestation}
+            tabletMode={tabletMode}
           />
 
           {task.status === "to_prepare" ? (
             <Button
-              size="large"
+              size={buttonSize}
               disabled={isPending || task.hasConfigurationWarning}
               loading={isNamedPending("startPreparation")}
               onClick={() =>
@@ -529,6 +554,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
               <ChecklistItems
                 items={preparationItems}
                 disabled={shouldLockChecklistForPending(isPending)}
+                tabletMode={tabletMode}
                 psiDrafts={psiDrafts}
                 onPsiDraftChange={(itemId, value) =>
                   setPsiDrafts((current) => ({ ...current, [itemId]: value }))
@@ -549,7 +575,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
               />
               <StageCompleteRow saving={itemSavesPending}>
                 <Button
-                  size="large"
+                  size={buttonSize}
                   disabled={isPending || itemSavesPending || !canCompleteM1}
                   loading={isNamedPending("completeM1")}
                   onClick={() => {
@@ -575,6 +601,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
               <M2Checklist
                 items={m2Items}
                 disabled={shouldLockChecklistForPending(isPending)}
+                tabletMode={tabletMode}
                 onConfirm={(itemId) =>
                   enqueueItemCommand(
                     itemId,
@@ -604,7 +631,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
               ) : null}
               <StageCompleteRow saving={itemSavesPending}>
                 <Button
-                  size="large"
+                  size={buttonSize}
                   disabled={isPending || itemSavesPending || !canCompleteM2}
                   loading={isNamedPending("completeM2")}
                   onClick={() => {
@@ -629,7 +656,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
 
           {task.status === "ready_for_pickup" ? (
             <Button
-              size="large"
+              size={buttonSize}
               disabled={isPending}
               loading={isNamedPending("markPickedUp")}
               onClick={() =>
@@ -649,7 +676,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
 
           {task.status === "in_rental" ? (
             <Button
-              size="large"
+              size={buttonSize}
               disabled={isPending}
               loading={isNamedPending("markReturned")}
               onClick={() =>
@@ -669,7 +696,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
 
           {task.status === "returned" ? (
             <Button
-              size="large"
+              size={buttonSize}
               disabled={isPending}
               loading={isNamedPending("startStorage")}
               onClick={() =>
@@ -692,6 +719,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
               <ChecklistItems
                 items={storageItems}
                 disabled={shouldLockChecklistForPending(isPending)}
+                tabletMode={tabletMode}
                 psiDrafts={psiDrafts}
                 onPsiDraftChange={(itemId, value) =>
                   setPsiDrafts((current) => ({ ...current, [itemId]: value }))
@@ -706,7 +734,7 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
               />
               <StageCompleteRow saving={itemSavesPending}>
                 <Button
-                  size="large"
+                  size={buttonSize}
                   disabled={isPending || itemSavesPending || !storageReady}
                   loading={isNamedPending("completeStorage")}
                   onClick={() =>
@@ -741,8 +769,10 @@ function addonQuantityLabel(quantity: number | null): string {
 
 function AddonsList({
   addons,
+  tabletMode,
 }: {
   addons: WorkshopTaskDetail["addons"];
+  tabletMode: boolean;
 }) {
   const rows = addons.map((addon) => {
     const { label, value } = parseAddonTitle(addon.title);
@@ -772,7 +802,7 @@ function AddonsList({
           What's included in the order
         </span>
         {included.length === 0 ? (
-          <span className="text-body font-body text-subtext-color">
+          <span className={`${taskCopyClass(tabletMode)} text-subtext-color`}>
             {addons.length === 0 ? "None" : "No items to fit"}
           </span>
         ) : (
@@ -780,21 +810,33 @@ function AddonsList({
             {included.map((row) => (
               <li key={row.id} className="w-full">
                 {row.isSection ? (
-                  <span className="text-body-bold font-body-bold text-subtext-color">
+                  <span
+                    className={`${taskCopyClass(tabletMode, true)} text-subtext-color`}
+                  >
                     {row.label}
                   </span>
                 ) : row.value ? (
                   <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-0">
-                    <span className="text-body font-body text-subtext-color">
+                    <span
+                      className={`${taskCopyClass(tabletMode)} text-subtext-color`}
+                    >
                       {row.label}
                     </span>
-                    <span className="min-w-0 break-words text-body font-medium text-default-font">
+                    <span
+                      className={`min-w-0 break-words ${
+                        tabletMode
+                          ? "text-heading-3 font-heading-3"
+                          : "text-body font-medium"
+                      } text-default-font`}
+                    >
                       {row.value}
                       {row.quantityLabel}
                     </span>
                   </div>
                 ) : (
-                  <span className="text-body-bold font-body-bold text-default-font">
+                  <span
+                    className={`${taskCopyClass(tabletMode, true)} text-default-font`}
+                  >
                     {row.label}
                     {row.quantityLabel}
                   </span>
@@ -813,7 +855,7 @@ function AddonsList({
             {declined.map((row) => (
               <li
                 key={row.id}
-                className="text-body font-body text-subtext-color"
+                className={`${taskCopyClass(tabletMode)} text-subtext-color`}
               >
                 {row.label}
               </li>
@@ -829,26 +871,28 @@ function AttestationList({
   m1,
   m2,
   storage,
+  tabletMode,
 }: {
   m1?: WorkshopAttestation;
   m2?: WorkshopAttestation;
   storage?: WorkshopAttestation;
+  tabletMode: boolean;
 }) {
   if (!m1 && !m2 && !storage) return null;
   return (
     <div className="flex w-full flex-col items-start gap-1">
       {m1 ? (
-        <span className="text-body font-body text-subtext-color">
+        <span className={`${taskCopyClass(tabletMode)} text-subtext-color`}>
           {`Bike preparation completed by ${signerName(m1)} on ${formatSignedAt(m1.signedAt)}`}
         </span>
       ) : null}
       {m2 ? (
-        <span className="text-body font-body text-subtext-color">
+        <span className={`${taskCopyClass(tabletMode)} text-subtext-color`}>
           {`Recheck completed by ${signerName(m2)} on ${formatSignedAt(m2.signedAt)}`}
         </span>
       ) : null}
       {storage ? (
-        <span className="text-body font-body text-subtext-color">
+        <span className={`${taskCopyClass(tabletMode)} text-subtext-color`}>
           {`Storage completed by ${signerName(storage)} on ${formatSignedAt(storage.signedAt)}`}
         </span>
       ) : null}
@@ -859,6 +903,7 @@ function AttestationList({
 function ChecklistItems({
   items,
   disabled,
+  tabletMode,
   psiDrafts,
   onPsiDraftChange,
   onComplete,
@@ -867,6 +912,7 @@ function ChecklistItems({
 }: {
   items: WorkshopTaskItem[];
   disabled: boolean;
+  tabletMode: boolean;
   psiDrafts: Record<string, string>;
   onPsiDraftChange: (itemId: string, value: string) => void;
   onComplete: (itemId: string) => void;
@@ -876,6 +922,8 @@ function ChecklistItems({
   const firstPsiId = items.find(
     (item) => item.itemType === "tyre_pressure_psi",
   )?.itemId;
+  const buttonSize = tabletMode ? "large" : "medium";
+  const rowMinH = tabletMode ? "min-h-16" : "min-h-12";
 
   return (
     <div className="grid w-full grid-cols-1 items-stretch gap-2 md:grid-cols-2">
@@ -903,17 +951,35 @@ function ChecklistItems({
                 {isDone ? (
                   <FeatherCheck className="text-body font-body text-success-700" />
                 ) : null}
-                <span className="grow text-body-bold font-body-bold text-default-font">
+                <span
+                  className={`grow ${taskCopyClass(tabletMode, true)} text-default-font`}
+                >
                   {item.label}
                 </span>
-                {isNa ? <Badge variant="neutral">N/A</Badge> : null}
+                {isNa ? (
+                  <Badge
+                    variant="neutral"
+                    className={tabletMode ? TABLET_BADGE_CLASS : undefined}
+                  >
+                    N/A
+                  </Badge>
+                ) : null}
                 {isDone && item.m1Psi != null ? (
-                  <Badge variant="info">{item.m1Psi} PSI</Badge>
+                  <Badge
+                    variant="info"
+                    className={tabletMode ? TABLET_BADGE_CLASS : undefined}
+                  >
+                    {item.m1Psi} PSI
+                  </Badge>
                 ) : null}
               </div>
               <div className="flex w-full flex-wrap items-center gap-2">
                 <TextField
-                  className="w-24 [&>div]:h-10"
+                  className={
+                    tabletMode
+                      ? "w-24 [&>div]:h-10 [&_input]:text-heading-3 [&_input]:font-heading-3"
+                      : "w-24 [&>div]:h-10"
+                  }
                   label=""
                   helpText=""
                   disabled={disabled || isNa}
@@ -929,7 +995,7 @@ function ChecklistItems({
                   />
                 </TextField>
                 <Button
-                  size="large"
+                  size={buttonSize}
                   variant="neutral-secondary"
                   disabled={disabled || isNa || !psiValid}
                   onClick={() => onSetPsi(item.itemId, parsed)}
@@ -938,7 +1004,7 @@ function ChecklistItems({
                 </Button>
                 {item.naAllowed ? (
                   <Button
-                    size="large"
+                    size={buttonSize}
                     variant="neutral-tertiary"
                     disabled={disabled || hasOutcome}
                     onClick={() => onNotApplicable(item.itemId)}
@@ -954,7 +1020,7 @@ function ChecklistItems({
         return (
           <div
             key={item.itemId}
-            className={`flex h-full min-h-12 min-w-0 w-full items-stretch overflow-hidden rounded-md border border-solid ${doneChrome}`}
+            className={`flex h-full ${rowMinH} min-w-0 w-full items-stretch overflow-hidden rounded-md border border-solid ${doneChrome}`}
           >
             <button
               type="button"
@@ -967,7 +1033,9 @@ function ChecklistItems({
               ) : (
                 <span className="h-4 w-4 flex-none rounded-[2px] border-2 border-solid border-neutral-300" />
               )}
-              <span className="text-body-bold font-body-bold text-default-font">
+              <span
+                className={`${taskCopyClass(tabletMode, true)} text-default-font`}
+              >
                 {item.label}
               </span>
             </button>
@@ -978,8 +1046,8 @@ function ChecklistItems({
                 onClick={() => onNotApplicable(item.itemId)}
                 className={
                   isNa
-                    ? "flex flex-none items-center border-l border-solid border-neutral-border bg-brand-100 px-4 text-body-bold font-body-bold text-brand-800 disabled:cursor-default"
-                    : "flex flex-none items-center border-l border-solid border-neutral-border px-4 text-body-bold font-body-bold text-subtext-color hover:bg-neutral-50 hover:text-default-font disabled:cursor-default"
+                    ? `flex flex-none items-center border-l border-solid border-neutral-border bg-brand-100 px-4 ${taskCopyClass(tabletMode, true)} text-brand-800 disabled:cursor-default`
+                    : `flex flex-none items-center border-l border-solid border-neutral-border px-4 ${taskCopyClass(tabletMode, true)} text-subtext-color hover:bg-neutral-50 hover:text-default-font disabled:cursor-default`
                 }
               >
                 N/A
@@ -995,12 +1063,15 @@ function ChecklistItems({
 function M2Checklist({
   items,
   disabled,
+  tabletMode,
   onConfirm,
 }: {
   items: WorkshopTaskItem[];
   disabled: boolean;
+  tabletMode: boolean;
   onConfirm: (itemId: string) => void;
 }) {
+  const rowMinH = tabletMode ? "min-h-16" : "min-h-12";
   return (
     <div className="grid w-full grid-cols-1 items-stretch gap-2 md:grid-cols-2">
       {items.map((item) => {
@@ -1013,8 +1084,8 @@ function M2Checklist({
             onClick={() => onConfirm(item.itemId)}
             className={
               item.m2Confirmed
-                ? "flex h-full min-h-12 min-w-0 w-full items-center gap-3 rounded-md border border-solid border-brand-600 bg-brand-50 px-4 py-3 text-left disabled:cursor-default"
-                : "flex h-full min-h-12 min-w-0 w-full items-center gap-3 rounded-md border border-solid border-neutral-border px-4 py-3 text-left disabled:cursor-default"
+                ? `flex h-full ${rowMinH} min-w-0 w-full items-center gap-3 rounded-md border border-solid border-brand-600 bg-brand-50 px-4 py-3 text-left disabled:cursor-default`
+                : `flex h-full ${rowMinH} min-w-0 w-full items-center gap-3 rounded-md border border-solid border-neutral-border px-4 py-3 text-left disabled:cursor-default`
             }
           >
             {item.m2Confirmed ? (
@@ -1023,7 +1094,9 @@ function M2Checklist({
               <span className="h-4 w-4 flex-none rounded-[2px] border-2 border-solid border-neutral-300" />
             )}
             <div className="flex flex-col items-start">
-              <span className="text-body-bold font-body-bold text-default-font">
+              <span
+                className={`${taskCopyClass(tabletMode, true)} text-default-font`}
+              >
                 {item.label}
               </span>
               {m1Summary ? (

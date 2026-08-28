@@ -28,6 +28,11 @@ import {
   cleanAddonText,
   parseAddonTitle,
 } from "./app/workshop/_components/workshop-ui.ts";
+import {
+  readWorkshopTabletMode,
+  writeWorkshopTabletMode,
+  WORKSHOP_TABLET_MODE_KEY,
+} from "./app/workshop/_components/workshop-tablet-mode.ts";
 import type { WorkshopCommandResult } from "./lib/workshop/domain/results.ts";
 import type { WorkshopTaskItem } from "./lib/workshop/domain/dtos.ts";
 import {
@@ -600,6 +605,9 @@ test("queue statuses use distinct badge colours", () => {
     statusTileClassName("to_prepare", false, 0),
     /shadow-\[inset_4px_0_0_0_rgb\(253_230_138\)\]/,
   );
+  assert.match(statusTileClassName("to_prepare", false, 1), /min-h-12/);
+  assert.doesNotMatch(statusTileClassName("to_prepare", false, 1), /min-h-16/);
+  assert.match(statusTileClassName("to_prepare", false, 1, true), /min-h-16/);
 });
 
 test("workshop page is a server component that reads URL filters", () => {
@@ -683,14 +691,6 @@ test("queue sync overlay locks next-7-days and resume I/O", () => {
   );
   assert.match(next7Button, /runSync/);
   assert.match(next7Button, /startManualSync\("next_7_days"\)/);
-
-  const resumeButton = queue.slice(
-    queue.indexOf('pendingScope === "resume"'),
-    queue.indexOf("Resume sync"),
-  );
-  assert.match(resumeButton, /runSync/);
-  assert.match(resumeButton, /resumeManualSync/);
-  assert.match(queue, /resumable && health\.cursor/);
   assert.match(queue, /syncStatusLabel && !syncInFlight/);
 
   assert.match(queue, /WorkshopQueueSyncOverlay/);
@@ -741,7 +741,7 @@ test("queue surface: All-first tabs, status tiles, columns, sync help, load erro
   assert.match(queue, /value: "all".*Today/s);
   assert.match(queue, /buildWorkshopQueueHref/);
   assert.match(queue, /QUEUE_CELL_CLASS = "!h-16"/);
-  assert.match(queue, /className=\{QUEUE_CELL_CLASS\}/);
+  assert.match(queue, /tabletMode \? QUEUE_CELL_CLASS/);
   assert.match(queue, /Bike ID/);
   assert.match(queue, /Bike title/);
   assert.match(queue, /Customer/);
@@ -813,4 +813,81 @@ test("task page reuses all-orders drawer via ?order=", () => {
   assert.match(task, /useOpenOrderDetails/);
   assert.match(task, /openOrderDetails\(orderId\)/);
   assert.match(task, /OrderDetailsButtonFallback/);
+});
+
+test("tablet mode storage is off unless the stored value is on", () => {
+  const store = new Map<string, string>();
+  const storage = {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => {
+      store.set(key, value);
+    },
+  };
+
+  assert.equal(WORKSHOP_TABLET_MODE_KEY, "workshop.tabletMode");
+  assert.equal(readWorkshopTabletMode(storage), false);
+
+  writeWorkshopTabletMode(storage, true);
+  assert.equal(store.get(WORKSHOP_TABLET_MODE_KEY), "on");
+  assert.equal(readWorkshopTabletMode(storage), true);
+
+  writeWorkshopTabletMode(storage, false);
+  assert.equal(store.get(WORKSHOP_TABLET_MODE_KEY), "off");
+  assert.equal(readWorkshopTabletMode(storage), false);
+
+  store.set(WORKSHOP_TABLET_MODE_KEY, "yes");
+  assert.equal(readWorkshopTabletMode(storage), false);
+
+  const blocked = {
+    getItem: () => {
+      throw new Error("blocked");
+    },
+    setItem: () => {
+      throw new Error("blocked");
+    },
+  };
+  assert.equal(readWorkshopTabletMode(blocked), false);
+  writeWorkshopTabletMode(blocked, true);
+});
+
+test("tablet mode switch is on list and task; density classes are conditional", () => {
+  const page = readFileSync(join(root, "src/app/workshop/page.tsx"), "utf8");
+  const layout = readFileSync(join(root, "src/app/workshop/layout.tsx"), "utf8");
+  const provider = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopTabletModeProvider.tsx"),
+    "utf8",
+  );
+  const queue = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopQueue.tsx"),
+    "utf8",
+  );
+  const task = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopTask.tsx"),
+    "utf8",
+  );
+  const skeleton = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopLoadingSkeleton.tsx"),
+    "utf8",
+  );
+
+  assert.match(layout, /WorkshopTabletModeProvider/);
+  assert.match(provider, /writeWorkshopTabletMode\(window\.localStorage/);
+  assert.match(provider, /try \{\s*return readWorkshopTabletMode\(window\.localStorage\)/s);
+  assert.match(page, /WorkshopTabletModeSwitch/);
+  assert.match(
+    page,
+    /shouldRenderWorkshopQueue\(loadError\)[\s\S]*: \(\s*<>\s*\{heading\}/,
+  );
+  assert.match(task, /WorkshopTabletModeSwitch/);
+  assert.match(task, /useWorkshopTabletMode/);
+  assert.match(queue, /useWorkshopTabletMode/);
+  assert.match(task, /taskCopyClass/);
+  assert.match(
+    task,
+    /TABLET_BADGE_CLASS = "h-7 \[&_span\]:!text-body \[&_span\]:!font-body"/,
+  );
+  assert.match(queue, /tabletMode \? QUEUE_CELL_CLASS/);
+  assert.match(task, /tabletMode \? "large" : "medium"/);
+  assert.match(task, /tabletMode \? "min-h-16" : "min-h-12"/);
+  assert.match(skeleton, /h-12 min-w-28/);
 });

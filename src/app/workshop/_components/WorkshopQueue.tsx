@@ -37,6 +37,7 @@ import {
   WORKSHOP_QUEUE_STATUS_SELECT_NONE,
   WORKSHOP_STATUS_LABELS,
 } from "./workshop-ui";
+import { useWorkshopTabletMode } from "./WorkshopTabletModeProvider";
 
 interface WorkshopQueueProps {
   heading: React.ReactNode;
@@ -57,6 +58,14 @@ const QUEUE_HEADER_CELL_CLASS =
   "[&_span]:!text-body-bold [&_span]:!font-body-bold";
 const QUEUE_BADGE_CLASS = "h-7 [&_span]:!text-body [&_span]:!font-body";
 const QUEUE_TAB_CLASS = "[&_span]:!text-heading-3 [&_span]:!font-heading-3";
+const QUEUE_SEARCH_CLASS =
+  "w-full max-w-md [&>div]:h-10 [&_input]:text-heading-3 [&_input]:font-heading-3";
+const QUEUE_SELECT_CLASS = "w-full [&_span]:text-heading-3 [&_span]:font-heading-3";
+
+function queueCopyClass(tabletMode: boolean, bold = false): string {
+  if (tabletMode) return "text-heading-3 font-heading-3";
+  return bold ? "text-body-bold font-body-bold" : "text-body font-body";
+}
 
 const FILTER_TABS: { value: WorkshopQueueFilter; label: string }[] = [
   { value: "all", label: "All" },
@@ -112,11 +121,14 @@ function QueueStatusBadge({
 }: {
   status: WorkshopTaskListRow["status"];
 }) {
+  const { tabletMode } = useWorkshopTabletMode();
   const props = workshopStatusBadgeProps(status);
   return (
     <Badge
       {...props}
-      className={[QUEUE_BADGE_CLASS, props.className].filter(Boolean).join(" ")}
+      className={[tabletMode ? QUEUE_BADGE_CLASS : "", props.className]
+        .filter(Boolean)
+        .join(" ")}
     >
       {WORKSHOP_STATUS_LABELS[status]}
     </Badge>
@@ -136,6 +148,8 @@ export function WorkshopQueue({
 }: WorkshopQueueProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const { tabletMode } = useWorkshopTabletMode();
+  const buttonSize = tabletMode ? "large" : "medium";
   const [search, setSearch] = useState(query);
   const [prevQuery, setPrevQuery] = useState(query);
   const [isPending, startTransition] = useTransition();
@@ -143,9 +157,7 @@ export function WorkshopQueue({
     code: WorkshopErrorCode;
     error: string;
   } | null>(null);
-  const [pendingScope, setPendingScope] = useState<ManualSyncScope | "resume" | null>(
-    null,
-  );
+  const [pendingScope, setPendingScope] = useState<ManualSyncScope | null>(null);
   if (query !== prevQuery) {
     setPrevQuery(query);
     setSearch(query);
@@ -215,12 +227,8 @@ export function WorkshopQueue({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, query, filter, status, pathname, router]);
 
-  const resumable = Boolean(health.cursor);
   const syncStatusLabel = (() => {
     if (health.state === "in_progress" && !health.cursor) return "Sync in progress";
-    if (health.state === "in_progress" && health.cursor) {
-      return "Sync paused — more reserved orders remain";
-    }
     if (health.state === "failed" && health.cursor) {
       return health.lastError
         ? `Partial sync failed: ${health.lastError}`
@@ -234,7 +242,7 @@ export function WorkshopQueue({
 
   const runSync = (
     fn: () => Promise<{ ok: true } | { ok: false; code: WorkshopErrorCode; error: string }>,
-    pending: ManualSyncScope | "resume",
+    pending: ManualSyncScope,
   ) => {
     if (isPending || (health.state === "in_progress" && !health.cursor)) return;
     setSyncError(null);
@@ -278,7 +286,7 @@ export function WorkshopQueue({
           <div className="mt-3 mb-4 flex w-full min-w-0 flex-wrap items-center gap-x-6 gap-y-2">
             <div className="flex min-w-0 flex-wrap items-center gap-2">
               <Button
-                size="large"
+                size={buttonSize}
                 variant="neutral-secondary"
                 disabled={syncInFlight}
                 loading={pendingScope === "next_7_days"}
@@ -291,32 +299,15 @@ export function WorkshopQueue({
               >
                 Sync next 7 days
               </Button>
-              {resumable && health.cursor ? (
-                <Button
-                  size="large"
-                  variant="brand-secondary"
-                  disabled={syncInFlight}
-                  loading={pendingScope === "resume"}
-                  onClick={() =>
-                    runSync(
-                      () => workshopActions.resumeManualSync(health.cursor as string),
-                      "resume",
-                    )
-                  }
-                >
-                  Resume sync
-                </Button>
-              ) : null}
             </div>
             <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="text-heading-3 font-heading-3 text-default-font">
+              <span
+                className={`${queueCopyClass(tabletMode)} text-default-font`}
+              >
                 Last full sync: {formatSyncTime(health.lastSuccessAt)}
               </span>
               <span className="text-body font-body text-subtext-color">
                 Pulls reserved orders starting in the next 7 days onto this list.
-                {resumable
-                  ? " Each click fetches 50 orders. Use Resume sync if more remain."
-                  : null}
               </span>
             </div>
           </div>
@@ -341,7 +332,7 @@ export function WorkshopQueue({
 
         <div className="hidden w-full mobile:block">
           <Select
-            className="w-full [&_span]:text-heading-3 [&_span]:font-heading-3"
+            className={tabletMode ? QUEUE_SELECT_CLASS : "w-full"}
             placeholder="Select"
             disabled={syncInFlight}
             value={queueStatusSelectValue(status)}
@@ -372,13 +363,20 @@ export function WorkshopQueue({
                   tileStatus,
                   selected,
                   statusCounts[tileStatus],
+                  tabletMode,
                 )}
                 onClick={() => {
                   const nextStatus = selected ? null : tileStatus;
                   pushQueue(query, 1, filter, nextStatus);
                 }}
               >
-                <span className="text-heading-2 font-heading-2">
+                <span
+                  className={
+                    tabletMode
+                      ? "text-heading-2 font-heading-2"
+                      : "text-body-bold font-body-bold"
+                  }
+                >
                   {statusCounts[tileStatus]}
                 </span>
                 <span className="text-body font-body">
@@ -393,7 +391,7 @@ export function WorkshopQueue({
           {FILTER_TABS.map((tab) => (
             <Tabs.Item
               key={tab.value}
-              className={QUEUE_TAB_CLASS}
+              className={tabletMode ? QUEUE_TAB_CLASS : undefined}
               active={filter === tab.value}
               onClick={() => {
                 if (tab.value === filter) return;
@@ -406,7 +404,9 @@ export function WorkshopQueue({
         </Tabs>
 
         <TextField
-          className="w-full max-w-md [&>div]:h-10 [&_input]:text-heading-3 [&_input]:font-heading-3"
+          className={
+            tabletMode ? QUEUE_SEARCH_CLASS : "w-full max-w-md [&>div]:h-10"
+          }
           label=""
           helpText=""
           icon={<FeatherSearch />}
@@ -423,10 +423,14 @@ export function WorkshopQueue({
         <div className="flex w-full flex-col items-start gap-6 overflow-hidden overflow-x-auto mobile:overflow-auto mobile:max-w-full">
           {tasks.length === 0 ? (
             <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-solid border-neutral-border bg-default-background py-12">
-              <span className="text-heading-3 font-heading-3 text-default-font text-center">
+              <span
+                className={`${queueCopyClass(tabletMode, true)} text-default-font text-center`}
+              >
                 No tasks found
               </span>
-              <span className="text-heading-3 font-heading-3 text-subtext-color text-center">
+              <span
+                className={`${queueCopyClass(tabletMode)} text-subtext-color text-center`}
+              >
                 {query.trim()
                   ? "Try adjusting your search."
                   : "No bikes need work in this filter."}
@@ -436,28 +440,28 @@ export function WorkshopQueue({
             <Table
               header={
                 <Table.HeaderRow>
-                  <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
                     Bike ID
                   </Table.HeaderCell>
-                  <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
                     Bike title
                   </Table.HeaderCell>
-                  <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
                     Customer
                   </Table.HeaderCell>
-                  <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
                     Order #
                   </Table.HeaderCell>
-                  <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
                     From
                   </Table.HeaderCell>
-                  <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
                     Until
                   </Table.HeaderCell>
-                  <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
                     Status
                   </Table.HeaderCell>
-                  <Table.HeaderCell className={QUEUE_HEADER_CELL_CLASS}>
+                  <Table.HeaderCell className={tabletMode ? QUEUE_HEADER_CELL_CLASS : undefined}>
                     Warnings
                   </Table.HeaderCell>
                 </Table.HeaderRow>
@@ -470,46 +474,46 @@ export function WorkshopQueue({
                   className="cursor-pointer"
                   onClick={() => openTask(task.taskId)}
                 >
-                  <Table.Cell className={QUEUE_CELL_CLASS}>
-                    <span className="text-heading-3 font-heading-3 text-default-font">
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <span className={`${queueCopyClass(tabletMode, true)} text-default-font`}>
                       {bikeIdCell(task)}
                     </span>
                   </Table.Cell>
-                  <Table.Cell className={QUEUE_CELL_CLASS}>
-                    <span className="text-heading-3 font-heading-3 text-default-font">
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <span className={`${queueCopyClass(tabletMode, true)} text-default-font`}>
                       {task.bikeTitle?.trim() || "—"}
                     </span>
                   </Table.Cell>
-                  <Table.Cell className={QUEUE_CELL_CLASS}>
-                    <span className="whitespace-nowrap text-heading-3 font-heading-3 text-default-font">
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <span className={`whitespace-nowrap ${queueCopyClass(tabletMode, true)} text-default-font`}>
                       {task.customerName?.trim() || "—"}
                     </span>
                   </Table.Cell>
-                  <Table.Cell className={QUEUE_CELL_CLASS}>
-                    <span className="whitespace-nowrap text-heading-3 font-heading-3 text-default-font">
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <span className={`whitespace-nowrap ${queueCopyClass(tabletMode, true)} text-default-font`}>
                       {task.orderNumber != null ? `#${task.orderNumber}` : "—"}
                     </span>
                   </Table.Cell>
-                  <Table.Cell className={QUEUE_CELL_CLASS}>
-                    <span className="whitespace-nowrap text-heading-3 font-heading-3 text-neutral-500">
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <span className={`whitespace-nowrap ${queueCopyClass(tabletMode)} text-neutral-500`}>
                       {formatWorkshopQueueWhen(task.startsAt, task.madridStartDate)}
                     </span>
                   </Table.Cell>
-                  <Table.Cell className={QUEUE_CELL_CLASS}>
-                    <span className="whitespace-nowrap text-heading-3 font-heading-3 text-neutral-500">
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
+                    <span className={`whitespace-nowrap ${queueCopyClass(tabletMode)} text-neutral-500`}>
                       {formatWorkshopQueueWhen(task.stopsAt, null)}
                     </span>
                   </Table.Cell>
-                  <Table.Cell className={QUEUE_CELL_CLASS}>
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
                     <QueueStatusBadge status={task.status} />
                   </Table.Cell>
-                  <Table.Cell className={QUEUE_CELL_CLASS}>
+                  <Table.Cell className={tabletMode ? QUEUE_CELL_CLASS : undefined}>
                     {task.hasConfigurationWarning ? (
-                      <Badge variant="warning" className={QUEUE_BADGE_CLASS}>
+                      <Badge variant="warning" className={tabletMode ? QUEUE_BADGE_CLASS : undefined}>
                         Warning
                       </Badge>
                     ) : (
-                      <span className="text-heading-3 font-heading-3 text-neutral-500">
+                      <span className={`${queueCopyClass(tabletMode)} text-neutral-500`}>
                         —
                       </span>
                     )}
