@@ -122,15 +122,17 @@ test("loader lists every customer and page uses DataLoadError plus pager", () =>
   assert.doesNotMatch(loader, /\.not\(\s*["']booqable_customer_id/);
   assert.doesNotMatch(loader, /\.neq\(\s*["']booqable_customer_id/);
   assert.match(loader, /createClient\(/);
-  assert.match(loader, /withAuth/);
-  assert.match(loader, /workshopSyncAllowed/);
-  assert.match(loader, /get_user_role/);
-  assert.match(loader, /role !== "admin"/);
-  assert.match(loader, /role !== "manager"/);
-  assert.match(loader, /landLocalCustomer:/);
   assert.match(loader, /loadCustomersLandingPage:/);
   assert.match(loader, /customers: \[\]/);
   assert.match(loader, /error\.message/);
+
+  const action = readSrc("lib/customer-landing/land-local-customer-action.ts");
+  assert.match(action, /withAuth/);
+  assert.match(action, /workshopSyncAllowed/);
+  assert.match(action, /get_user_role/);
+  assert.match(action, /role !== "admin"/);
+  assert.match(action, /role !== "manager"/);
+  assert.match(action, /landLocalCustomer:/);
 
   const page = readSrc("app/customers/page.tsx");
   assert.match(page, /DataLoadError/);
@@ -362,6 +364,7 @@ test("local land does not GET Booqable or invent address", async () => {
 test("page and action do not use the service role", () => {
   const files = [
     "lib/customer-landing/load-status-page.ts",
+    "lib/customer-landing/land-local-customer-action.ts",
     "app/customers/page.tsx",
     "app/customers/layout.tsx",
     "app/customers/_components/CustomersLandingTable.tsx",

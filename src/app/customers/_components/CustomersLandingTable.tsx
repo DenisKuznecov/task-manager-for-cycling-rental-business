@@ -8,11 +8,11 @@ import { Badge } from "@/ui/components/Badge";
 import { Button } from "@/ui/components/Button";
 import { Table } from "@/ui/components/Table";
 import { TablePagination } from "@/src/components/TablePagination";
-import { landLocalCustomerAction } from "@/src/lib/customer-landing/load-status-page";
+import { landLocalCustomerAction } from "@/src/lib/customer-landing/land-local-customer-action";
 import type {
   CustomerLandingListRow,
   DestCell,
-} from "@/src/lib/customer-landing/load-status-page";
+} from "@/src/lib/customer-landing/status-rows";
 
 interface CustomersLandingTableProps {
   customers: CustomerLandingListRow[];
