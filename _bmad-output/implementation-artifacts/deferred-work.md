@@ -60,3 +60,7 @@
 - source_spec: `/Users/denyskuznetsov/Documents/echelon-cycling-hub-admin/echelon-cycling-hub-admin/_bmad-output/implementation-artifacts/spec-pending-page-navbar.md`
   summary: `test:pending-layout` is not part of an aggregate `test` script or CI job.
   evidence: Pre-existing repo pattern — each `node --test` file has its own npm script and is not wired into GitHub Actions.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-booqable-customer-created-sync.md`
+  summary: Staff `/customers` table plus Customers nav href showing name and three destination statuses.
+  evidence: Split from customer landing so this run can ship fail-closed event parse and destination writes without the morning-check UI.
