@@ -15,6 +15,7 @@
     "test:workshop-ui": "node --test src/workshop-ui.test.mts",
     "test:source-apply": "node --test src/booqable-source-apply.test.mts",
     "test:workshop-sync": "node --test src/workshop-sync.test.mts",
+    "test:customer-landing": "node --test src/customer-landing.test.mts",
     "test:pending-layout": "node --test src/pending-layout.test.mts",
     "test:db": "supabase test db --local"
   },

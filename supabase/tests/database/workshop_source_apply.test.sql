@@ -371,6 +371,92 @@ SELECT is(
   'second apply updates customer email'
 );
 
+UPDATE public.customers
+SET landing_google_id = 'people/c-apply',
+    landing_google_status = 'green',
+    landing_google_error = NULL,
+    landing_holded_id = 'holded-apply',
+    landing_holded_status = 'green',
+    landing_holded_error = NULL,
+    landing_mailchimp_id = 'mc-apply',
+    landing_mailchimp_status = 'red',
+    landing_mailchimp_error = 'Mailchimp: check the audience.'
+WHERE booqable_customer_id = 'cust-bq-road';
+
+SELECT ok(
+  (
+    pg_temp.apply_snap(
+      'bq-road',
+      jsonb_set(
+        jsonb_set(pg_temp.road_snap('bq-road'), '{customer,name}', '"Renamed Rider"'),
+        '{customer,email}',
+        '"renamed@example.test"'
+      )
+    )->>'ok'
+  )::boolean,
+  'apply after landing columns are set succeeds'
+);
+
+SELECT is(
+  (
+    SELECT c.landing_google_id
+    FROM public.customers c
+    WHERE c.booqable_customer_id = 'cust-bq-road'
+  ),
+  'people/c-apply',
+  'order apply does not clear landing dest ids'
+);
+
+SELECT is(
+  (
+    SELECT c.landing_google_status
+    FROM public.customers c
+    WHERE c.booqable_customer_id = 'cust-bq-road'
+  ),
+  'green',
+  'order apply does not clear landing status'
+);
+
+SELECT is(
+  (
+    SELECT c.landing_holded_id
+    FROM public.customers c
+    WHERE c.booqable_customer_id = 'cust-bq-road'
+  ),
+  'holded-apply',
+  'order apply does not clear Holded landing dest ids'
+);
+
+SELECT is(
+  (
+    SELECT c.landing_holded_status
+    FROM public.customers c
+    WHERE c.booqable_customer_id = 'cust-bq-road'
+  ),
+  'green',
+  'order apply does not clear Holded landing status'
+);
+
+SELECT is(
+  (
+    SELECT c.landing_mailchimp_id
+    FROM public.customers c
+    WHERE c.booqable_customer_id = 'cust-bq-road'
+  ),
+  'mc-apply',
+  'order apply does not clear Mailchimp landing dest ids'
+);
+
+SELECT is(
+  (
+    SELECT c.landing_mailchimp_status
+    FROM public.customers c
+    WHERE c.booqable_customer_id = 'cust-bq-road'
+  ),
+  'red',
+  'order apply does not clear Mailchimp landing status'
+);
+
 SELECT ok(
   (
     pg_temp.apply_snap(

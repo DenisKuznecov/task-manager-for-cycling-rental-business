@@ -2,8 +2,9 @@
 title: 'Booqable customer landing'
 type: 'feature'
 created: '2026-08-31'
-status: 'ready-for-dev'
+status: 'done'
 review_loop_iteration: 0
+baseline_commit: '61e4bb3d9f4bea6e6e8b3e8a080b7114de31cea4'
 context:
   - '{project-root}/_bmad-output/specs/spec-booqable-customer-created-sync/webhook-cutover.md'
 ---
@@ -80,12 +81,12 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/lib/workshop/application/sync-env.ts` -- classify form `event` (order / customer / ignore) -- fail-closed before any subscription change
-- [ ] `src/app/api/webhooks/booqable/route.ts` -- dispatch on that class; keep secret + env gate -- customer ids must never hit reconcile
-- [ ] `src/lib/booqable/fetch-source-snapshot.ts` + customer parser beside `parse-source-snapshot.ts` -- GET one customer; map passport -- form body is not the passport
-- [ ] `supabase/migrations/20260831120000_customer_landing_status.sql` -- idempotent landing columns on `public.customers` -- status on the existing identity
-- [ ] `src/lib/customer-landing/` -- server-only dest adapters + land use-case; persist dest ids; per-dest green/red -- no-dup update; partial failure allowed
-- [ ] `src/workshop-sync.test.mts` + `src/customer-landing.test.mts` + `package.json` -- I/O matrix (routing, GET-not-form, green/red, no-dup, preview) + keep order webhook asserts -- lock the seams
+- [x] `src/lib/workshop/application/sync-env.ts` -- classify form `event` (order / customer / ignore) -- fail-closed before any subscription change
+- [x] `src/app/api/webhooks/booqable/route.ts` -- dispatch on that class; keep secret + env gate -- customer ids must never hit reconcile
+- [x] `src/lib/booqable/fetch-source-snapshot.ts` + customer parser beside `parse-source-snapshot.ts` -- GET one customer; map passport -- form body is not the passport
+- [x] `supabase/migrations/20260831120000_customer_landing_status.sql` -- idempotent landing columns on `public.customers` -- status on the existing identity
+- [x] `src/lib/customer-landing/` -- server-only dest adapters + land use-case; persist dest ids; per-dest green/red -- no-dup update; partial failure allowed
+- [x] `src/workshop-sync.test.mts` + `src/customer-landing.test.mts` + `package.json` -- I/O matrix (routing, GET-not-form, green/red, no-dup, preview) + keep order webhook asserts -- lock the seams
 
 **Acceptance Criteria:**
 - Given a delivery with missing or unknown `event`, when the route handles it, then it returns 200 and writes nothing.
@@ -112,3 +113,57 @@ Persist dest ids so `customer.updated` is an update (stored id, then email). Ord
 
 **Manual checks (if no CLI):**
 - After fail-closed is on localhost, prove an `order.*` delivery still returns 200 and workshop still applies. Then the human PATCHes only local `052183d7-…` per `webhook-cutover.md` (keep all `order.*`). Create or save a customer; dest accounts and the local landing columns match. Do not PATCH production in this story.
+
+## Suggested Review Order
+
+**Fail-closed dispatch**
+
+- Shared webhook still secrets-and-gates first; `event` then picks the path.
+  [`route.ts:16`](../../src/app/api/webhooks/booqable/route.ts#L16)
+
+- Unknown events 200 with no write; customer ids never reach reconcile.
+  [`sync-env.ts:67`](../../src/lib/workshop/application/sync-env.ts#L67)
+
+- Classify is fail-closed: only `order.*` and customer created/updated write.
+  [`sync-env.ts:18`](../../src/lib/workshop/application/sync-env.ts#L18)
+
+**Passport from GET**
+
+- Webhook form is a signal; the passport is a Booqable customer GET.
+  [`fetch-source-snapshot.ts:277`](../../src/lib/booqable/fetch-source-snapshot.ts#L277)
+
+- Address comes from included properties, never from the delivery body.
+  [`parse-landing-customer.ts:168`](../../src/lib/booqable/parse-landing-customer.ts#L168)
+
+**Land and persist**
+
+- GET → upsert identity → three dests (throws stay red) → save statuses.
+  [`land-customer.ts:61`](../../src/lib/customer-landing/land-customer.ts#L61)
+
+- Upsert omits null identity and all landing columns; dest ids are reused.
+  [`landing-store.ts:19`](../../src/lib/customer-landing/landing-store.ts#L19)
+
+- Per-dest green/red plus readable next action live on `customers`.
+  [`20260831120000_customer_landing_status.sql:4`](../../supabase/migrations/20260831120000_customer_landing_status.sql#L4)
+
+**Destination writes**
+
+- Search failure is red (no create); empty person is never green.
+  [`google.ts:332`](../../src/lib/customer-landing/google.ts#L332)
+
+- Numeric Holded ids persist; a failed contact list does not create.
+  [`holded.ts:183`](../../src/lib/customer-landing/holded.ts#L183)
+
+- Stored-hash 404 recreates via email; dropped ADDRESS can still be green.
+  [`mailchimp.ts:166`](../../src/lib/customer-landing/mailchimp.ts#L166)
+
+**Tests**
+
+- Executed dispatch: ignore 200, customer lands, land failure 500.
+  [`workshop-sync.test.mts:132`](../../src/workshop-sync.test.mts#L132)
+
+- Persist-then-reuse, first-land search, partial red, preview, no-dup.
+  [`customer-landing.test.mts:585`](../../src/customer-landing.test.mts#L585)
+
+- Order-apply must leave Google, Holded, and Mailchimp landing columns.
+  [`workshop_source_apply.test.sql:378`](../../supabase/tests/database/workshop_source_apply.test.sql#L378)
