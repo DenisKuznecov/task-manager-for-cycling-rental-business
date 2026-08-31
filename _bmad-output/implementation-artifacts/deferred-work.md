@@ -64,3 +64,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-booqable-customer-created-sync.md`
   summary: Staff `/customers` table plus Customers nav href showing name and three destination statuses.
   evidence: Split from customer landing so this run can ship fail-closed event parse and destination writes without the morning-check UI.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-customers-landing-status.md`
+  summary: Staff customer edit UI so missing passport fields (address, email) can be filled before a destination upload.
+  evidence: Bike-fit rows have no address and often no email; dests (especially Mailchimp) reject incomplete data. This run lands what exists and shows red; editing is a later stage.
