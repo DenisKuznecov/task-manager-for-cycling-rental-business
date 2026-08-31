@@ -96,6 +96,14 @@ function memoryStore(initial: DestIds = { google: null, holded: null, mailchimp:
         mailchimp: statuses.mailchimp.id,
       };
     },
+    async saveStatusesByCustomerId(_id, statuses) {
+      saved.push(statuses);
+      storedIds = {
+        google: statuses.google.id,
+        holded: statuses.holded.id,
+        mailchimp: statuses.mailchimp.id,
+      };
+    },
   };
 }
 
@@ -750,7 +758,8 @@ test("only src/lib/booqable calls Booqable and landing stays off client surfaces
     }
     if (
       relative.startsWith("app/") &&
-      !relative.startsWith("app/api/webhooks/booqable/")
+      !relative.startsWith("app/api/webhooks/booqable/") &&
+      !relative.startsWith("app/customers/")
     ) {
       assert.doesNotMatch(
         source,
@@ -762,5 +771,5 @@ test("only src/lib/booqable calls Booqable and landing stays off client surfaces
 
   const nav = readSrc("ui/layouts/nav-config.ts");
   assert.match(nav, /label: "Customers"/);
-  assert.doesNotMatch(nav, /href: "\/customers"/);
+  assert.match(nav, /href: "\/customers"/);
 });

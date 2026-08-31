@@ -1,5 +1,19 @@
+const BOOQABLE_NEXT_ACTION =
+  " Save the customer in Booqable again after fixing this.";
+const LOCAL_NEXT_ACTION = " Upload again after fixing this.";
+
 export function destNextAction(tool: string, detail: string): string {
-  return `${tool}: ${detail} Save the customer in Booqable again after fixing this.`;
+  return `${tool}: ${detail}${BOOQABLE_NEXT_ACTION}`;
+}
+
+export function destLocalNextAction(tool: string, detail: string): string {
+  return `${tool}: ${detail}${LOCAL_NEXT_ACTION}`;
+}
+
+export function localizeDestError(error: string): string {
+  return error.includes(BOOQABLE_NEXT_ACTION)
+    ? error.replace(BOOQABLE_NEXT_ACTION, LOCAL_NEXT_ACTION)
+    : error;
 }
 
 export function destToolName(name: "google" | "holded" | "mailchimp"): string {

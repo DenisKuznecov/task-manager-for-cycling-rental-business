@@ -2,8 +2,9 @@
 title: 'Customers landing status'
 type: 'feature'
 created: '2026-08-31'
-status: 'ready-for-dev'
+status: 'done'
 review_loop_iteration: 0
+baseline_commit: '030980db60b0bf6739f9de3f5f8654be7c839704'
 context:
   - '{project-root}/_bmad-output/specs/spec-booqable-customer-created-sync/SPEC.md'
 ---
@@ -74,12 +75,12 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/ui/layouts/nav-config.ts` -- set Customers `href` to `/customers` -- nav opens the table
-- [ ] `supabase/migrations/20260831140000_customers_landing_staff_update.sql` -- idempotent staff UPDATE of landing columns -- persist upload results without service role
-- [ ] `src/lib/customer-landing/` -- local-id save, local next-action text, land from the local row via existing writers -- no Booqable GET, no invented fields
-- [ ] `src/lib/customer-landing/load-status-page.ts` + land action -- list all customers; `withAuth` upload gated by `workshopSyncAllowed()` -- read + local upload
-- [ ] `src/app/customers/` -- bike-fits shell; name; local-only badge + upload; three statuses; `DataLoadError`; pager -- morning-check surface
-- [ ] `src/customers-landing-status.test.mts` + `package.json` -- nav; list includes local; no upload on Booqable rows; no-email Mailchimp red; preview writes nothing; no service role -- lock the seams
+- [x] `src/ui/layouts/nav-config.ts` -- set Customers `href` to `/customers` -- nav opens the table
+- [x] `supabase/migrations/20260831140000_customers_landing_staff_update.sql` -- idempotent staff UPDATE of landing columns -- persist upload results without service role
+- [x] `src/lib/customer-landing/` -- local-id save, local next-action text, land from the local row via existing writers -- no Booqable GET, no invented fields
+- [x] `src/lib/customer-landing/load-status-page.ts` + land action -- list all customers; `withAuth` upload gated by `workshopSyncAllowed()` -- read + local upload
+- [x] `src/app/customers/` -- bike-fits shell; name; local-only badge + upload; three statuses; `DataLoadError`; pager -- morning-check surface
+- [x] `src/customers-landing-status.test.mts` + `package.json` -- nav; list includes local; no upload on Booqable rows; no-email Mailchimp red; preview writes nothing; no service role -- lock the seams
 
 **Acceptance Criteria:**
 - Given an admin or manager session, when they open Customers, then `/customers` lists every customer by name with three destination statuses, and local-only rows show they were not created in Booqable.
@@ -104,3 +105,54 @@ Bike-fit create has no address and often no email. Writers already omit absent f
 
 **Manual checks (if no CLI):**
 - Admin: Customers → `/customers`. Booqable row: statuses, no upload. Bike-fit customer: badge + upload; dest cells match. Mechanic does not see the item. Partner `/partner/.../customers` unchanged.
+
+## Suggested Review Order
+
+**Staff surface**
+
+- Customers nav now opens the morning-check table.
+  [`nav-config.ts:17`](../../src/ui/layouts/nav-config.ts#L17)
+
+- Same admin/manager shell as bike-fits: login, pending, partner, unauthorized.
+  [`layout.tsx:9`](../../src/app/customers/layout.tsx#L9)
+
+- `?page=` list, `DataLoadError`, empty fallback.
+  [`page.tsx:9`](../../src/app/customers/page.tsx#L9)
+
+- Green / red-with-error / never-landed; Upload only on local-only rows.
+  [`CustomersLandingTable.tsx:23`](../../src/app/customers/_components/CustomersLandingTable.tsx#L23)
+
+**List + statuses**
+
+- Every `customers` row, user-scoped client, stable name+id pages.
+  [`load-status-page.ts:29`](../../src/lib/customer-landing/load-status-page.ts#L29)
+
+- Empty name → Unknown; null dests stay not-red.
+  [`status-rows.ts:35`](../../src/lib/customer-landing/status-rows.ts#L35)
+
+**Local upload**
+
+- Passport from the local row; no Booqable GET; persist by `customers.id`.
+  [`land-customer.ts:219`](../../src/lib/customer-landing/land-customer.ts#L219)
+
+- `withAuth`, preview gate, admin/manager before dest writes.
+  [`load-status-page.ts:70`](../../src/lib/customer-landing/load-status-page.ts#L70)
+
+- Local reds say upload again, never save in Booqable.
+  [`dest-error.ts:9`](../../src/lib/customer-landing/dest-error.ts#L9)
+
+- Holded `customId` only when a Booqable id exists.
+  [`holded.ts:28`](../../src/lib/customer-landing/holded.ts#L28)
+
+**Persist without service role**
+
+- Id-keyed save fails closed on a 0-row update.
+  [`landing-store.ts:84`](../../src/lib/customer-landing/landing-store.ts#L84)
+
+- Staff RLS plus landing-column `GRANT` only.
+  [`20260831140000_customers_landing_staff_update.sql:21`](../../supabase/migrations/20260831140000_customers_landing_staff_update.sql#L21)
+
+**Tests**
+
+- Nav, list+badge, local I/O, preview, no service role.
+  [`customers-landing-status.test.mts:84`](../../src/customers-landing-status.test.mts#L84)

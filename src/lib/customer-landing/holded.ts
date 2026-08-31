@@ -23,9 +23,10 @@ function holdedAddress(
 
 export function holdedContactBody(passport: CustomerPassport): Record<string, unknown> {
   const body: Record<string, unknown> = {
-    customId: `booqable:${passport.booqableCustomerId}`,
     type: "client",
   };
+  const booqableId = presentString(passport.booqableCustomerId);
+  if (booqableId) body.customId = `booqable:${booqableId}`;
   const name = presentString(passport.name);
   if (name) body.name = name;
   const email = presentString(passport.email);
