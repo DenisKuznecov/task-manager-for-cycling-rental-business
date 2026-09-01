@@ -25,7 +25,7 @@ export default async function CustomersPage({
           Customers
         </span>
         <span className="text-body font-body text-subtext-color">
-          Destination landing status for every customer.
+          Customers synchronization status page. When a user is created or updated in Booqable their data is synced into Google Contacts, Holded and Mailchimp.
         </span>
       </div>
 
