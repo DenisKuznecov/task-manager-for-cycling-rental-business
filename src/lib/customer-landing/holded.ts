@@ -3,7 +3,7 @@ import type { DestWriteResult, EnvMap } from "./types.ts";
 import { destNextAction, isRecord, omitEmpty, presentString } from "./dest-error.ts";
 
 const LOG_PREFIX = "[customer-landing/holded]";
-const CONTACTS_URL = "https://api.holded.com/api/invoicing/v1/contacts";
+const CONTACTS_URL = "https://api.holded.com/api/v2/contacts";
 
 type FetchLike = typeof fetch;
 
@@ -14,7 +14,7 @@ function holdedAddress(
   const body = omitEmpty({
     address: presentString(address.street),
     city: presentString(address.city),
-    postalCode: presentString(address.zip),
+    postal_code: presentString(address.zip),
     province: presentString(address.region),
     country: presentString(address.country),
   });
@@ -26,7 +26,7 @@ export function holdedContactBody(passport: CustomerPassport): Record<string, un
     type: "client",
   };
   const booqableId = presentString(passport.booqableCustomerId);
-  if (booqableId) body.customId = `booqable:${booqableId}`;
+  if (booqableId) body.custom_id = `booqable:${booqableId}`;
   const name = presentString(passport.name);
   if (name) body.name = name;
   const email = presentString(passport.email);
@@ -37,7 +37,7 @@ export function holdedContactBody(passport: CustomerPassport): Record<string, un
     body.mobile = phone;
   }
   const billAddress = holdedAddress(passport.address);
-  if (billAddress) body.billAddress = billAddress;
+  if (billAddress) body.bill_address = billAddress;
   return body;
 }
 
@@ -51,8 +51,7 @@ async function readJson(res: Response): Promise<unknown> {
   }
 }
 
-function contactId(payload: unknown): string | null {
-  if (!isRecord(payload)) return null;
+function idFromRecord(payload: Record<string, unknown>): string | null {
   if (typeof payload.id === "string" && payload.id.trim() !== "") return payload.id;
   if (typeof payload.id === "number" && Number.isFinite(payload.id)) {
     return String(payload.id);
@@ -60,12 +59,23 @@ function contactId(payload: unknown): string | null {
   return null;
 }
 
+function contactId(payload: unknown): string | null {
+  if (!isRecord(payload)) return null;
+  const direct = idFromRecord(payload);
+  if (direct) return direct;
+  if (isRecord(payload.item)) return idFromRecord(payload.item);
+  if (isRecord(payload.data)) return idFromRecord(payload.data);
+  return null;
+}
+
 function asContactList(payload: unknown): Record<string, unknown>[] {
   if (Array.isArray(payload)) {
     return payload.filter(isRecord);
   }
-  if (isRecord(payload) && Array.isArray(payload.value)) {
-    return payload.value.filter(isRecord);
+  if (!isRecord(payload)) return [];
+  for (const key of ["items", "value", "data"] as const) {
+    const nested = payload[key];
+    if (Array.isArray(nested)) return nested.filter(isRecord);
   }
   return [];
 }
@@ -76,14 +86,17 @@ async function holdedRequest(
   fetchImpl: FetchLike,
   init: RequestInit = {},
 ): Promise<{ res: Response; payload: unknown }> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    Accept: "application/json",
+    ...(init.headers as Record<string, string> | undefined),
+  };
+  if (init.body != null) {
+    headers["Content-Type"] = "application/json";
+  }
   const res = await fetchImpl(url, {
     ...init,
-    headers: {
-      key: apiKey,
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
-    },
+    headers,
   });
   return { res, payload: await readJson(res) };
 }
@@ -98,7 +111,15 @@ async function findByEmail(
   fetchImpl: FetchLike,
 ): Promise<EmailLookup> {
   try {
-    const { res, payload } = await holdedRequest(CONTACTS_URL, apiKey, fetchImpl);
+    const query = new URLSearchParams({
+      email,
+      limit: "100",
+    });
+    const { res, payload } = await holdedRequest(
+      `${CONTACTS_URL}?${query.toString()}`,
+      apiKey,
+      fetchImpl,
+    );
     if (!res.ok) {
       console.error(LOG_PREFIX, res.status, payload);
       return {

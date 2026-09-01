@@ -329,8 +329,8 @@ test("dest payloads omit absent passport fields and do not invent them", () => {
 
   const holded = holdedContactBody(sparse);
   assert.equal("phone" in holded, false);
-  assert.equal("billAddress" in holded, false);
-  assert.equal(holded.customId, "booqable:cust-land-1");
+  assert.equal("bill_address" in holded, false);
+  assert.equal(holded.custom_id, "booqable:cust-land-1");
 
   const mailchimp = mailchimpMemberBody(sparse, true);
   const merge = mailchimp.merge_fields as Record<string, unknown>;
@@ -470,6 +470,28 @@ test("first Google land creates when search finds nothing and updates a search h
   assert.deepEqual(createdWhenEmpty, { ok: true, destId: "people/c-new" });
   assert.equal(created.length, 1);
 
+  const createdWhenObject: string[] = [];
+  const emptyObjectSearch = await writeGoogleContact(
+    { passport: passport(), storedId: null },
+    googleEnv(),
+    async (url) => {
+      const href = String(url);
+      if (href.includes("oauth2.googleapis.com/token")) {
+        return jsonResponse(200, { access_token: "token" });
+      }
+      if (href.includes("people:searchContacts")) {
+        return jsonResponse(200, {});
+      }
+      if (href.includes("people:createContact")) {
+        createdWhenObject.push(href);
+        return jsonResponse(200, { resourceName: "people/c-empty" });
+      }
+      throw new Error(`unexpected Google URL ${href}`);
+    },
+  );
+  assert.deepEqual(emptyObjectSearch, { ok: true, destId: "people/c-empty" });
+  assert.equal(createdWhenObject.length, 1);
+
   const updatedCalls: string[] = [];
   const searchHit = await writeGoogleContact(
     { passport: passport(), storedId: null },
@@ -541,11 +563,15 @@ test("first Holded land creates when list misses and updates a list hit", async 
     { passport: passport(), storedId: null },
     { HOLDED_API_KEY: "holded-test" },
     async (url, init) => {
+      const headers = new Headers(init?.headers);
       methods.push(`${init?.method ?? "GET"} ${String(url)}`);
+      assert.equal(headers.get("authorization"), "Bearer holded-test");
+      assert.match(String(url), /api\/v2\/contacts/);
       if ((init?.method ?? "GET") === "GET") {
-        return jsonResponse(200, []);
+        assert.match(String(url), /email=landing/);
+        return jsonResponse(200, { items: [] });
       }
-      return jsonResponse(200, { id: 7788 });
+      return jsonResponse(201, { id: 7788 });
     },
   );
   assert.deepEqual(created, { ok: true, destId: "7788" });

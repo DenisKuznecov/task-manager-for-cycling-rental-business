@@ -358,7 +358,7 @@ test("local land does not GET Booqable or invent address", async () => {
     birthday: null,
     address: null,
   });
-  assert.equal("customId" in holded, false);
+  assert.equal("custom_id" in holded, false);
 });
 
 test("page and action do not use the service role", () => {

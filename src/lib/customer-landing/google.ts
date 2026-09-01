@@ -131,16 +131,26 @@ async function peopleRequest(
   fetchImpl: FetchLike,
   init: RequestInit = {},
 ): Promise<{ res: Response; payload: unknown }> {
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/json",
+    ...(init.headers as Record<string, string> | undefined),
+  };
+  if (init.body != null) {
+    headers["Content-Type"] = "application/json";
+  }
   const res = await fetchImpl(url, {
     ...init,
-    headers: {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/json",
-      "Content-Type": "application/json",
-      ...(init.headers ?? {}),
-    },
+    headers,
   });
   return { res, payload: await readJson(res) };
+}
+
+function searchContactResults(payload: unknown): unknown[] | null {
+  if (payload == null) return [];
+  if (!isRecord(payload)) return null;
+  if (payload.results == null) return [];
+  return Array.isArray(payload.results) ? payload.results : null;
 }
 
 function personResourceName(payload: unknown): string | null {
@@ -300,7 +310,9 @@ async function findByEmail(
         ),
       };
     }
-    if (!isRecord(payload) || !Array.isArray(payload.results)) {
+    const results = searchContactResults(payload);
+    if (!results) {
+      console.error(LOG_PREFIX, "searchContacts response was invalid", payload);
       return {
         ok: false,
         error: destNextAction(
@@ -310,7 +322,7 @@ async function findByEmail(
       };
     }
     const wanted = email.trim().toLowerCase();
-    for (const row of payload.results) {
+    for (const row of results) {
       if (!isRecord(row)) continue;
       const person = row.person;
       if (!isRecord(person)) continue;
