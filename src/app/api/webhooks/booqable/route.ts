@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { landBooqableCustomer } from "@/src/lib/customer-landing/land-customer";
+import { tagReviewRequestForOrder } from "@/src/lib/customer-landing/tag-review-request";
 import { reconcileBooqableOrder } from "@/src/lib/workshop/application/reconcile-order";
 import {
   dispatchBooqableWebhookEvent,
@@ -44,6 +45,7 @@ export async function POST(request: Request) {
     const dispatched = await dispatchBooqableWebhookEvent(await request.text(), {
       landCustomer: landBooqableCustomer,
       reconcileOrder: (orderId) => reconcileBooqableOrder(orderId, "webhook"),
+      tagReviewRequest: tagReviewRequestForOrder,
     });
 
     if (dispatched.ignoreEvent) {

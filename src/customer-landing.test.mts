@@ -13,11 +13,14 @@ import { googleContactPerson, writeGoogleContact } from "./lib/customer-landing/
 import { holdedContactBody, writeHoldedContact } from "./lib/customer-landing/holded.ts";
 import { landBooqableCustomer } from "./lib/customer-landing/land-customer.ts";
 import {
+  REVIEW_REQUEST_TAG,
   mailchimpDataCenter,
   mailchimpMemberBody,
   mailchimpSubscriberHash,
+  tagMailchimpReviewRequest,
   writeMailchimpMember,
 } from "./lib/customer-landing/mailchimp.ts";
+import { tagReviewRequestForOrder } from "./lib/customer-landing/tag-review-request.ts";
 import { identityUpsertRow } from "./lib/customer-landing/landing-store.ts";
 import type {
   DestIds,
@@ -787,6 +790,341 @@ test("address identifier address parses; whitespace and ISO birthday do not land
   };
   iso.data.attributes.properties.birthday_date = "1990-05-17T00:00:00Z";
   assert.equal(parseLandingCustomer(iso).birthday, null);
+});
+
+function mailchimpEnv() {
+  return {
+    MAILCHIMP_API_KEY: "key-us21",
+    MAILCHIMP_AUDIENCE_ID: "audience-test",
+  };
+}
+
+function orderDocument(email: string | null, hasCustomer = true): unknown {
+  if (!hasCustomer) {
+    return {
+      data: {
+        id: "order-1",
+        type: "orders",
+        relationships: { customer: { data: null } },
+      },
+      included: [],
+    };
+  }
+  return {
+    data: {
+      id: "order-1",
+      type: "orders",
+      relationships: {
+        customer: { data: { id: "cust-1", type: "customers" } },
+      },
+    },
+    included: [
+      {
+        id: "cust-1",
+        type: "customers",
+        attributes: { email },
+      },
+    ],
+  };
+}
+
+type MailchimpCall = { method: string; url: string; body: unknown };
+
+function reviewRequestFetch(plan: {
+  tagSearch?: { status: number; body: unknown };
+  createSegment?: { status: number; body: unknown };
+  member?: { status: number; body: unknown };
+  addTags?: { status: number; body: unknown };
+}): { calls: MailchimpCall[]; fetchImpl: typeof fetch } {
+  const calls: MailchimpCall[] = [];
+  const fetchImpl: typeof fetch = async (url, init) => {
+    const href = String(url);
+    const method = (init?.method ?? "GET").toUpperCase();
+    const body = init?.body ? JSON.parse(String(init.body)) : null;
+    calls.push({ method, url: href, body });
+    const headers = new Headers(init?.headers);
+    assert.equal(
+      headers.get("authorization"),
+      `Basic ${Buffer.from("anystring:key-us21").toString("base64")}`,
+    );
+
+    if (href.includes("/tag-search")) {
+      const res = plan.tagSearch ?? { status: 200, body: { tags: [] } };
+      return jsonResponse(res.status, res.body);
+    }
+    if (href.includes("/segments") && method === "POST") {
+      const res = plan.createSegment ?? {
+        status: 200,
+        body: { id: 1, name: REVIEW_REQUEST_TAG },
+      };
+      return jsonResponse(res.status, res.body);
+    }
+    if (href.endsWith("/tags") && method === "POST") {
+      const res = plan.addTags ?? { status: 204, body: null };
+      if (res.status === 204) {
+        return new Response(null, { status: 204 });
+      }
+      return jsonResponse(res.status, res.body);
+    }
+    if (href.includes("/members/") && method === "GET") {
+      const res = plan.member ?? { status: 200, body: { id: "mc-1", tags: [] } };
+      return jsonResponse(res.status, res.body);
+    }
+    throw new Error(`unexpected Mailchimp ${method} ${href}`);
+  };
+  return { calls, fetchImpl };
+}
+
+test("review-request find-or-create, GET member, add tag; never upserts", async () => {
+  const email = "landing@example.test";
+  const hash = mailchimpSubscriberHash(email);
+  const created = reviewRequestFetch({});
+  await tagMailchimpReviewRequest(email, mailchimpEnv(), created.fetchImpl);
+  assert.equal(
+    created.calls.some((call) => call.method === "PUT"),
+    false,
+  );
+  assert.equal(
+    created.calls.some((call) => call.url.includes("/tag-search")),
+    true,
+  );
+  assert.equal(
+    created.calls.some(
+      (call) => call.method === "POST" && call.url.includes("/segments"),
+    ),
+    true,
+  );
+  assert.equal(
+    created.calls.some(
+      (call) => call.method === "GET" && call.url.endsWith(`/members/${hash}`),
+    ),
+    true,
+  );
+  const add = created.calls.find(
+    (call) => call.method === "POST" && call.url.endsWith("/tags"),
+  );
+  assert.ok(add);
+  assert.deepEqual(add?.body, {
+    tags: [{ name: REVIEW_REQUEST_TAG, status: "active" }],
+  });
+
+  const existingTag = reviewRequestFetch({
+    tagSearch: {
+      status: 200,
+      body: { tags: [{ id: 9, name: REVIEW_REQUEST_TAG }] },
+    },
+  });
+  await tagMailchimpReviewRequest(email, mailchimpEnv(), existingTag.fetchImpl);
+  assert.equal(
+    existingTag.calls.some((call) => call.url.includes("/segments")),
+    false,
+  );
+  assert.equal(
+    existingTag.calls.some((call) => call.url.endsWith("/tags")),
+    true,
+  );
+
+  const containsOnly = reviewRequestFetch({
+    tagSearch: {
+      status: 200,
+      body: { tags: [{ id: 8, name: "pre-review-request" }] },
+    },
+  });
+  await tagMailchimpReviewRequest(email, mailchimpEnv(), containsOnly.fetchImpl);
+  assert.equal(
+    containsOnly.calls.some(
+      (call) => call.method === "POST" && call.url.includes("/segments"),
+    ),
+    true,
+  );
+
+  const tagSearchFail = reviewRequestFetch({
+    tagSearch: { status: 503, body: { title: "Unavailable" } },
+  });
+  await tagMailchimpReviewRequest(email, mailchimpEnv(), tagSearchFail.fetchImpl);
+  assert.equal(
+    tagSearchFail.calls.some((call) => call.url.includes("/members/")),
+    false,
+  );
+  assert.equal(
+    tagSearchFail.calls.some((call) => call.method === "PUT"),
+    false,
+  );
+});
+
+test("review-request skips missing subscriber and already-tagged members", async () => {
+  const email = "landing@example.test";
+  const missing = reviewRequestFetch({
+    tagSearch: {
+      status: 200,
+      body: { tags: [{ id: 9, name: REVIEW_REQUEST_TAG }] },
+    },
+    member: { status: 404, body: { title: "Resource Not Found" } },
+  });
+  const errors: unknown[][] = [];
+  const originalError = console.error;
+  console.error = (...args: unknown[]) => {
+    errors.push(args);
+  };
+  try {
+    await tagMailchimpReviewRequest(email, mailchimpEnv(), missing.fetchImpl);
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(
+    missing.calls.some((call) => call.method === "PUT"),
+    false,
+  );
+  assert.equal(
+    missing.calls.some((call) => call.url.endsWith("/tags")),
+    false,
+  );
+  assert.equal(
+    errors.some((args) => String(args[0]).includes("[review-request/mailchimp]")),
+    true,
+  );
+
+  const already = reviewRequestFetch({
+    tagSearch: {
+      status: 200,
+      body: { tags: [{ id: 9, name: REVIEW_REQUEST_TAG }] },
+    },
+    member: {
+      status: 200,
+      body: { id: "mc-1", tags: [{ id: 9, name: REVIEW_REQUEST_TAG }] },
+    },
+  });
+  const alreadyLogs: unknown[][] = [];
+  console.error = (...args: unknown[]) => {
+    alreadyLogs.push(args);
+  };
+  try {
+    await tagMailchimpReviewRequest(email, mailchimpEnv(), already.fetchImpl);
+  } finally {
+    console.error = originalError;
+  }
+  assert.equal(
+    already.calls.some((call) => call.url.endsWith("/tags")),
+    false,
+  );
+  assert.equal(
+    alreadyLogs.some(
+      (args) =>
+        String(args[0]).includes("[review-request/mailchimp]") &&
+        args.some((arg) => String(arg).includes("already tagged")),
+    ),
+    true,
+  );
+});
+
+test("review-request order tagger GETs Booqable email and does not invent it", async () => {
+  const email = "rider@example.test";
+  const hash = mailchimpSubscriberHash(email);
+  const happy = reviewRequestFetch({
+    tagSearch: {
+      status: 200,
+      body: { tags: [{ id: 9, name: REVIEW_REQUEST_TAG }] },
+    },
+  });
+  let fetchedId: string | null = null;
+  await tagReviewRequestForOrder("order-1", {
+    env: mailchimpEnv(),
+    fetchOrder: async (id) => {
+      fetchedId = id;
+      return orderDocument(email);
+    },
+    fetchImpl: happy.fetchImpl,
+  });
+  assert.equal(fetchedId, "order-1");
+  assert.equal(
+    happy.calls.some(
+      (call) => call.method === "GET" && call.url.endsWith(`/members/${hash}`),
+    ),
+    true,
+  );
+  assert.equal(
+    happy.calls.some((call) => call.method === "POST" && call.url.endsWith("/tags")),
+    true,
+  );
+
+  const noMailchimp: MailchimpCall[] = [];
+  const blankErrors: unknown[][] = [];
+  const originalError = console.error;
+  console.error = (...args: unknown[]) => {
+    blankErrors.push(args);
+  };
+  try {
+    await tagReviewRequestForOrder("order-blank", {
+      env: mailchimpEnv(),
+      fetchOrder: async () => orderDocument("   "),
+      fetchImpl: async (url, init) => {
+        noMailchimp.push({
+          method: (init?.method ?? "GET").toUpperCase(),
+          url: String(url),
+          body: null,
+        });
+        throw new Error("Mailchimp must not run without email");
+      },
+    });
+    await tagReviewRequestForOrder("order-none", {
+      env: mailchimpEnv(),
+      fetchOrder: async () => orderDocument(null, false),
+      fetchImpl: async () => {
+        throw new Error("Mailchimp must not run without customer");
+      },
+    });
+    await tagReviewRequestForOrder("order-get-fail", {
+      env: mailchimpEnv(),
+      fetchOrder: async () => {
+        throw new Error("Booqable GET failed");
+      },
+      fetchImpl: async () => {
+        throw new Error("Mailchimp must not run after GET fail");
+      },
+    });
+  } finally {
+    console.error = originalError;
+  }
+  assert.deepEqual(noMailchimp, []);
+  assert.equal(
+    blankErrors.some((args) => String(args[0]).includes("[review-request/mailchimp]")),
+    true,
+  );
+
+  const missingEnvCalls: MailchimpCall[] = [];
+  console.error = () => {};
+  try {
+    await tagReviewRequestForOrder("order-env", {
+      env: {},
+      fetchOrder: async () => orderDocument(email),
+      fetchImpl: async (url, init) => {
+        missingEnvCalls.push({
+          method: (init?.method ?? "GET").toUpperCase(),
+          url: String(url),
+          body: null,
+        });
+        return jsonResponse(200, {});
+      },
+    });
+  } finally {
+    console.error = originalError;
+  }
+  assert.deepEqual(missingEnvCalls, []);
+});
+
+test("review-request tagger stays off landing upsert and workshop apply", () => {
+  const mailchimp = readSrc("lib/customer-landing/mailchimp.ts");
+  const tagger = readSrc("lib/customer-landing/tag-review-request.ts");
+  const land = readSrc("lib/customer-landing/land-customer.ts");
+  assert.match(mailchimp, /\[review-request\/mailchimp\]/);
+  assert.match(mailchimp, /tag-search/);
+  assert.match(mailchimp, /status: "active"/);
+  assert.match(tagger, /fetchSourceOrderDocument/);
+  assert.doesNotMatch(tagger, /writeMailchimpMember/);
+  assert.doesNotMatch(tagger, /landBooqableCustomer/);
+  assert.doesNotMatch(tagger, /parseSourceOrderSnapshot/);
+  assert.doesNotMatch(tagger, /reconcileBooqableOrder/);
+  assert.doesNotMatch(land, /tagMailchimpReviewRequest|tagReviewRequestForOrder/);
 });
 
 test("audience id is read from env and not hardcoded", () => {

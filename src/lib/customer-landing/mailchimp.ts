@@ -238,3 +238,215 @@ export async function writeMailchimpMember(
     };
   }
 }
+
+export const REVIEW_REQUEST_TAG = "review-request";
+const REVIEW_REQUEST_LOG = "[review-request/mailchimp]";
+
+function mailchimpBasicAuth(apiKey: string): string {
+  return `Basic ${Buffer.from(`anystring:${apiKey}`).toString("base64")}`;
+}
+
+function resolveReviewRequestAudience(
+  env: EnvMap,
+): { apiKey: string; audienceId: string; dc: string } | null {
+  const apiKey = presentString(env.MAILCHIMP_API_KEY);
+  const audienceId = presentString(env.MAILCHIMP_AUDIENCE_ID);
+  if (!apiKey || !audienceId) {
+    console.error(
+      REVIEW_REQUEST_LOG,
+      "MAILCHIMP_API_KEY or MAILCHIMP_AUDIENCE_ID is unset.",
+    );
+    return null;
+  }
+  const dc = mailchimpDataCenter(apiKey);
+  if (!dc) {
+    console.error(
+      REVIEW_REQUEST_LOG,
+      "MAILCHIMP_API_KEY is missing a data-center suffix.",
+    );
+    return null;
+  }
+  return { apiKey, audienceId, dc };
+}
+
+async function mailchimpRequest(
+  url: string,
+  apiKey: string,
+  fetchImpl: FetchLike,
+  init: { method: string; body?: unknown },
+): Promise<{ res: Response; payload: unknown }> {
+  const headers: Record<string, string> = {
+    Authorization: mailchimpBasicAuth(apiKey),
+    Accept: "application/json",
+  };
+  if (init.body !== undefined) {
+    headers["Content-Type"] = "application/json";
+  }
+  const res = await fetchImpl(url, {
+    method: init.method,
+    headers,
+    body: init.body === undefined ? undefined : JSON.stringify(init.body),
+  });
+  return { res, payload: await readJson(res) };
+}
+
+function tagSearchHasExactName(payload: unknown, name: string): boolean {
+  if (!isRecord(payload) || !Array.isArray(payload.tags)) return false;
+  return payload.tags.some((tag) => isRecord(tag) && tag.name === name);
+}
+
+function memberHasTag(payload: unknown, name: string): boolean {
+  if (!isRecord(payload) || !Array.isArray(payload.tags)) return false;
+  return payload.tags.some((tag) => isRecord(tag) && tag.name === name);
+}
+
+function tagSearchUrl(dc: string, audienceId: string): string {
+  return `https://${dc}.api.mailchimp.com/3.0/lists/${encodeURIComponent(
+    audienceId,
+  )}/tag-search?name=${encodeURIComponent(REVIEW_REQUEST_TAG)}`;
+}
+
+function segmentsUrl(dc: string, audienceId: string): string {
+  return `https://${dc}.api.mailchimp.com/3.0/lists/${encodeURIComponent(
+    audienceId,
+  )}/segments`;
+}
+
+export async function findOrCreateReviewRequestTag(
+  env: EnvMap = process.env,
+  fetchImpl: FetchLike = fetch,
+): Promise<boolean> {
+  const cfg = resolveReviewRequestAudience(env);
+  if (!cfg) return false;
+  try {
+    const search = await mailchimpRequest(
+      tagSearchUrl(cfg.dc, cfg.audienceId),
+      cfg.apiKey,
+      fetchImpl,
+      { method: "GET" },
+    );
+    if (!search.res.ok) {
+      console.error(REVIEW_REQUEST_LOG, search.res.status, search.payload);
+      return false;
+    }
+    if (tagSearchHasExactName(search.payload, REVIEW_REQUEST_TAG)) {
+      return true;
+    }
+    const created = await mailchimpRequest(
+      segmentsUrl(cfg.dc, cfg.audienceId),
+      cfg.apiKey,
+      fetchImpl,
+      {
+        method: "POST",
+        body: { name: REVIEW_REQUEST_TAG, static_segment: [] },
+      },
+    );
+    if (created.res.ok) return true;
+    if (created.res.status === 400) {
+      const retry = await mailchimpRequest(
+        tagSearchUrl(cfg.dc, cfg.audienceId),
+        cfg.apiKey,
+        fetchImpl,
+        { method: "GET" },
+      );
+      if (retry.res.ok && tagSearchHasExactName(retry.payload, REVIEW_REQUEST_TAG)) {
+        return true;
+      }
+    }
+    console.error(REVIEW_REQUEST_LOG, created.res.status, created.payload);
+    return false;
+  } catch (error) {
+    console.error(REVIEW_REQUEST_LOG, error);
+    return false;
+  }
+}
+
+export async function getMailchimpMemberForReviewRequest(
+  email: string,
+  env: EnvMap = process.env,
+  fetchImpl: FetchLike = fetch,
+): Promise<{ found: true; alreadyTagged: boolean } | { found: false } | null> {
+  const cfg = resolveReviewRequestAudience(env);
+  if (!cfg) return null;
+  const hash = mailchimpSubscriberHash(email);
+  try {
+    const got = await mailchimpRequest(
+      memberUrl(cfg.dc, cfg.audienceId, hash),
+      cfg.apiKey,
+      fetchImpl,
+      { method: "GET" },
+    );
+    if (got.res.status === 404) {
+      console.error(REVIEW_REQUEST_LOG, "subscriber missing", hash);
+      return { found: false };
+    }
+    if (!got.res.ok) {
+      console.error(REVIEW_REQUEST_LOG, got.res.status, got.payload);
+      return null;
+    }
+    return {
+      found: true,
+      alreadyTagged: memberHasTag(got.payload, REVIEW_REQUEST_TAG),
+    };
+  } catch (error) {
+    console.error(REVIEW_REQUEST_LOG, error);
+    return null;
+  }
+}
+
+export async function addReviewRequestTagToMember(
+  email: string,
+  env: EnvMap = process.env,
+  fetchImpl: FetchLike = fetch,
+): Promise<boolean> {
+  const cfg = resolveReviewRequestAudience(env);
+  if (!cfg) return false;
+  const hash = mailchimpSubscriberHash(email);
+  try {
+    const added = await mailchimpRequest(
+      `${memberUrl(cfg.dc, cfg.audienceId, hash)}/tags`,
+      cfg.apiKey,
+      fetchImpl,
+      {
+        method: "POST",
+        body: { tags: [{ name: REVIEW_REQUEST_TAG, status: "active" }] },
+      },
+    );
+    if (added.res.ok) return true;
+    console.error(REVIEW_REQUEST_LOG, added.res.status, added.payload);
+    return false;
+  } catch (error) {
+    console.error(REVIEW_REQUEST_LOG, error);
+    return false;
+  }
+}
+
+/** Find-or-create `review-request`, GET member by hash, add tag. Never upserts a member. */
+export async function tagMailchimpReviewRequest(
+  email: string,
+  env: EnvMap = process.env,
+  fetchImpl: FetchLike = fetch,
+): Promise<void> {
+  const trimmed = presentString(email);
+  if (!trimmed) {
+    console.error(REVIEW_REQUEST_LOG, "no customer email");
+    return;
+  }
+  try {
+    const tagReady = await findOrCreateReviewRequestTag(env, fetchImpl);
+    if (!tagReady) return;
+    const member = await getMailchimpMemberForReviewRequest(
+      trimmed,
+      env,
+      fetchImpl,
+    );
+    if (!member || !member.found) return;
+    if (member.alreadyTagged) {
+      console.error(REVIEW_REQUEST_LOG, "already tagged");
+      return;
+    }
+    await addReviewRequestTagToMember(trimmed, env, fetchImpl);
+  } catch (error) {
+    console.error(REVIEW_REQUEST_LOG, error);
+  }
+}

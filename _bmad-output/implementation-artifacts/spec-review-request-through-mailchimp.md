@@ -2,9 +2,10 @@
 title: 'Mailchimp review-request tag on order.stopped'
 type: 'feature'
 created: '2026-09-01'
-status: 'ready-for-dev'
+status: 'done'
 review_loop_iteration: 0
 context: []
+baseline_commit: 'ccd096ee5d1321c2d3242893852d602fa5072200'
 ---
 
 <frozen-after-approval reason="human-owned intent — do not modify unless human renegotiates">
@@ -76,11 +77,11 @@ context: []
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/lib/customer-landing/mailchimp.ts` -- find-or-create `review-request`, GET member by hash, add tag; leave `writeMailchimpMember` unchanged -- Mailchimp half of the Zap
-- [ ] `src/lib/customer-landing/` -- order-id tagger: Booqable GET → email → Mailchimp tag APIs -- no workshop apply
-- [ ] `src/lib/workshop/application/sync-env.ts` -- on `order.stopped` + dest writes, call injected tagger with order id (sibling of reconcile); swallow tag failures -- tagging does not own HTTP
-- [ ] `src/app/api/webhooks/booqable/route.ts` -- inject the tagger -- same adapter seam as landing
-- [ ] `src/workshop-sync.test.mts` + `src/customer-landing.test.mts` -- lock the I/O matrix -- stopped-only, find-only subscriber, independent of apply
+- [x] `src/lib/customer-landing/mailchimp.ts` -- find-or-create `review-request`, GET member by hash, add tag; leave `writeMailchimpMember` unchanged -- Mailchimp half of the Zap
+- [x] `src/lib/customer-landing/` -- order-id tagger: Booqable GET → email → Mailchimp tag APIs -- no workshop apply
+- [x] `src/lib/workshop/application/sync-env.ts` -- on `order.stopped` + dest writes, call injected tagger with order id (sibling of reconcile); swallow tag failures -- tagging does not own HTTP
+- [x] `src/app/api/webhooks/booqable/route.ts` -- inject the tagger -- same adapter seam as landing
+- [x] `src/workshop-sync.test.mts` + `src/customer-landing.test.mts` -- lock the I/O matrix -- stopped-only, find-only subscriber, independent of apply
 
 **Acceptance Criteria:**
 - Given `order.stopped` and dest writes allowed, when the order customer's email matches an existing Mailchimp member, then that member has tag `review-request`.
@@ -100,3 +101,37 @@ Workshop reconcile already runs on every `order.*` because that is the existing 
 **Commands:**
 - `npm run test:workshop-sync` -- expected: pass, including new dispatch cases
 - `npm run test:customer-landing` -- expected: pass, including new tag cases; existing upsert tests unchanged
+
+## Suggested Review Order
+
+**Dispatch seam**
+
+- Only `order.stopped` plus dest writes starts the sibling tagger
+  [`sync-env.ts:134`](../../src/lib/workshop/application/sync-env.ts#L134)
+
+- Tag failures are swallowed; HTTP still comes from reconcile
+  [`sync-env.ts:136`](../../src/lib/workshop/application/sync-env.ts#L136)
+
+- Route injects the tagger next to landing and reconcile
+  [`route.ts:48`](../../src/app/api/webhooks/booqable/route.ts#L48)
+
+**Order-id tagger**
+
+- Second Booqable GET; email from included customer only
+  [`tag-review-request.ts:43`](../../src/lib/customer-landing/tag-review-request.ts#L43)
+
+**Mailchimp tag APIs**
+
+- Find-or-create `review-request`, GET member, add tag; never upsert
+  [`mailchimp.ts:425`](../../src/lib/customer-landing/mailchimp.ts#L425)
+
+- Already-tagged logs and returns; no remove/re-add
+  [`mailchimp.ts:444`](../../src/lib/customer-landing/mailchimp.ts#L444)
+
+**Tests**
+
+- Stopped-only, dest-off, throw still reconciles, await delayed tagger
+  [`workshop-sync.test.mts:252`](../../src/workshop-sync.test.mts#L252)
+
+- Find-only subscriber, no email invent, no landing upsert
+  [`customer-landing.test.mts:878`](../../src/customer-landing.test.mts#L878)
