@@ -16,6 +16,7 @@ import {
 } from "./lib/workshop/domain/commands.ts";
 import {
   classifyBooqableWebhookEvent,
+  customerWebhookDestWritesAllowed,
   dispatchBooqableWebhookEvent,
   parseBooqableWebhookOrderId,
   sandboxBackfillAllowed,
@@ -74,6 +75,31 @@ test("sandboxBackfillAllowed is true only when VERCEL_ENV is unset", () => {
   assert.equal(sandboxBackfillAllowed({ VERCEL_ENV: "preview" }), false);
 });
 
+test("customer webhook dest writes are off on localhost unless overridden", () => {
+  assert.equal(customerWebhookDestWritesAllowed({}), false);
+  assert.equal(customerWebhookDestWritesAllowed({ VERCEL_ENV: "" }), false);
+  assert.equal(
+    customerWebhookDestWritesAllowed({ VERCEL_ENV: "production" }),
+    true,
+  );
+  assert.equal(customerWebhookDestWritesAllowed({ VERCEL_ENV: "preview" }), false);
+  assert.equal(
+    customerWebhookDestWritesAllowed({ VERCEL_GIT_COMMIT_REF: "staging" }),
+    false,
+  );
+  assert.equal(
+    customerWebhookDestWritesAllowed({ CUSTOMER_WEBHOOK_DEST_WRITES: "1" }),
+    true,
+  );
+  assert.equal(
+    customerWebhookDestWritesAllowed({
+      VERCEL_ENV: "preview",
+      CUSTOMER_WEBHOOK_DEST_WRITES: "1",
+    }),
+    false,
+  );
+});
+
 test("webhook signal uses only data[id]", () => {
   assert.equal(
     parseBooqableWebhookOrderId("data[id]=order-344&data[status]=new&data[number]="),
@@ -127,6 +153,8 @@ test("webhook event classify is fail-closed", () => {
   assert.match(webhook, /dispatchBooqableWebhookEvent/);
   assert.match(webhook, /landBooqableCustomer/);
   assert.match(webhook, /reconcileBooqableOrder/);
+  const dispatch = readSrc("lib/workshop/application/sync-env.ts");
+  assert.match(dispatch, /customerWebhookDestWritesAllowed/);
 });
 
 test("webhook dispatch executes fail-closed routing", async () => {
@@ -165,13 +193,33 @@ test("webhook dispatch executes fail-closed routing", async () => {
   assert.deepEqual(lands, []);
   assert.deepEqual(reconciles, []);
 
+  const customerLocal = await dispatchBooqableWebhookEvent(
+    "event=customer.created&data[id]=cust-local",
+    handlers,
+    {},
+  );
+  assert.equal(customerLocal.status, 200);
+  assert.deepEqual(customerLocal.json, { received: true });
+  assert.equal(customerLocal.ignoreEvent, "customer dest writes disabled");
+  assert.deepEqual(lands, []);
+  assert.deepEqual(reconciles, []);
+
+  const customerOverride = await dispatchBooqableWebhookEvent(
+    "event=customer.updated&data[id]=cust-override",
+    handlers,
+    { CUSTOMER_WEBHOOK_DEST_WRITES: "1" },
+  );
+  assert.equal(customerOverride.status, 200);
+  assert.deepEqual(lands, ["cust-override"]);
+
   const customer = await dispatchBooqableWebhookEvent(
     "event=customer.created&data[id]=cust-X",
     handlers,
+    { VERCEL_ENV: "production" },
   );
   assert.equal(customer.status, 200);
   assert.deepEqual(customer.json, { received: true });
-  assert.deepEqual(lands, ["cust-X"]);
+  assert.deepEqual(lands, ["cust-override", "cust-X"]);
   assert.deepEqual(reconciles, []);
 
   const landFail = await dispatchBooqableWebhookEvent(
@@ -183,6 +231,7 @@ test("webhook dispatch executes fail-closed routing", async () => {
         return { ok: false, error: "GET failed" };
       },
     },
+    { VERCEL_ENV: "production" },
   );
   assert.equal(landFail.status, 500);
   assert.deepEqual(landFail.json, {
@@ -197,7 +246,7 @@ test("webhook dispatch executes fail-closed routing", async () => {
   );
   assert.equal(order.status, 200);
   assert.deepEqual(reconciles, ["order-344"]);
-  assert.deepEqual(lands, ["cust-X", "cust-Y"]);
+  assert.deepEqual(lands, ["cust-override", "cust-X", "cust-Y"]);
 });
 
 test("fetch include is the complete source snapshot path", () => {
