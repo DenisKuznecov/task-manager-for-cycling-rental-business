@@ -12,6 +12,20 @@ export function sandboxBackfillAllowed(env: EnvMap = process.env): boolean {
   return env.VERCEL_ENV == null || env.VERCEL_ENV === "";
 }
 
+/**
+ * Customer webhooks may write live Google/Holded/Mailchimp only off localhost.
+ * Local still acks (`200`) so ngrok can stay subscribed for debug.
+ * Set `CUSTOMER_WEBHOOK_DEST_WRITES=1` to force local dest writes.
+ */
+export function customerWebhookDestWritesAllowed(
+  env: EnvMap = process.env,
+): boolean {
+  if (!workshopSyncAllowed(env)) return false;
+  if (!sandboxBackfillAllowed(env)) return true;
+  const override = env.CUSTOMER_WEBHOOK_DEST_WRITES?.trim().toLowerCase();
+  return override === "1" || override === "true";
+}
+
 export type BooqableWebhookClass = "order" | "customer" | "ignore";
 
 /** Fail-closed: only `order.*` and customer created/updated may write. */
@@ -72,6 +86,7 @@ export async function dispatchBooqableWebhookEvent(
       orderId: string,
     ) => Promise<{ ok: boolean; code?: string; error?: string }>;
   },
+  env: EnvMap = process.env,
 ): Promise<WebhookDispatchOutcome> {
   const eventClass = classifyBooqableWebhookEvent(rawText);
   if (eventClass === "ignore") {
@@ -84,6 +99,13 @@ export async function dispatchBooqableWebhookEvent(
   }
 
   if (eventClass === "customer") {
+    if (!customerWebhookDestWritesAllowed(env)) {
+      return {
+        status: 200,
+        json: { received: true },
+        ignoreEvent: "customer dest writes disabled",
+      };
+    }
     const customerId = parseBooqableWebhookOrderId(rawText);
     if (!customerId) {
       return { status: 200, json: { received: true } };
