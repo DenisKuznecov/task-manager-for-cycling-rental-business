@@ -39,24 +39,10 @@ export type LandingStatuses = {
   mailchimp: DestStatusRow;
 };
 
-export type LocalCustomerRow = {
-  id: string;
-  booqableCustomerId: string | null;
-  name: string | null;
-  email: string | null;
-  phone: string | null;
-  birthday: string | null;
-  storedIds: DestIds;
-};
-
 export type LandingStore = {
   upsertIdentity(passport: CustomerPassport): Promise<{ storedIds: DestIds }>;
   saveStatuses(
     booqableCustomerId: string,
-    statuses: LandingStatuses,
-  ): Promise<void>;
-  saveStatusesByCustomerId(
-    customerId: string,
     statuses: LandingStatuses,
   ): Promise<void>;
 };

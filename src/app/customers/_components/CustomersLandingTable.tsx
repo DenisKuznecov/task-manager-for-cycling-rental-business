@@ -1,15 +1,11 @@
 "use client";
 
-import React, { useEffect, useState, useTransition } from "react";
+import React, { useEffect, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
-import { FeatherAlertTriangle } from "@subframe/core";
-import { Alert } from "@/ui/components/Alert";
 import { Badge } from "@/ui/components/Badge";
-import { Button } from "@/ui/components/Button";
 import { Table } from "@/ui/components/Table";
 import { TextField } from "@/ui/components/TextField";
 import { TablePagination } from "@/src/components/TablePagination";
-import { landLocalCustomerAction } from "@/src/lib/customer-landing/land-local-customer-action";
 import type {
   CustomerLandingListRow,
   DestCell,
@@ -52,9 +48,6 @@ export function CustomersLandingTable({
   const router = useRouter();
   const pathname = usePathname();
   const [search, setSearch] = useState(query);
-  const [uploadError, setUploadError] = useState<string | null>(null);
-  const [uploadingId, setUploadingId] = useState<string | null>(null);
-  const [isUploading, startUploading] = useTransition();
 
   useEffect(() => {
     setSearch(query);
@@ -80,38 +73,8 @@ export function CustomersLandingTable({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, query, pathname, router]);
 
-  const handleUpload = (customerId: string) => {
-    if (isUploading) return;
-    setUploadError(null);
-    setUploadingId(customerId);
-    startUploading(async () => {
-      try {
-        const result = await landLocalCustomerAction(customerId);
-        if (!result.ok) {
-          setUploadError(result.error);
-          return;
-        }
-        router.refresh();
-      } catch (error) {
-        setUploadError(
-          error instanceof Error ? error.message : "Could not upload customer.",
-        );
-      } finally {
-        setUploadingId(null);
-      }
-    });
-  };
-
   return (
     <div className="flex w-full flex-col items-start gap-6">
-      {uploadError ? (
-        <Alert
-          variant="error"
-          icon={<FeatherAlertTriangle />}
-          title="Couldn't upload customer"
-          description={uploadError}
-        />
-      ) : null}
       <div className="flex w-full items-center justify-end gap-2">
         <TextField label="" helpText="">
           <TextField.Input
@@ -143,21 +106,15 @@ export function CustomersLandingTable({
                 <Table.HeaderCell>Google</Table.HeaderCell>
                 <Table.HeaderCell>Holded</Table.HeaderCell>
                 <Table.HeaderCell>Mailchimp</Table.HeaderCell>
-                <Table.HeaderCell />
               </Table.HeaderRow>
             }
           >
             {customers.map((customer) => (
               <Table.Row key={customer.id}>
                 <Table.Cell>
-                  <div className="flex items-center gap-2">
-                    <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
-                      {customer.name}
-                    </span>
-                    {customer.isLocalOnly ? (
-                      <Badge variant="neutral">Not from Booqable</Badge>
-                    ) : null}
-                  </div>
+                  <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
+                    {customer.name}
+                  </span>
                 </Table.Cell>
                 <Table.Cell>
                   <DestStatusCell cell={customer.google} />
@@ -167,19 +124,6 @@ export function CustomersLandingTable({
                 </Table.Cell>
                 <Table.Cell>
                   <DestStatusCell cell={customer.mailchimp} />
-                </Table.Cell>
-                <Table.Cell>
-                  {customer.isLocalOnly ? (
-                    <Button
-                      size="small"
-                      variant="neutral-secondary"
-                      loading={isUploading && uploadingId === customer.id}
-                      disabled={isUploading}
-                      onClick={() => handleUpload(customer.id)}
-                    >
-                      Upload
-                    </Button>
-                  ) : null}
                 </Table.Cell>
               </Table.Row>
             ))}

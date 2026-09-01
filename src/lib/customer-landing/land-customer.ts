@@ -4,13 +4,7 @@ import {
   parseLandingCustomer,
 } from "../booqable/parse-landing-customer.ts";
 import { workshopSyncAllowed } from "../workshop/application/sync-env.ts";
-import {
-  destLocalNextAction,
-  destNextAction,
-  destToolName,
-  localizeDestError,
-  presentString,
-} from "./dest-error.ts";
+import { destNextAction, destToolName } from "./dest-error.ts";
 import { writeGoogleContact } from "./google.ts";
 import { writeHoldedContact } from "./holded.ts";
 import { writeMailchimpMember } from "./mailchimp.ts";
@@ -25,7 +19,6 @@ import type {
   LandingStatuses,
   LandingStore,
   LandResult,
-  LocalCustomerRow,
 } from "./types.ts";
 
 export function defaultDestWriters(
@@ -66,31 +59,10 @@ function storedIdFor(name: DestName, ids: DestIds): string | null {
   return ids[name];
 }
 
-type NextActionKind = "booqable" | "local";
-
-function nextActionFor(
-  kind: NextActionKind,
-  tool: string,
-  detail: string,
-): string {
-  return kind === "local"
-    ? destLocalNextAction(tool, detail)
-    : destNextAction(tool, detail);
-}
-
-function applyErrorKind(
-  kind: NextActionKind,
-  result: DestWriteResult,
-): DestWriteResult {
-  if (result.ok || kind === "booqable") return result;
-  return { ...result, error: localizeDestError(result.error) };
-}
-
 async function collectLandingStatuses(
   writers: DestWriter[],
   passport: CustomerPassport,
   storedIds: DestIds,
-  kind: NextActionKind,
 ): Promise<LandingStatuses> {
   const writes = await Promise.all(
     writers.map(async (writer) => {
@@ -103,17 +75,17 @@ async function collectLandingStatuses(
         result = {
           ok: false,
           destId: storedId,
-          error: nextActionFor(kind, destToolName(writer.name), "write threw."),
+          error: destNextAction(destToolName(writer.name), "write threw."),
         };
       }
-      return { name: writer.name, storedId, result: applyErrorKind(kind, result) };
+      return { name: writer.name, storedId, result };
     }),
   );
 
   const byName = new Map(writes.map((write) => [write.name, write]));
   const missing = (tool: string): DestWriteResult => ({
     ok: false,
-    error: nextActionFor(kind, tool, "was not attempted."),
+    error: destNextAction(tool, "was not attempted."),
   });
 
   return {
@@ -196,12 +168,7 @@ export async function landBooqableCustomer(
     };
   }
 
-  const statuses = await collectLandingStatuses(
-    writers,
-    passport,
-    storedIds,
-    "booqable",
-  );
+  const statuses = await collectLandingStatuses(writers, passport, storedIds);
 
   try {
     await store.saveStatuses(booqableCustomerId, statuses);
@@ -210,75 +177,6 @@ export async function landBooqableCustomer(
     return {
       ok: false,
       error: error instanceof Error ? error.message : "Could not store landing statuses.",
-    };
-  }
-
-  return { ok: true, ignored: false, statuses };
-}
-
-export async function landLocalCustomer(
-  customerId: string,
-  options: {
-    env?: EnvMap;
-    store: Pick<LandingStore, "saveStatusesByCustomerId">;
-    writers?: DestWriter[];
-    loadRow: (id: string) => Promise<LocalCustomerRow | null>;
-  },
-): Promise<LandResult> {
-  const env = options.env ?? process.env;
-  if (!workshopSyncAllowed(env)) {
-    return { ok: true, ignored: true };
-  }
-
-  const writers = options.writers ?? defaultDestWriters(env);
-
-  let row: LocalCustomerRow | null;
-  try {
-    row = await options.loadRow(customerId);
-  } catch (error) {
-    console.error("[customer-landing/local] loadRow:", error);
-    return {
-      ok: false,
-      error: error instanceof Error ? error.message : "Could not load customer row.",
-    };
-  }
-
-  if (!row) {
-    return { ok: false, error: "Customer not found." };
-  }
-
-  if (presentString(row.booqableCustomerId)) {
-    return {
-      ok: false,
-      error:
-        "This customer was created in Booqable. Save them there to retry landing.",
-    };
-  }
-
-  const passport: CustomerPassport = {
-    booqableCustomerId: row.booqableCustomerId ?? "",
-    name: row.name,
-    email: row.email,
-    phone: row.phone,
-    birthday: row.birthday,
-    address: null,
-  };
-
-  const statuses = await collectLandingStatuses(
-    writers,
-    passport,
-    row.storedIds,
-    "local",
-  );
-
-  try {
-    await options.store.saveStatusesByCustomerId(customerId, statuses);
-  } catch (error) {
-    console.error("[customer-landing/local] saveStatuses:", error);
-    return {
-      ok: false,
-      error:
-        error instanceof Error ? error.message : "Could not store landing statuses.",
     };
   }
 

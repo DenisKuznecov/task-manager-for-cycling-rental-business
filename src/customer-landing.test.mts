@@ -96,14 +96,6 @@ function memoryStore(initial: DestIds = { google: null, holded: null, mailchimp:
         mailchimp: statuses.mailchimp.id,
       };
     },
-    async saveStatusesByCustomerId(_id, statuses) {
-      saved.push(statuses);
-      storedIds = {
-        google: statuses.google.id,
-        holded: statuses.holded.id,
-        mailchimp: statuses.mailchimp.id,
-      };
-    },
   };
 }
 

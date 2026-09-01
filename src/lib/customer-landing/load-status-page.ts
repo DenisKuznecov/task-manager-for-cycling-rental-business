@@ -27,12 +27,11 @@ export async function loadCustomersLandingPage(
   const to = from + CUSTOMERS_LANDING_PAGE_SIZE - 1;
   const supabase = await createClient();
   let queryBuilder = supabase
-    .from("customers")
+    .from("customer_sync_list")
     .select(
-      "id, name, booqable_customer_id, landing_google_status, landing_google_error, landing_holded_status, landing_holded_error, landing_mailchimp_status, landing_mailchimp_error",
+      "id, name, booqable_customer_id, google_status, google_error, holded_status, holded_error, mailchimp_status, mailchimp_error",
       { count: "exact" },
-    )
-    .not("landing_at", "is", null);
+    );
 
   const trimmed = query.trim();
   if (trimmed) {
@@ -43,7 +42,7 @@ export async function loadCustomersLandingPage(
   }
 
   const { data, error, count } = await queryBuilder
-    .order("landing_at", { ascending: false })
+    .order("synced_at", { ascending: false })
     .order("id", { ascending: false })
     .range(from, to);
 

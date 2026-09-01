@@ -4,61 +4,16 @@ import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
 import { destNextAction } from "./lib/customer-landing/dest-error.ts";
-import { holdedContactBody } from "./lib/customer-landing/holded.ts";
-import { landLocalCustomer } from "./lib/customer-landing/land-customer.ts";
 import {
   toLandingListRow,
   type CustomerLandingDbRow,
 } from "./lib/customer-landing/status-rows.ts";
-import { writeMailchimpMember } from "./lib/customer-landing/mailchimp.ts";
-import type {
-  CustomerPassport,
-  DestWriter,
-  LandingStatuses,
-  LandingStore,
-  LocalCustomerRow,
-} from "./lib/customer-landing/types.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const srcRoot = join(root, "src");
 
 function readSrc(relativePath: string): string {
   return readFileSync(join(srcRoot, relativePath), "utf8");
-}
-
-function localRow(
-  overrides: Partial<LocalCustomerRow> = {},
-): LocalCustomerRow {
-  return {
-    id: "local-1",
-    booqableCustomerId: null,
-    name: "Bike Fit Rider",
-    email: null,
-    phone: null,
-    birthday: null,
-    storedIds: { google: null, holded: null, mailchimp: null },
-    ...overrides,
-  };
-}
-
-function memoryStore(): LandingStore & {
-  savedById: string[];
-  saved: LandingStatuses[];
-} {
-  const savedById: string[] = [];
-  const saved: LandingStatuses[] = [];
-  return {
-    savedById,
-    saved,
-    async upsertIdentity() {
-      return { storedIds: { google: null, holded: null, mailchimp: null } };
-    },
-    async saveStatuses() {},
-    async saveStatusesByCustomerId(id, statuses) {
-      savedById.push(id);
-      saved.push(statuses);
-    },
-  };
 }
 
 function dbRow(
@@ -68,15 +23,12 @@ function dbRow(
     id: "cust-1",
     name: "Ada",
     booqable_customer_id: "bq-1",
-    landing_google_status: "green",
-    landing_google_error: null,
-    landing_holded_status: "green",
-    landing_holded_error: null,
-    landing_mailchimp_status: "red",
-    landing_mailchimp_error: destNextAction(
-      "Mailchimp",
-      "an email is required.",
-    ),
+    google_status: "green",
+    google_error: null,
+    holded_status: "green",
+    holded_error: null,
+    mailchimp_status: "red",
+    mailchimp_error: destNextAction("Mailchimp", "an email is required."),
     ...overrides,
   };
 }
@@ -88,58 +40,47 @@ test("Customers nav opens /customers", () => {
   assert.match(nav, /roles: \["admin", "manager"\]/);
 });
 
-test("list mapper includes local-only rows and never-landed is not red", () => {
-  const local = toLandingListRow(
+test("list mapper treats empty name as Unknown and never-landed is not red", () => {
+  const unnamed = toLandingListRow(
     dbRow({
-      id: "local-1",
+      id: "cust-2",
       name: "   ",
-      booqable_customer_id: null,
-      landing_google_status: null,
-      landing_google_error: null,
-      landing_holded_status: null,
-      landing_holded_error: null,
-      landing_mailchimp_status: null,
-      landing_mailchimp_error: null,
+      google_status: null,
+      google_error: null,
+      holded_status: null,
+      holded_error: null,
+      mailchimp_status: null,
+      mailchimp_error: null,
     }),
   );
-  assert.equal(local.name, "Unknown");
-  assert.equal(local.isLocalOnly, true);
-  assert.equal(local.google.status, null);
-  assert.equal(local.holded.status, null);
-  assert.equal(local.mailchimp.status, null);
+  assert.equal(unnamed.name, "Unknown");
+  assert.equal(unnamed.google.status, null);
+  assert.equal(unnamed.holded.status, null);
+  assert.equal(unnamed.mailchimp.status, null);
 
   const mixed = toLandingListRow(dbRow());
-  assert.equal(mixed.isLocalOnly, false);
   assert.equal(mixed.google.status, "green");
   assert.equal(mixed.holded.status, "green");
   assert.equal(mixed.mailchimp.status, "red");
   assert.match(mixed.mailchimp.error ?? "", /Mailchimp/);
 });
 
-test("loader lists landed customers newest first and page uses DataLoadError plus query", () => {
+test("loader lists customer_sync_list newest first and page uses DataLoadError plus query", () => {
   const loader = readSrc("lib/customer-landing/load-status-page.ts");
-  assert.match(loader, /from\("customers"\)/);
-  assert.match(loader, /\.not\(\s*["']landing_at["'],\s*["']is["'],\s*null\)/);
-  assert.match(loader, /\.order\(\s*["']landing_at["'],\s*\{\s*ascending:\s*false/);
+  assert.match(loader, /from\("customer_sync_list"\)/);
+  assert.match(loader, /\.order\(\s*["']synced_at["'],\s*\{\s*ascending:\s*false/);
   assert.match(loader, /\.order\(\s*["']id["'],\s*\{\s*ascending:\s*false/);
   assert.match(loader, /\.ilike\(\s*["']name["']/);
   assert.match(loader, /replace\(\/\[,\(\)\]\/g/);
   assert.match(loader, /if \(escaped\)/);
   assert.doesNotMatch(loader, /\.order\(\s*["']name["']/);
   assert.doesNotMatch(loader, /\.order\(\s*["']updated_at["']/);
+  assert.doesNotMatch(loader, /landing_at/);
   assert.doesNotMatch(loader, /createServiceRoleClient|SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(loader, /createClient\(/);
   assert.match(loader, /loadCustomersLandingPage:/);
   assert.match(loader, /customers: \[\]/);
   assert.match(loader, /error\.message/);
-
-  const action = readSrc("lib/customer-landing/land-local-customer-action.ts");
-  assert.match(action, /withAuth/);
-  assert.match(action, /workshopSyncAllowed/);
-  assert.match(action, /get_user_role/);
-  assert.match(action, /role !== "admin"/);
-  assert.match(action, /role !== "manager"/);
-  assert.match(action, /landLocalCustomer:/);
 
   const page = readSrc("app/customers/page.tsx");
   assert.match(page, /DataLoadError/);
@@ -157,28 +98,25 @@ test("loader lists landed customers newest first and page uses DataLoadError plu
   assert.match(layout, /redirect\("\/unauthorized"\)/);
 });
 
-test("landing store stamps landing_at on both save paths", () => {
+test("landing store upserts customer_sync and stamps synced_at", () => {
   const store = readSrc("lib/customer-landing/landing-store.ts");
-  assert.match(store, /function landingStatusPatch/);
-  assert.match(store, /landing_at:\s*new Date\(\)\.toISOString\(\)/);
-  const saveByBooqableId = store.slice(
-    store.indexOf("async saveStatuses("),
-    store.indexOf("async saveStatusesByCustomerId"),
-  );
-  assert.match(saveByBooqableId, /\.update\(landingStatusPatch\(statuses\)\)/);
-  const saveById = store.slice(store.indexOf("saveStatusesByCustomerId"));
-  assert.match(saveById, /\.update\(landingStatusPatch\(statuses\)\)/);
+  assert.match(store, /function syncStatusPatch/);
+  assert.match(store, /synced_at:\s*new Date\(\)\.toISOString\(\)/);
+  assert.match(store, /from\("customer_sync"\)/);
+  assert.match(store, /\.upsert\(/);
+  assert.match(store, /onConflict:\s*["']customer_id["']/);
+  assert.doesNotMatch(store, /saveStatusesByCustomerId/);
+  assert.doesNotMatch(store, /\.update\(/);
 });
 
-test("table shows local badge and upload only on local-only rows", () => {
+test("table searches by name and has no upload control", () => {
   const table = readSrc("app/customers/_components/CustomersLandingTable.tsx");
-  assert.match(table, /Not from Booqable/);
-  assert.match(table, /isLocalOnly/);
-  assert.match(table, />\s*Upload\s*</);
+  assert.doesNotMatch(table, /Upload/);
+  assert.doesNotMatch(table, /landLocalCustomer/);
+  assert.doesNotMatch(table, /Not from Booqable/);
   assert.match(table, /variant="success"/);
   assert.match(table, /variant="error"/);
   assert.match(table, /variant="neutral"/);
-  assert.match(table, /landLocalCustomerAction/);
   assert.match(table, /TextField/);
   assert.match(table, /SEARCH_DEBOUNCE_MS = 300/);
   assert.match(table, /function buildHref|const buildHref/);
@@ -192,214 +130,9 @@ test("table shows local badge and upload only on local-only rows", () => {
   );
 });
 
-test("local upload with no email reds Mailchimp and keeps a local next action", async () => {
-  const store = memoryStore();
-  let mailchimpFetch = 0;
-  const result = await landLocalCustomer("local-1", {
-    store,
-    loadRow: async () => localRow(),
-    writers: [
-      {
-        name: "google",
-        async write() {
-          return { ok: true, destId: "people/local-1" };
-        },
-      },
-      {
-        name: "holded",
-        async write() {
-          return { ok: true, destId: "holded-local-1" };
-        },
-      },
-      {
-        name: "mailchimp",
-        write: (input) =>
-          writeMailchimpMember(
-            input,
-            {
-              MAILCHIMP_API_KEY: "key-us21",
-              MAILCHIMP_AUDIENCE_ID: "audience-test",
-            },
-            async () => {
-              mailchimpFetch += 1;
-              throw new Error("Mailchimp fetch must not run without email");
-            },
-          ),
-      },
-    ],
-  });
-
-  assert.equal(result.ok, true);
-  if (!result.ok || result.ignored) throw new Error("expected landed statuses");
-  assert.equal(result.statuses.google.status, "green");
-  assert.equal(result.statuses.holded.status, "green");
-  assert.equal(result.statuses.mailchimp.status, "red");
-  assert.match(result.statuses.mailchimp.error ?? "", /Mailchimp/);
-  assert.match(result.statuses.mailchimp.error ?? "", /email is required/);
-  assert.match(result.statuses.mailchimp.error ?? "", /Upload again after fixing this/);
-  assert.doesNotMatch(
-    result.statuses.mailchimp.error ?? "",
-    /Save the customer in Booqable/,
-  );
-  assert.equal(mailchimpFetch, 0);
-  assert.deepEqual(store.savedById, ["local-1"]);
-  assert.deepEqual(store.saved, [result.statuses]);
-});
-
-test("local dest 4xx reds that dest, keeps other greens, and persists all three", async () => {
-  const store = memoryStore();
-  const result = await landLocalCustomer("local-1", {
-    store,
-    loadRow: async () => localRow({ email: "a@b.test" }),
-    writers: [
-      {
-        name: "google",
-        async write() {
-          return { ok: true, destId: "people/local-1" };
-        },
-      },
-      {
-        name: "holded",
-        async write() {
-          return { ok: true, destId: "holded-local-1" };
-        },
-      },
-      {
-        name: "mailchimp",
-        write: (input) =>
-          writeMailchimpMember(
-            input,
-            {
-              MAILCHIMP_API_KEY: "key-us21",
-              MAILCHIMP_AUDIENCE_ID: "audience-test",
-            },
-            async () =>
-              new Response(JSON.stringify({ title: "Invalid Resource" }), {
-                status: 400,
-                headers: { "Content-Type": "application/json" },
-              }),
-          ),
-      },
-    ],
-  });
-
-  assert.equal(result.ok, true);
-  if (!result.ok || result.ignored) throw new Error("expected landed statuses");
-  assert.equal(result.statuses.google.status, "green");
-  assert.equal(result.statuses.holded.status, "green");
-  assert.equal(result.statuses.mailchimp.status, "red");
-  assert.match(result.statuses.mailchimp.error ?? "", /Mailchimp/);
-  assert.match(
-    result.statuses.mailchimp.error ?? "",
-    /Upload again after fixing this/,
-  );
-  assert.doesNotMatch(
-    result.statuses.mailchimp.error ?? "",
-    /Save the customer in Booqable/,
-  );
-  assert.deepEqual(store.savedById, ["local-1"]);
-  assert.deepEqual(store.saved, [result.statuses]);
-});
-
-test("Booqable-keyed landLocalCustomer does not write dests", async () => {
-  let wrote = false;
-  const store = memoryStore();
-  const result = await landLocalCustomer("bq-row", {
-    store,
-    loadRow: async () => localRow({ booqableCustomerId: "cust-land-1" }),
-    writers: [
-      {
-        name: "google",
-        async write() {
-          wrote = true;
-          return { ok: true, destId: "x" };
-        },
-      },
-      {
-        name: "holded",
-        async write() {
-          wrote = true;
-          return { ok: true, destId: "y" };
-        },
-      },
-      {
-        name: "mailchimp",
-        async write() {
-          wrote = true;
-          return { ok: true, destId: "z" };
-        },
-      },
-    ],
-  });
-  assert.equal(result.ok, false);
-  if (result.ok) throw new Error("expected refusal");
-  assert.equal(wrote, false);
-  assert.deepEqual(store.saved, []);
-  assert.deepEqual(store.savedById, []);
-});
-
-test("preview env writes nothing for local upload", async () => {
-  let loaded = false;
-  let wrote = false;
-  let saved = false;
-  const result = await landLocalCustomer("local-1", {
-    env: { VERCEL_ENV: "preview" },
-    loadRow: async () => {
-      loaded = true;
-      return localRow();
-    },
-    writers: [
-      {
-        name: "google",
-        async write() {
-          wrote = true;
-          return { ok: true, destId: "x" };
-        },
-      },
-    ],
-    store: {
-      async saveStatusesByCustomerId() {
-        saved = true;
-      },
-    },
-  });
-  assert.deepEqual(result, { ok: true, ignored: true });
-  assert.equal(loaded, false);
-  assert.equal(wrote, false);
-  assert.equal(saved, false);
-});
-
-test("local land does not GET Booqable or invent address", async () => {
-  const seen: CustomerPassport[] = [];
-  const result = await landLocalCustomer("local-1", {
-    store: memoryStore(),
-    loadRow: async () => localRow({ name: "Local", email: "a@b.test" }),
-    writers: (["google", "holded", "mailchimp"] as const).map((name) => ({
-      name,
-      async write({ passport }) {
-        seen.push(passport);
-        return { ok: true, destId: name };
-      },
-    })) as DestWriter[],
-  });
-  assert.equal(result.ok, true);
-  assert.equal(seen[0]?.address, null);
-  assert.equal(seen[0]?.booqableCustomerId, "");
-  const holded = holdedContactBody({
-    booqableCustomerId: "",
-    name: "Local",
-    email: "a@b.test",
-    phone: null,
-    birthday: null,
-    address: null,
-  });
-  assert.equal("custom_id" in holded, false);
-});
-
-test("page and action do not use the service role", () => {
+test("page does not use the service role and upload is gone", () => {
   const files = [
     "lib/customer-landing/load-status-page.ts",
-    "lib/customer-landing/land-local-customer-action.ts",
     "app/customers/page.tsx",
     "app/customers/layout.tsx",
     "app/customers/_components/CustomersLandingTable.tsx",
@@ -416,37 +149,29 @@ test("page and action do not use the service role", () => {
 
   const customersLib = readSrc("lib/customers.ts");
   assert.doesNotMatch(customersLib, /loadCustomersLandingPage/);
-  assert.doesNotMatch(customersLib, /landing_google_status/);
+  assert.doesNotMatch(customersLib, /customer_sync/);
 
   const partner = readSrc("app/partner/(me)/customers/page.tsx");
   assert.doesNotMatch(partner, /loadCustomersLandingPage/);
   assert.doesNotMatch(partner, /landLocalCustomer/);
 
-  const staffGrant = readFileSync(
-    join(root, "supabase/migrations/20260831140000_customers_landing_staff_update.sql"),
-    "utf8",
-  );
-  assert.match(staffGrant, /Staff can update customer landing status/);
-  assert.match(staffGrant, /FOR UPDATE/);
-  assert.match(staffGrant, /REVOKE UPDATE ON TABLE public.customers FROM authenticated;/);
-  assert.match(
-    staffGrant,
-    /GRANT UPDATE \(\s*landing_google_id,\s*landing_google_status,\s*landing_google_error,\s*landing_holded_id,\s*landing_holded_status,\s*landing_holded_error,\s*landing_mailchimp_id,\s*landing_mailchimp_status,\s*landing_mailchimp_error\s*\) ON TABLE public.customers TO authenticated;/,
-  );
+  const land = readSrc("lib/customer-landing/land-customer.ts");
+  assert.doesNotMatch(land, /landLocalCustomer/);
+  assert.doesNotMatch(land, /destLocalNextAction/);
 
-  const landingAt = readFileSync(
-    join(root, "supabase/migrations/20260901120000_customers_landing_at.sql"),
+  const migration = readFileSync(
+    join(root, "supabase/migrations/20260901120000_customer_sync.sql"),
     "utf8",
   );
-  assert.match(landingAt, /ADD COLUMN IF NOT EXISTS landing_at/);
-  assert.match(landingAt, /landing_at = updated_at/);
-  assert.match(landingAt, /landing_google_status IS NOT NULL/);
-  assert.match(landingAt, /landing_holded_status IS NOT NULL/);
-  assert.match(landingAt, /landing_mailchimp_status IS NOT NULL/);
-  assert.match(landingAt, /CREATE INDEX IF NOT EXISTS customers_landing_at_id_desc_idx/);
-  assert.match(landingAt, /REVOKE UPDATE ON TABLE public.customers FROM authenticated;/);
+  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.customer_sync/);
+  assert.match(migration, /CREATE OR REPLACE VIEW public\.customer_sync_list/);
+  assert.match(migration, /CREATE INDEX IF NOT EXISTS customer_sync_synced_at_id_desc_idx/);
+  assert.match(migration, /Staff can read customer sync/);
   assert.match(
-    landingAt,
-    /GRANT UPDATE \(\s*landing_google_id,\s*landing_google_status,\s*landing_google_error,\s*landing_holded_id,\s*landing_holded_status,\s*landing_holded_error,\s*landing_mailchimp_id,\s*landing_mailchimp_status,\s*landing_mailchimp_error,\s*landing_at\s*\) ON TABLE public.customers TO authenticated;/,
+    migration,
+    /DROP POLICY IF EXISTS "Staff can update customer landing status"/,
   );
+  assert.doesNotMatch(migration, /CREATE POLICY "Staff can update customer landing status"/);
+  assert.doesNotMatch(migration, /landing_at = updated_at/);
+  assert.doesNotMatch(migration, /GRANT UPDATE \(\s*landing_/);
 });

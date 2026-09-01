@@ -371,17 +371,33 @@ SELECT is(
   'second apply updates customer email'
 );
 
-UPDATE public.customers
-SET landing_google_id = 'people/c-apply',
-    landing_google_status = 'green',
-    landing_google_error = NULL,
-    landing_holded_id = 'holded-apply',
-    landing_holded_status = 'green',
-    landing_holded_error = NULL,
-    landing_mailchimp_id = 'mc-apply',
-    landing_mailchimp_status = 'red',
-    landing_mailchimp_error = 'Mailchimp: check the audience.'
-WHERE booqable_customer_id = 'cust-bq-road';
+INSERT INTO public.customer_sync (
+  customer_id,
+  google_id,
+  google_status,
+  google_error,
+  holded_id,
+  holded_status,
+  holded_error,
+  mailchimp_id,
+  mailchimp_status,
+  mailchimp_error,
+  synced_at
+)
+SELECT
+  c.id,
+  'people/c-apply',
+  'green',
+  NULL,
+  'holded-apply',
+  'green',
+  NULL,
+  'mc-apply',
+  'red',
+  'Mailchimp: check the audience.',
+  now()
+FROM public.customers c
+WHERE c.booqable_customer_id = 'cust-bq-road';
 
 SELECT ok(
   (
@@ -394,13 +410,14 @@ SELECT ok(
       )
     )->>'ok'
   )::boolean,
-  'apply after landing columns are set succeeds'
+  'apply after customer sync is set succeeds'
 );
 
 SELECT is(
   (
-    SELECT c.landing_google_id
-    FROM public.customers c
+    SELECT s.google_id
+    FROM public.customer_sync s
+    JOIN public.customers c ON c.id = s.customer_id
     WHERE c.booqable_customer_id = 'cust-bq-road'
   ),
   'people/c-apply',
@@ -409,8 +426,9 @@ SELECT is(
 
 SELECT is(
   (
-    SELECT c.landing_google_status
-    FROM public.customers c
+    SELECT s.google_status
+    FROM public.customer_sync s
+    JOIN public.customers c ON c.id = s.customer_id
     WHERE c.booqable_customer_id = 'cust-bq-road'
   ),
   'green',
@@ -419,8 +437,9 @@ SELECT is(
 
 SELECT is(
   (
-    SELECT c.landing_holded_id
-    FROM public.customers c
+    SELECT s.holded_id
+    FROM public.customer_sync s
+    JOIN public.customers c ON c.id = s.customer_id
     WHERE c.booqable_customer_id = 'cust-bq-road'
   ),
   'holded-apply',
@@ -429,8 +448,9 @@ SELECT is(
 
 SELECT is(
   (
-    SELECT c.landing_holded_status
-    FROM public.customers c
+    SELECT s.holded_status
+    FROM public.customer_sync s
+    JOIN public.customers c ON c.id = s.customer_id
     WHERE c.booqable_customer_id = 'cust-bq-road'
   ),
   'green',
@@ -439,8 +459,9 @@ SELECT is(
 
 SELECT is(
   (
-    SELECT c.landing_mailchimp_id
-    FROM public.customers c
+    SELECT s.mailchimp_id
+    FROM public.customer_sync s
+    JOIN public.customers c ON c.id = s.customer_id
     WHERE c.booqable_customer_id = 'cust-bq-road'
   ),
   'mc-apply',
@@ -449,8 +470,9 @@ SELECT is(
 
 SELECT is(
   (
-    SELECT c.landing_mailchimp_status
-    FROM public.customers c
+    SELECT s.mailchimp_status
+    FROM public.customer_sync s
+    JOIN public.customers c ON c.id = s.customer_id
     WHERE c.booqable_customer_id = 'cust-bq-road'
   ),
   'red',

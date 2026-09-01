@@ -6,21 +6,22 @@ import type {
   DestIds,
   LandingStatuses,
   LandingStore,
-  LocalCustomerRow,
 } from "./types.ts";
 
-function landingStatusPatch(statuses: LandingStatuses): Record<string, string | null> {
+function syncStatusPatch(
+  statuses: LandingStatuses,
+): Record<string, string | null> {
   return {
-    landing_google_id: statuses.google.id,
-    landing_google_status: statuses.google.status,
-    landing_google_error: statuses.google.error,
-    landing_holded_id: statuses.holded.id,
-    landing_holded_status: statuses.holded.status,
-    landing_holded_error: statuses.holded.error,
-    landing_mailchimp_id: statuses.mailchimp.id,
-    landing_mailchimp_status: statuses.mailchimp.status,
-    landing_mailchimp_error: statuses.mailchimp.error,
-    landing_at: new Date().toISOString(),
+    google_id: statuses.google.id,
+    google_status: statuses.google.status,
+    google_error: statuses.google.error,
+    holded_id: statuses.holded.id,
+    holded_status: statuses.holded.status,
+    holded_error: statuses.holded.error,
+    mailchimp_id: statuses.mailchimp.id,
+    mailchimp_status: statuses.mailchimp.status,
+    mailchimp_error: statuses.mailchimp.error,
+    synced_at: new Date().toISOString(),
   };
 }
 
@@ -48,9 +49,7 @@ export function createSupabaseLandingStore(
       const { data, error } = await supabase
         .from("customers")
         .upsert(row, { onConflict: "booqable_customer_id" })
-        .select(
-          "landing_google_id, landing_holded_id, landing_mailchimp_id",
-        )
+        .select("id")
         .single();
 
       if (error) {
@@ -58,11 +57,22 @@ export function createSupabaseLandingStore(
         throw new Error(error.message);
       }
 
+      const { data: sync, error: syncError } = await supabase
+        .from("customer_sync")
+        .select("google_id, holded_id, mailchimp_id")
+        .eq("customer_id", data.id)
+        .maybeSingle();
+
+      if (syncError) {
+        console.error("[customer-landing] upsertIdentity sync:", syncError);
+        throw new Error(syncError.message);
+      }
+
       return {
         storedIds: {
-          google: asText(data?.landing_google_id),
-          holded: asText(data?.landing_holded_id),
-          mailchimp: asText(data?.landing_mailchimp_id),
+          google: asText(sync?.google_id),
+          holded: asText(sync?.holded_id),
+          mailchimp: asText(sync?.mailchimp_id),
         },
       };
     },
@@ -71,68 +81,32 @@ export function createSupabaseLandingStore(
       booqableCustomerId: string,
       statuses: LandingStatuses,
     ): Promise<void> {
-      const { error } = await supabase
+      const { data: customer, error: findError } = await supabase
         .from("customers")
-        .update(landingStatusPatch(statuses))
-        .eq("booqable_customer_id", booqableCustomerId);
+        .select("id")
+        .eq("booqable_customer_id", booqableCustomerId)
+        .maybeSingle();
+
+      if (findError) {
+        console.error("[customer-landing] saveStatuses find:", findError);
+        throw new Error(findError.message);
+      }
+      if (!customer) {
+        throw new Error("Customer row was not found.");
+      }
+
+      const { error } = await supabase.from("customer_sync").upsert(
+        {
+          customer_id: customer.id,
+          ...syncStatusPatch(statuses),
+        },
+        { onConflict: "customer_id" },
+      );
 
       if (error) {
         console.error("[customer-landing] saveStatuses:", error);
         throw new Error(error.message);
       }
-    },
-
-    async saveStatusesByCustomerId(
-      customerId: string,
-      statuses: LandingStatuses,
-    ): Promise<void> {
-      const { data, error } = await supabase
-        .from("customers")
-        .update(landingStatusPatch(statuses))
-        .eq("id", customerId)
-        .select("id")
-        .maybeSingle();
-
-      if (error) {
-        console.error("[customer-landing] saveStatusesByCustomerId:", error);
-        throw new Error(error.message);
-      }
-      if (!data) {
-        throw new Error("Customer row was not updated.");
-      }
-    },
-  };
-}
-
-export async function loadLocalCustomerRow(
-  supabase: SupabaseClient,
-  customerId: string,
-): Promise<LocalCustomerRow | null> {
-  const { data, error } = await supabase
-    .from("customers")
-    .select(
-      "id, booqable_customer_id, name, email, phone, birthday, landing_google_id, landing_holded_id, landing_mailchimp_id",
-    )
-    .eq("id", customerId)
-    .maybeSingle();
-
-  if (error) {
-    console.error("[customer-landing] loadLocalCustomerRow:", error);
-    throw new Error(error.message);
-  }
-  if (!data) return null;
-
-  return {
-    id: data.id as string,
-    booqableCustomerId: asText(data.booqable_customer_id),
-    name: asText(data.name),
-    email: asText(data.email),
-    phone: asText(data.phone),
-    birthday: asText(data.birthday),
-    storedIds: {
-      google: asText(data.landing_google_id),
-      holded: asText(data.landing_holded_id),
-      mailchimp: asText(data.landing_mailchimp_id),
     },
   };
 }

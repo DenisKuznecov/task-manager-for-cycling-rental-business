@@ -18,12 +18,12 @@ export type CustomerLandingDbRow = {
   id: string;
   name: string | null;
   booqable_customer_id: string | null;
-  landing_google_status: string | null;
-  landing_google_error: string | null;
-  landing_holded_status: string | null;
-  landing_holded_error: string | null;
-  landing_mailchimp_status: string | null;
-  landing_mailchimp_error: string | null;
+  google_status: string | null;
+  google_error: string | null;
+  holded_status: string | null;
+  holded_error: string | null;
+  mailchimp_status: string | null;
+  mailchimp_error: string | null;
 };
 
 function destCell(status: string | null, error: string | null): DestCell {
@@ -41,11 +41,8 @@ export function toLandingListRow(
     id: row.id,
     name,
     isLocalOnly: booqableId === "",
-    google: destCell(row.landing_google_status, row.landing_google_error),
-    holded: destCell(row.landing_holded_status, row.landing_holded_error),
-    mailchimp: destCell(
-      row.landing_mailchimp_status,
-      row.landing_mailchimp_error,
-    ),
+    google: destCell(row.google_status, row.google_error),
+    holded: destCell(row.holded_status, row.holded_error),
+    mailchimp: destCell(row.mailchimp_status, row.mailchimp_error),
   };
 }
