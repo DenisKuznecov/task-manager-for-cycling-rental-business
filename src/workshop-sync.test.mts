@@ -123,6 +123,7 @@ test("webhook signal uses only data[id]", () => {
   assert.match(webhook, /reconcileBooqableOrder/);
   assert.match(webhook, /dispatchBooqableWebhookEvent/);
   assert.match(webhook, /landBooqableCustomer/);
+  assert.match(webhook, /tagReviewRequestForOrder/);
 });
 
 test("webhook event classify is fail-closed", () => {
@@ -155,6 +156,10 @@ test("webhook event classify is fail-closed", () => {
   assert.match(webhook, /reconcileBooqableOrder/);
   const dispatch = readSrc("lib/workshop/application/sync-env.ts");
   assert.match(dispatch, /customerWebhookDestWritesAllowed/);
+  assert.match(dispatch, /order\.stopped/);
+  assert.match(dispatch, /tagReviewRequest/);
+  const reconcile = readSrc("lib/workshop/application/reconcile-order.ts");
+  assert.doesNotMatch(reconcile, /review-request|tagReviewRequest/);
 });
 
 test("webhook dispatch executes fail-closed routing", async () => {
@@ -165,6 +170,7 @@ test("webhook dispatch executes fail-closed routing", async () => {
     holded: { status: "green", error: null },
     mailchimp: { status: "green", error: null },
   };
+  const tags: string[] = [];
   const handlers = {
     async landCustomer(id: string) {
       lands.push(id);
@@ -173,6 +179,9 @@ test("webhook dispatch executes fail-closed routing", async () => {
     async reconcileOrder(id: string) {
       reconciles.push(id);
       return { ok: true };
+    },
+    async tagReviewRequest(id: string) {
+      tags.push(id);
     },
   };
 
@@ -247,6 +256,79 @@ test("webhook dispatch executes fail-closed routing", async () => {
   assert.equal(order.status, 200);
   assert.deepEqual(reconciles, ["order-344"]);
   assert.deepEqual(lands, ["cust-override", "cust-X", "cust-Y"]);
+  assert.deepEqual(tags, []);
+
+  const reservedDestOn = await dispatchBooqableWebhookEvent(
+    "event=order.reserved&data[id]=order-reserved-prod",
+    handlers,
+    { VERCEL_ENV: "production" },
+  );
+  assert.equal(reservedDestOn.status, 200);
+  assert.deepEqual(tags, []);
+
+  const stoppedLocal = await dispatchBooqableWebhookEvent(
+    "event=order.stopped&data[id]=order-stopped-local",
+    handlers,
+    {},
+  );
+  assert.equal(stoppedLocal.status, 200);
+  assert.deepEqual(reconciles, [
+    "order-344",
+    "order-reserved-prod",
+    "order-stopped-local",
+  ]);
+  assert.deepEqual(tags, []);
+
+  const stopped = await dispatchBooqableWebhookEvent(
+    "event=order.stopped&data[id]=order-stopped",
+    handlers,
+    { VERCEL_ENV: "production" },
+  );
+  assert.equal(stopped.status, 200);
+  assert.deepEqual(tags, ["order-stopped"]);
+
+  const taggerThrow = await dispatchBooqableWebhookEvent(
+    "event=order.stopped&data[id]=order-tag-throw",
+    {
+      ...handlers,
+      async tagReviewRequest() {
+        throw new Error("mailchimp down");
+      },
+    },
+    { VERCEL_ENV: "production" },
+  );
+  assert.equal(taggerThrow.status, 200);
+  assert.deepEqual(taggerThrow.json, { received: true });
+  assert.equal(reconciles.includes("order-tag-throw"), true);
+
+  const delayedTags: string[] = [];
+  const delayed = await dispatchBooqableWebhookEvent(
+    "event=order.stopped&data[id]=order-delayed-tag",
+    {
+      ...handlers,
+      async tagReviewRequest(id: string) {
+        await new Promise((resolve) => setTimeout(resolve, 25));
+        delayedTags.push(id);
+      },
+    },
+    { VERCEL_ENV: "production" },
+  );
+  assert.equal(delayed.status, 200);
+  assert.deepEqual(delayedTags, ["order-delayed-tag"]);
+
+  const reconcileFail = await dispatchBooqableWebhookEvent(
+    "event=order.stopped&data[id]=order-reconcile-fail",
+    {
+      ...handlers,
+      async reconcileOrder(id: string) {
+        reconciles.push(id);
+        return { ok: false, code: "SOURCE_UNAVAILABLE", error: "apply failed" };
+      },
+    },
+    { VERCEL_ENV: "production" },
+  );
+  assert.equal(reconcileFail.status, 500);
+  assert.deepEqual(tags, ["order-stopped", "order-reconcile-fail"]);
 });
 
 test("fetch include is the complete source snapshot path", () => {

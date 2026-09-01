@@ -85,6 +85,7 @@ export async function dispatchBooqableWebhookEvent(
     reconcileOrder: (
       orderId: string,
     ) => Promise<{ ok: boolean; code?: string; error?: string }>;
+    tagReviewRequest: (orderId: string) => Promise<void>;
   },
   env: EnvMap = process.env,
 ): Promise<WebhookDispatchOutcome> {
@@ -129,7 +130,24 @@ export async function dispatchBooqableWebhookEvent(
   if (!orderId) {
     return { status: 200, json: { received: true } };
   }
-  const result = await handlers.reconcileOrder(orderId);
+  const event = new URLSearchParams(rawText).get("event")?.trim() ?? "";
+  const shouldTag =
+    event === "order.stopped" && customerWebhookDestWritesAllowed(env);
+  const tagging = shouldTag
+    ? (async () => {
+        try {
+          await handlers.tagReviewRequest(orderId);
+        } catch (error) {
+          console.error("[review-request/mailchimp]", error);
+        }
+      })()
+    : Promise.resolve();
+  let result: { ok: boolean; code?: string; error?: string };
+  try {
+    result = await handlers.reconcileOrder(orderId);
+  } finally {
+    await tagging;
+  }
   const outcome = webhookDeliveryStatus({ allowed: true, result });
   if (outcome.status === 500) {
     return {
