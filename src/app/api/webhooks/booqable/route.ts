@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
+import { landBooqableCustomer } from "@/src/lib/customer-landing/land-customer";
 import { reconcileBooqableOrder } from "@/src/lib/workshop/application/reconcile-order";
 import {
-  parseBooqableWebhookOrderId,
+  dispatchBooqableWebhookEvent,
   webhookDeliveryStatus,
   workshopSyncAllowed,
 } from "@/src/lib/workshop/application/sync-env";
@@ -9,8 +10,8 @@ import {
 export const dynamic = "force-dynamic";
 
 /**
- * Thin webhook: the form-encoded payload is only used to identify the order.
- * Eligibility and assignment state come from a full Booqable snapshot apply.
+ * Thin webhook: form `event` selects the path. `data[id]` is only a signal.
+ * Order and customer passports come from a Booqable GET, not the delivery body.
  */
 export async function POST(request: Request) {
   try {
@@ -40,23 +41,42 @@ export async function POST(request: Request) {
       );
     }
 
-    const booqableOrderId = parseBooqableWebhookOrderId(await request.text());
-    if (!booqableOrderId) {
-      const outcome = webhookDeliveryStatus({ allowed: true });
-      return NextResponse.json({ received: true }, { status: outcome.status });
+    const dispatched = await dispatchBooqableWebhookEvent(await request.text(), {
+      landCustomer: landBooqableCustomer,
+      reconcileOrder: (orderId) => reconcileBooqableOrder(orderId, "webhook"),
+    });
+
+    if (dispatched.ignoreEvent) {
+      console.warn("[webhooks/booqable] ignored event", dispatched.ignoreEvent);
     }
 
-    const result = await reconcileBooqableOrder(booqableOrderId, "webhook");
-    const outcome = webhookDeliveryStatus({ allowed: true, result });
-    if (outcome.status === 500) {
-      console.error("[webhooks/booqable] Failure:", result.ok ? undefined : result.error);
-      return NextResponse.json(
-        { error: "Failed to process webhook", message: result.ok ? undefined : result.error },
-        { status: 500 },
-      );
+    if (
+      dispatched.land &&
+      dispatched.land.result.ok &&
+      !dispatched.land.result.ignored
+    ) {
+      const { google, holded, mailchimp } = dispatched.land.result.statuses;
+      console.info("[webhooks/booqable]", dispatched.land.customerId, {
+        google: google.status,
+        holded: holded.status,
+        mailchimp: mailchimp.status,
+        googleError: google.status === "red" ? google.error : undefined,
+        holdedError: holded.status === "red" ? holded.error : undefined,
+        mailchimpError: mailchimp.status === "red" ? mailchimp.error : undefined,
+      });
     }
 
-    return NextResponse.json({ received: true }, { status: 200 });
+    if (dispatched.status === 500) {
+      const message =
+        dispatched.land && !dispatched.land.result.ok
+          ? dispatched.land.result.error
+          : "message" in dispatched.json
+            ? dispatched.json.message
+            : undefined;
+      console.error("[webhooks/booqable] Failure:", message);
+    }
+
+    return NextResponse.json(dispatched.json, { status: dispatched.status });
   } catch (err) {
     const message = err instanceof Error ? err.message : "Unknown error";
     console.error("[webhooks/booqable] Failure:", err);

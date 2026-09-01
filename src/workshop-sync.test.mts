@@ -15,6 +15,8 @@ import {
   skipReason,
 } from "./lib/workshop/domain/commands.ts";
 import {
+  classifyBooqableWebhookEvent,
+  dispatchBooqableWebhookEvent,
   parseBooqableWebhookOrderId,
   sandboxBackfillAllowed,
   webhookDeliveryStatus,
@@ -86,13 +88,116 @@ test("webhook signal uses only data[id]", () => {
   );
 
   const webhook = readSrc("app/api/webhooks/booqable/route.ts");
-  assert.match(webhook, /parseBooqableWebhookOrderId/);
+  assert.match(webhook, /dispatchBooqableWebhookEvent/);
   assert.doesNotMatch(webhook, /data\[status\]/);
   assert.doesNotMatch(webhook, /data\[number\]/);
   assert.doesNotMatch(webhook, /Provided secret/);
   assert.doesNotMatch(webhook, /secret: \$\{/);
   assert.match(webhook, /workshopSyncAllowed/);
   assert.match(webhook, /reconcileBooqableOrder/);
+  assert.match(webhook, /dispatchBooqableWebhookEvent/);
+  assert.match(webhook, /landBooqableCustomer/);
+});
+
+test("webhook event classify is fail-closed", () => {
+  assert.equal(
+    classifyBooqableWebhookEvent("event=order.reserved&data[id]=order-344"),
+    "order",
+  );
+  assert.equal(
+    classifyBooqableWebhookEvent("event=order.stopped&data[id]=order-344"),
+    "order",
+  );
+  assert.equal(
+    classifyBooqableWebhookEvent("event=customer.created&data[id]=cust-X"),
+    "customer",
+  );
+  assert.equal(
+    classifyBooqableWebhookEvent("event=customer.updated&data[id]=cust-X"),
+    "customer",
+  );
+  assert.equal(classifyBooqableWebhookEvent("data[id]=cust-X"), "ignore");
+  assert.equal(classifyBooqableWebhookEvent("event=foo&data[id]=cust-X"), "ignore");
+  assert.equal(
+    classifyBooqableWebhookEvent("event=customer.deleted&data[id]=cust-X"),
+    "ignore",
+  );
+
+  const webhook = readSrc("app/api/webhooks/booqable/route.ts");
+  assert.match(webhook, /dispatchBooqableWebhookEvent/);
+  assert.match(webhook, /landBooqableCustomer/);
+  assert.match(webhook, /reconcileBooqableOrder/);
+});
+
+test("webhook dispatch executes fail-closed routing", async () => {
+  const lands: string[] = [];
+  const reconciles: string[] = [];
+  const green = {
+    google: { status: "green", error: null },
+    holded: { status: "green", error: null },
+    mailchimp: { status: "green", error: null },
+  };
+  const handlers = {
+    async landCustomer(id: string) {
+      lands.push(id);
+      return { ok: true as const, ignored: false as const, statuses: green };
+    },
+    async reconcileOrder(id: string) {
+      reconciles.push(id);
+      return { ok: true };
+    },
+  };
+
+  const ignored = await dispatchBooqableWebhookEvent(
+    "event=foo&data[id]=cust-X",
+    handlers,
+  );
+  assert.equal(ignored.status, 200);
+  assert.deepEqual(ignored.json, { received: true });
+  assert.equal(ignored.ignoreEvent, "foo");
+  assert.deepEqual(lands, []);
+  assert.deepEqual(reconciles, []);
+
+  const missing = await dispatchBooqableWebhookEvent("data[id]=cust-X", handlers);
+  assert.equal(missing.status, 200);
+  assert.deepEqual(missing.json, { received: true });
+  assert.equal(missing.ignoreEvent, "(missing)");
+  assert.deepEqual(lands, []);
+  assert.deepEqual(reconciles, []);
+
+  const customer = await dispatchBooqableWebhookEvent(
+    "event=customer.created&data[id]=cust-X",
+    handlers,
+  );
+  assert.equal(customer.status, 200);
+  assert.deepEqual(customer.json, { received: true });
+  assert.deepEqual(lands, ["cust-X"]);
+  assert.deepEqual(reconciles, []);
+
+  const landFail = await dispatchBooqableWebhookEvent(
+    "event=customer.updated&data[id]=cust-Y",
+    {
+      ...handlers,
+      async landCustomer(id: string) {
+        lands.push(id);
+        return { ok: false, error: "GET failed" };
+      },
+    },
+  );
+  assert.equal(landFail.status, 500);
+  assert.deepEqual(landFail.json, {
+    error: "Failed to process webhook",
+    message: "GET failed",
+  });
+  assert.deepEqual(reconciles, []);
+
+  const order = await dispatchBooqableWebhookEvent(
+    "event=order.reserved&data[id]=order-344",
+    handlers,
+  );
+  assert.equal(order.status, 200);
+  assert.deepEqual(reconciles, ["order-344"]);
+  assert.deepEqual(lands, ["cust-X", "cust-Y"]);
 });
 
 test("fetch include is the complete source snapshot path", () => {

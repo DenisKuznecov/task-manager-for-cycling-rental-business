@@ -12,6 +12,20 @@ export function sandboxBackfillAllowed(env: EnvMap = process.env): boolean {
   return env.VERCEL_ENV == null || env.VERCEL_ENV === "";
 }
 
+export type BooqableWebhookClass = "order" | "customer" | "ignore";
+
+/** Fail-closed: only `order.*` and customer created/updated may write. */
+export function classifyBooqableWebhookEvent(rawText: string): BooqableWebhookClass {
+  const event = new URLSearchParams(rawText).get("event");
+  if (!event || event.trim() === "") return "ignore";
+  const trimmed = event.trim();
+  if (trimmed.startsWith("order.")) return "order";
+  if (trimmed === "customer.created" || trimmed === "customer.updated") {
+    return "customer";
+  }
+  return "ignore";
+}
+
 /** Webhook body is form-encoded; only `data[id]` identifies the order. */
 export function parseBooqableWebhookOrderId(rawText: string): string | null {
   const id = new URLSearchParams(rawText).get("data[id]");
@@ -30,4 +44,79 @@ export function webhookDeliveryStatus(input: {
     return { status: 500, ignored: false };
   }
   return { status: 200, ignored: false };
+}
+
+export type WebhookLandStatuses = {
+  google: { status: string; error: string | null };
+  holded: { status: string; error: string | null };
+  mailchimp: { status: string; error: string | null };
+};
+
+export type WebhookLandResult =
+  | { ok: true; ignored: true }
+  | { ok: true; ignored: false; statuses: WebhookLandStatuses }
+  | { ok: false; error: string };
+
+export type WebhookDispatchOutcome = {
+  status: 200 | 500;
+  json: { received: true } | { error: string; message?: string };
+  ignoreEvent?: string;
+  land?: { customerId: string; result: WebhookLandResult };
+};
+
+export async function dispatchBooqableWebhookEvent(
+  rawText: string,
+  handlers: {
+    landCustomer: (customerId: string) => Promise<WebhookLandResult>;
+    reconcileOrder: (
+      orderId: string,
+    ) => Promise<{ ok: boolean; code?: string; error?: string }>;
+  },
+): Promise<WebhookDispatchOutcome> {
+  const eventClass = classifyBooqableWebhookEvent(rawText);
+  if (eventClass === "ignore") {
+    const event = new URLSearchParams(rawText).get("event");
+    return {
+      status: 200,
+      json: { received: true },
+      ignoreEvent: event && event.trim() !== "" ? event : "(missing)",
+    };
+  }
+
+  if (eventClass === "customer") {
+    const customerId = parseBooqableWebhookOrderId(rawText);
+    if (!customerId) {
+      return { status: 200, json: { received: true } };
+    }
+    const result = await handlers.landCustomer(customerId);
+    if (!result.ok) {
+      return {
+        status: 500,
+        json: { error: "Failed to process webhook", message: result.error },
+        land: { customerId, result },
+      };
+    }
+    return {
+      status: 200,
+      json: { received: true },
+      land: { customerId, result },
+    };
+  }
+
+  const orderId = parseBooqableWebhookOrderId(rawText);
+  if (!orderId) {
+    return { status: 200, json: { received: true } };
+  }
+  const result = await handlers.reconcileOrder(orderId);
+  const outcome = webhookDeliveryStatus({ allowed: true, result });
+  if (outcome.status === 500) {
+    return {
+      status: 500,
+      json: {
+        error: "Failed to process webhook",
+        message: result.ok ? undefined : result.error,
+      },
+    };
+  }
+  return { status: 200, json: { received: true } };
 }

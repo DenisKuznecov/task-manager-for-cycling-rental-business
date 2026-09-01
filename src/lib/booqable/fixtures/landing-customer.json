@@ -1,0 +1,35 @@
+{
+  "data": {
+    "id": "cust-land-1",
+    "type": "customers",
+    "attributes": {
+      "name": "Landing Rider",
+      "email": "landing@example.test",
+      "legal_type": "person",
+      "properties": {
+        "phone": "+34000000000",
+        "birthday_date": "1990-05-17"
+      }
+    },
+    "relationships": {
+      "properties": {
+        "data": [{ "id": "prop-address-1", "type": "properties" }]
+      }
+    }
+  },
+  "included": [
+    {
+      "id": "prop-address-1",
+      "type": "properties",
+      "attributes": {
+        "identifier": "address",
+        "property_type": "address",
+        "address1": "Carrer de Mallorca 1",
+        "city": "Barcelona",
+        "region": "Catalonia",
+        "zipcode": "08001",
+        "country": "Spain"
+      }
+    }
+  ]
+}

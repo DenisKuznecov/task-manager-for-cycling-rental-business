@@ -371,6 +371,114 @@ SELECT is(
   'second apply updates customer email'
 );
 
+INSERT INTO public.customer_sync (
+  customer_id,
+  google_id,
+  google_status,
+  google_error,
+  holded_id,
+  holded_status,
+  holded_error,
+  mailchimp_id,
+  mailchimp_status,
+  mailchimp_error,
+  synced_at
+)
+SELECT
+  c.id,
+  'people/c-apply',
+  'green',
+  NULL,
+  'holded-apply',
+  'green',
+  NULL,
+  'mc-apply',
+  'red',
+  'Mailchimp: check the audience.',
+  now()
+FROM public.customers c
+WHERE c.booqable_customer_id = 'cust-bq-road';
+
+SELECT ok(
+  (
+    pg_temp.apply_snap(
+      'bq-road',
+      jsonb_set(
+        jsonb_set(pg_temp.road_snap('bq-road'), '{customer,name}', '"Renamed Rider"'),
+        '{customer,email}',
+        '"renamed@example.test"'
+      )
+    )->>'ok'
+  )::boolean,
+  'apply after customer sync is set succeeds'
+);
+
+SELECT is(
+  (
+    SELECT s.google_id
+    FROM public.customer_sync s
+    JOIN public.customers c ON c.id = s.customer_id
+    WHERE c.booqable_customer_id = 'cust-bq-road'
+  ),
+  'people/c-apply',
+  'order apply does not clear landing dest ids'
+);
+
+SELECT is(
+  (
+    SELECT s.google_status
+    FROM public.customer_sync s
+    JOIN public.customers c ON c.id = s.customer_id
+    WHERE c.booqable_customer_id = 'cust-bq-road'
+  ),
+  'green',
+  'order apply does not clear landing status'
+);
+
+SELECT is(
+  (
+    SELECT s.holded_id
+    FROM public.customer_sync s
+    JOIN public.customers c ON c.id = s.customer_id
+    WHERE c.booqable_customer_id = 'cust-bq-road'
+  ),
+  'holded-apply',
+  'order apply does not clear Holded landing dest ids'
+);
+
+SELECT is(
+  (
+    SELECT s.holded_status
+    FROM public.customer_sync s
+    JOIN public.customers c ON c.id = s.customer_id
+    WHERE c.booqable_customer_id = 'cust-bq-road'
+  ),
+  'green',
+  'order apply does not clear Holded landing status'
+);
+
+SELECT is(
+  (
+    SELECT s.mailchimp_id
+    FROM public.customer_sync s
+    JOIN public.customers c ON c.id = s.customer_id
+    WHERE c.booqable_customer_id = 'cust-bq-road'
+  ),
+  'mc-apply',
+  'order apply does not clear Mailchimp landing dest ids'
+);
+
+SELECT is(
+  (
+    SELECT s.mailchimp_status
+    FROM public.customer_sync s
+    JOIN public.customers c ON c.id = s.customer_id
+    WHERE c.booqable_customer_id = 'cust-bq-road'
+  ),
+  'red',
+  'order apply does not clear Mailchimp landing status'
+);
+
 SELECT ok(
   (
     pg_temp.apply_snap(
