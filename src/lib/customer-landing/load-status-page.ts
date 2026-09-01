@@ -17,6 +17,7 @@ export const CUSTOMERS_LANDING_PAGE_SIZE = 10;
 
 export async function loadCustomersLandingPage(
   page: number,
+  query: string = "",
 ): Promise<{
   customers: CustomerLandingListRow[];
   count: number;
@@ -25,14 +26,25 @@ export async function loadCustomersLandingPage(
   const from = (page - 1) * CUSTOMERS_LANDING_PAGE_SIZE;
   const to = from + CUSTOMERS_LANDING_PAGE_SIZE - 1;
   const supabase = await createClient();
-  const { data, error, count } = await supabase
+  let queryBuilder = supabase
     .from("customers")
     .select(
       "id, name, booqable_customer_id, landing_google_status, landing_google_error, landing_holded_status, landing_holded_error, landing_mailchimp_status, landing_mailchimp_error",
       { count: "exact" },
     )
-    .order("name", { ascending: true })
-    .order("id", { ascending: true })
+    .not("landing_at", "is", null);
+
+  const trimmed = query.trim();
+  if (trimmed) {
+    const escaped = trimmed.replace(/[,()]/g, "");
+    if (escaped) {
+      queryBuilder = queryBuilder.ilike("name", `%${escaped}%`);
+    }
+  }
+
+  const { data, error, count } = await queryBuilder
+    .order("landing_at", { ascending: false })
+    .order("id", { ascending: false })
     .range(from, to);
 
   if (error) {

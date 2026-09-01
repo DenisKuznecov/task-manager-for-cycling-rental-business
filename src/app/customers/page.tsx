@@ -11,11 +11,13 @@ export default async function CustomersPage({
 }: {
   searchParams: Promise<{
     page?: string;
+    query?: string;
   }>;
 }) {
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, query: queryParam } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
-  const { customers, count, error } = await loadCustomersLandingPage(page);
+  const query = typeof queryParam === "string" ? queryParam.trim() : "";
+  const { customers, count, error } = await loadCustomersLandingPage(page, query);
   const totalPages = Math.ceil(count / CUSTOMERS_LANDING_PAGE_SIZE);
 
   return (
@@ -37,6 +39,7 @@ export default async function CustomersPage({
         customers={customers}
         currentPage={page}
         totalPages={totalPages}
+        query={query}
       />
     </div>
   );

@@ -20,6 +20,7 @@ function landingStatusPatch(statuses: LandingStatuses): Record<string, string | 
     landing_mailchimp_id: statuses.mailchimp.id,
     landing_mailchimp_status: statuses.mailchimp.status,
     landing_mailchimp_error: statuses.mailchimp.error,
+    landing_at: new Date().toISOString(),
   };
 }
 

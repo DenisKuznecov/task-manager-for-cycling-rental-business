@@ -116,11 +116,18 @@ test("list mapper includes local-only rows and never-landed is not red", () => {
   assert.match(mixed.mailchimp.error ?? "", /Mailchimp/);
 });
 
-test("loader lists every customer and page uses DataLoadError plus pager", () => {
+test("loader lists landed customers newest first and page uses DataLoadError plus query", () => {
   const loader = readSrc("lib/customer-landing/load-status-page.ts");
   assert.match(loader, /from\("customers"\)/);
-  assert.doesNotMatch(loader, /\.not\(\s*["']booqable_customer_id/);
-  assert.doesNotMatch(loader, /\.neq\(\s*["']booqable_customer_id/);
+  assert.match(loader, /\.not\(\s*["']landing_at["'],\s*["']is["'],\s*null\)/);
+  assert.match(loader, /\.order\(\s*["']landing_at["'],\s*\{\s*ascending:\s*false/);
+  assert.match(loader, /\.order\(\s*["']id["'],\s*\{\s*ascending:\s*false/);
+  assert.match(loader, /\.ilike\(\s*["']name["']/);
+  assert.match(loader, /replace\(\/\[,\(\)\]\/g/);
+  assert.match(loader, /if \(escaped\)/);
+  assert.doesNotMatch(loader, /\.order\(\s*["']name["']/);
+  assert.doesNotMatch(loader, /\.order\(\s*["']updated_at["']/);
+  assert.doesNotMatch(loader, /createServiceRoleClient|SUPABASE_SERVICE_ROLE_KEY/);
   assert.match(loader, /createClient\(/);
   assert.match(loader, /loadCustomersLandingPage:/);
   assert.match(loader, /customers: \[\]/);
@@ -138,12 +145,29 @@ test("loader lists every customer and page uses DataLoadError plus pager", () =>
   assert.match(page, /DataLoadError/);
   assert.match(page, /loadCustomersLandingPage/);
   assert.match(page, /page\?: string/);
+  assert.match(page, /query\?: string/);
+  assert.match(page, /typeof queryParam === "string"/);
+  assert.match(page, /queryParam\.trim\(\)/);
+  assert.match(page, /loadCustomersLandingPage\(page, query\)/);
 
   const layout = readSrc("app/customers/layout.tsx");
   assert.match(layout, /redirect\("\/login"\)/);
   assert.match(layout, /redirect\("\/pending"\)/);
   assert.match(layout, /redirect\("\/partner\/overview"\)/);
   assert.match(layout, /redirect\("\/unauthorized"\)/);
+});
+
+test("landing store stamps landing_at on both save paths", () => {
+  const store = readSrc("lib/customer-landing/landing-store.ts");
+  assert.match(store, /function landingStatusPatch/);
+  assert.match(store, /landing_at:\s*new Date\(\)\.toISOString\(\)/);
+  const saveByBooqableId = store.slice(
+    store.indexOf("async saveStatuses("),
+    store.indexOf("async saveStatusesByCustomerId"),
+  );
+  assert.match(saveByBooqableId, /\.update\(landingStatusPatch\(statuses\)\)/);
+  const saveById = store.slice(store.indexOf("saveStatusesByCustomerId"));
+  assert.match(saveById, /\.update\(landingStatusPatch\(statuses\)\)/);
 });
 
 test("table shows local badge and upload only on local-only rows", () => {
@@ -155,6 +179,17 @@ test("table shows local badge and upload only on local-only rows", () => {
   assert.match(table, /variant="error"/);
   assert.match(table, /variant="neutral"/);
   assert.match(table, /landLocalCustomerAction/);
+  assert.match(table, /TextField/);
+  assert.match(table, /SEARCH_DEBOUNCE_MS = 300/);
+  assert.match(table, /function buildHref|const buildHref/);
+  assert.match(table, /params\.set\("query"/);
+  assert.match(table, /router\.push\(buildHref\(search, 1\)\)/);
+  assert.match(table, /router\.push\(buildHref\(query, page\)\)/);
+  assert.match(table, /query\.trim\(\)/);
+  assert.match(
+    table,
+    /query\.trim\(\)\s*\?\s*"Try adjusting your search\."\s*:\s*"This is not a full customer directory/,
+  );
 });
 
 test("local upload with no email reds Mailchimp and keeps a local next action", async () => {
@@ -387,15 +422,31 @@ test("page and action do not use the service role", () => {
   assert.doesNotMatch(partner, /loadCustomersLandingPage/);
   assert.doesNotMatch(partner, /landLocalCustomer/);
 
-  const migration = readFileSync(
+  const staffGrant = readFileSync(
     join(root, "supabase/migrations/20260831140000_customers_landing_staff_update.sql"),
     "utf8",
   );
-  assert.match(migration, /Staff can update customer landing status/);
-  assert.match(migration, /FOR UPDATE/);
-  assert.match(migration, /REVOKE UPDATE ON TABLE public.customers FROM authenticated;/);
+  assert.match(staffGrant, /Staff can update customer landing status/);
+  assert.match(staffGrant, /FOR UPDATE/);
+  assert.match(staffGrant, /REVOKE UPDATE ON TABLE public.customers FROM authenticated;/);
   assert.match(
-    migration,
+    staffGrant,
     /GRANT UPDATE \(\s*landing_google_id,\s*landing_google_status,\s*landing_google_error,\s*landing_holded_id,\s*landing_holded_status,\s*landing_holded_error,\s*landing_mailchimp_id,\s*landing_mailchimp_status,\s*landing_mailchimp_error\s*\) ON TABLE public.customers TO authenticated;/,
+  );
+
+  const landingAt = readFileSync(
+    join(root, "supabase/migrations/20260901120000_customers_landing_at.sql"),
+    "utf8",
+  );
+  assert.match(landingAt, /ADD COLUMN IF NOT EXISTS landing_at/);
+  assert.match(landingAt, /landing_at = updated_at/);
+  assert.match(landingAt, /landing_google_status IS NOT NULL/);
+  assert.match(landingAt, /landing_holded_status IS NOT NULL/);
+  assert.match(landingAt, /landing_mailchimp_status IS NOT NULL/);
+  assert.match(landingAt, /CREATE INDEX IF NOT EXISTS customers_landing_at_id_desc_idx/);
+  assert.match(landingAt, /REVOKE UPDATE ON TABLE public.customers FROM authenticated;/);
+  assert.match(
+    landingAt,
+    /GRANT UPDATE \(\s*landing_google_id,\s*landing_google_status,\s*landing_google_error,\s*landing_holded_id,\s*landing_holded_status,\s*landing_holded_error,\s*landing_mailchimp_id,\s*landing_mailchimp_status,\s*landing_mailchimp_error,\s*landing_at\s*\) ON TABLE public.customers TO authenticated;/,
   );
 });

@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useTransition } from "react";
+import React, { useEffect, useState, useTransition } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { FeatherAlertTriangle } from "@subframe/core";
 import { Alert } from "@/ui/components/Alert";
 import { Badge } from "@/ui/components/Badge";
 import { Button } from "@/ui/components/Button";
 import { Table } from "@/ui/components/Table";
+import { TextField } from "@/ui/components/TextField";
 import { TablePagination } from "@/src/components/TablePagination";
 import { landLocalCustomerAction } from "@/src/lib/customer-landing/land-local-customer-action";
 import type {
@@ -18,7 +19,10 @@ interface CustomersLandingTableProps {
   customers: CustomerLandingListRow[];
   currentPage: number;
   totalPages: number;
+  query: string;
 }
+
+const SEARCH_DEBOUNCE_MS = 300;
 
 function DestStatusCell({ cell }: { cell: DestCell }) {
   if (cell.status === "green") {
@@ -43,12 +47,38 @@ export function CustomersLandingTable({
   customers,
   currentPage,
   totalPages,
+  query,
 }: CustomersLandingTableProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const [search, setSearch] = useState(query);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const [uploadingId, setUploadingId] = useState<string | null>(null);
   const [isUploading, startUploading] = useTransition();
+
+  useEffect(() => {
+    setSearch(query);
+  }, [query]);
+
+  const buildHref = (nextQuery: string, nextPage: number) => {
+    const params = new URLSearchParams();
+    const trimmed = nextQuery.trim();
+    if (trimmed) params.set("query", trimmed);
+    if (nextPage !== 1) params.set("page", String(nextPage));
+    const queryString = params.toString();
+    return queryString ? `${pathname}?${queryString}` : pathname;
+  };
+
+  useEffect(() => {
+    if (search === query) return;
+
+    const handle = setTimeout(() => {
+      router.push(buildHref(search, 1));
+    }, SEARCH_DEBOUNCE_MS);
+
+    return () => clearTimeout(handle);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [search, query, pathname, router]);
 
   const handleUpload = (customerId: string) => {
     if (isUploading) return;
@@ -82,11 +112,27 @@ export function CustomersLandingTable({
           description={uploadError}
         />
       ) : null}
+      <div className="flex w-full items-center justify-end gap-2">
+        <TextField label="" helpText="">
+          <TextField.Input
+            placeholder="Search by name"
+            value={search}
+            onChange={(event: React.ChangeEvent<HTMLInputElement>) =>
+              setSearch(event.target.value)
+            }
+          />
+        </TextField>
+      </div>
       <div className="flex w-full flex-col items-start gap-6 overflow-hidden overflow-x-auto mobile:overflow-auto mobile:max-w-full">
         {customers.length === 0 ? (
           <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-solid border-neutral-border bg-default-background py-12">
             <span className="text-body-bold font-body-bold text-default-font text-center">
               No customers found
+            </span>
+            <span className="text-body font-body text-subtext-color text-center">
+              {query.trim()
+                ? "Try adjusting your search."
+                : "This is not a full customer directory. Customers appear here after they land."}
             </span>
           </div>
         ) : (
@@ -144,10 +190,7 @@ export function CustomersLandingTable({
         currentPage={currentPage}
         totalPages={totalPages}
         onPageChange={(page) => {
-          const params = new URLSearchParams();
-          if (page !== 1) params.set("page", String(page));
-          const queryString = params.toString();
-          router.push(queryString ? `${pathname}?${queryString}` : pathname);
+          router.push(buildHref(query, page));
         }}
       />
     </div>
