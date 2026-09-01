@@ -29,7 +29,7 @@ export async function loadCustomersLandingPage(
   let queryBuilder = supabase
     .from("customer_sync_list")
     .select(
-      "id, name, booqable_customer_id, google_status, google_error, holded_status, holded_error, mailchimp_status, mailchimp_error",
+      "id, name, email, phone, birthday, address_street, address_city, address_region, address_zip, address_country, booqable_customer_id, google_status, google_error, holded_status, holded_error, mailchimp_status, mailchimp_error",
       { count: "exact" },
     );
 

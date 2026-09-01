@@ -1,5 +1,4 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
-import { createServiceRoleClient } from "../workshop/application/reconcile-order.ts";
+import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { presentString } from "./dest-error.ts";
 import type {
   CustomerPassport,
@@ -29,22 +28,47 @@ function asText(value: unknown): string | null {
   return typeof value === "string" && value.trim() !== "" ? value : null;
 }
 
+function createServiceRoleClient(): SupabaseClient {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error(
+      "Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY.",
+    );
+  }
+  return createClient(url, key);
+}
+
+export function identityUpsertRow(
+  passport: CustomerPassport,
+): Record<string, string | null> {
+  const row: Record<string, string | null> = {
+    booqable_customer_id: passport.booqableCustomerId,
+  };
+  const name = presentString(passport.name);
+  const email = presentString(passport.email);
+  const phone = presentString(passport.phone);
+  const birthday = presentString(passport.birthday);
+  if (name) row.name = name;
+  if (email) row.email = email;
+  if (phone) row.phone = phone;
+  if (birthday) row.birthday = birthday;
+  if (passport.address) {
+    row.address_street = presentString(passport.address.street) ?? null;
+    row.address_city = presentString(passport.address.city) ?? null;
+    row.address_region = presentString(passport.address.region) ?? null;
+    row.address_zip = presentString(passport.address.zip) ?? null;
+    row.address_country = presentString(passport.address.country) ?? null;
+  }
+  return row;
+}
+
 export function createSupabaseLandingStore(
   supabase: SupabaseClient = createServiceRoleClient(),
 ): LandingStore {
   return {
     async upsertIdentity(passport: CustomerPassport): Promise<{ storedIds: DestIds }> {
-      const row: Record<string, string> = {
-        booqable_customer_id: passport.booqableCustomerId,
-      };
-      const name = presentString(passport.name);
-      const email = presentString(passport.email);
-      const phone = presentString(passport.phone);
-      const birthday = presentString(passport.birthday);
-      if (name) row.name = name;
-      if (email) row.email = email;
-      if (phone) row.phone = phone;
-      if (birthday) row.birthday = birthday;
+      const row = identityUpsertRow(passport);
 
       const { data, error } = await supabase
         .from("customers")

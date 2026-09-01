@@ -103,6 +103,10 @@ export function CustomersLandingTable({
             header={
               <Table.HeaderRow>
                 <Table.HeaderCell>Name</Table.HeaderCell>
+                <Table.HeaderCell>Email</Table.HeaderCell>
+                <Table.HeaderCell>Phone</Table.HeaderCell>
+                <Table.HeaderCell>Birthday</Table.HeaderCell>
+                <Table.HeaderCell>Address</Table.HeaderCell>
                 <Table.HeaderCell>Google</Table.HeaderCell>
                 <Table.HeaderCell>Holded</Table.HeaderCell>
                 <Table.HeaderCell>Mailchimp</Table.HeaderCell>
@@ -114,6 +118,26 @@ export function CustomersLandingTable({
                 <Table.Cell>
                   <span className="whitespace-nowrap text-body-bold font-body-bold text-default-font">
                     {customer.name}
+                  </span>
+                </Table.Cell>
+                <Table.Cell>
+                  <span className="whitespace-nowrap text-body font-body text-neutral-500">
+                    {customer.email}
+                  </span>
+                </Table.Cell>
+                <Table.Cell>
+                  <span className="whitespace-nowrap text-body font-body text-neutral-500">
+                    {customer.phone}
+                  </span>
+                </Table.Cell>
+                <Table.Cell>
+                  <span className="whitespace-nowrap text-body font-body text-neutral-500">
+                    {customer.birthday}
+                  </span>
+                </Table.Cell>
+                <Table.Cell>
+                  <span className="whitespace-nowrap text-body font-body text-neutral-500">
+                    {customer.address}
                   </span>
                 </Table.Cell>
                 <Table.Cell>

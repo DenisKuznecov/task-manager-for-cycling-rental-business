@@ -18,6 +18,7 @@ import {
   mailchimpSubscriberHash,
   writeMailchimpMember,
 } from "./lib/customer-landing/mailchimp.ts";
+import { identityUpsertRow } from "./lib/customer-landing/landing-store.ts";
 import type {
   DestIds,
   DestName,
@@ -118,6 +119,43 @@ function jsonResponse(status: number, body: unknown): Response {
     headers: { "Content-Type": "application/json" },
   });
 }
+
+test("upsertIdentity persists address as a unit and leaves it when passport.address is null", () => {
+  const full = identityUpsertRow(passport());
+  assert.equal(full.address_street, "Carrer de Mallorca 1");
+  assert.equal(full.address_city, "Barcelona");
+  assert.equal(full.address_region, "Catalonia");
+  assert.equal(full.address_zip, "08001");
+  assert.equal(full.address_country, "Spain");
+
+  const cityOnly = identityUpsertRow(
+    passport({
+      address: {
+        street: null,
+        city: "Barcelona",
+        region: null,
+        zip: null,
+        country: null,
+      },
+    }),
+  );
+  assert.equal(cityOnly.address_city, "Barcelona");
+  assert.equal("address_street" in cityOnly, true);
+  assert.equal("address_region" in cityOnly, true);
+  assert.equal("address_zip" in cityOnly, true);
+  assert.equal("address_country" in cityOnly, true);
+  assert.equal(cityOnly.address_street, null);
+  assert.equal(cityOnly.address_region, null);
+  assert.equal(cityOnly.address_zip, null);
+  assert.equal(cityOnly.address_country, null);
+
+  const noAddress = identityUpsertRow(passport({ address: null }));
+  assert.equal("address_street" in noAddress, false);
+  assert.equal("address_city" in noAddress, false);
+  assert.equal("address_region" in noAddress, false);
+  assert.equal("address_zip" in noAddress, false);
+  assert.equal("address_country" in noAddress, false);
+});
 
 test("landing parser maps GET passport including address and ignores form-only fields", () => {
   const parsed = parseLandingCustomer(loadLandingFixture());

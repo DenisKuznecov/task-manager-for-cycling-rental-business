@@ -22,6 +22,14 @@ function dbRow(
   return {
     id: "cust-1",
     name: "Ada",
+    email: null,
+    phone: null,
+    birthday: null,
+    address_street: null,
+    address_city: null,
+    address_region: null,
+    address_zip: null,
+    address_country: null,
     booqable_customer_id: "bq-1",
     google_status: "green",
     google_error: null,
@@ -65,12 +73,60 @@ test("list mapper treats empty name as Unknown and never-landed is not red", () 
   assert.match(mixed.mailchimp.error ?? "", /Mailchimp/);
 });
 
+test("list mapper formats contact fields and dashes missing ones", () => {
+  const full = toLandingListRow(
+    dbRow({
+      email: "ada@example.test",
+      phone: "+34000000000",
+      birthday: "1990-05-17",
+      address_street: "Carrer de Mallorca 1",
+      address_city: "Barcelona",
+      address_region: "Catalonia",
+      address_zip: "08001",
+      address_country: "Spain",
+    }),
+  );
+  assert.equal(full.email, "ada@example.test");
+  assert.equal(full.phone, "+34000000000");
+  assert.equal(full.birthday, "17/05/1990");
+  assert.equal(
+    full.address,
+    "Carrer de Mallorca 1, Barcelona, Catalonia, 08001, Spain",
+  );
+
+  const cityOnly = toLandingListRow(dbRow({ address_city: "Barcelona" }));
+  assert.equal(cityOnly.address, "Barcelona");
+
+  const streetAndCity = toLandingListRow(
+    dbRow({
+      address_street: "Carrer de Mallorca 1",
+      address_city: "Barcelona",
+    }),
+  );
+  assert.equal(streetAndCity.address, "Carrer de Mallorca 1, Barcelona");
+
+  const missing = toLandingListRow(dbRow());
+  assert.equal(missing.email, "—");
+  assert.equal(missing.phone, "—");
+  assert.equal(missing.birthday, "—");
+  assert.equal(missing.address, "—");
+
+  const unnamed = toLandingListRow(dbRow({ name: "   " }));
+  assert.equal(unnamed.name, "Unknown");
+  assert.equal(unnamed.email, "—");
+});
+
 test("loader lists customer_sync_list newest first and page uses DataLoadError plus query", () => {
   const loader = readSrc("lib/customer-landing/load-status-page.ts");
   assert.match(loader, /from\("customer_sync_list"\)/);
+  assert.match(
+    loader,
+    /id, name, email, phone, birthday, address_street, address_city, address_region, address_zip, address_country, booqable_customer_id/,
+  );
   assert.match(loader, /\.order\(\s*["']synced_at["'],\s*\{\s*ascending:\s*false/);
   assert.match(loader, /\.order\(\s*["']id["'],\s*\{\s*ascending:\s*false/);
   assert.match(loader, /\.ilike\(\s*["']name["']/);
+  assert.doesNotMatch(loader, /\.ilike\(\s*["']email["']/);
   assert.match(loader, /replace\(\/\[,\(\)\]\/g/);
   assert.match(loader, /if \(escaped\)/);
   assert.doesNotMatch(loader, /\.order\(\s*["']name["']/);
@@ -101,6 +157,9 @@ test("loader lists customer_sync_list newest first and page uses DataLoadError p
 test("landing store upserts customer_sync and stamps synced_at", () => {
   const store = readSrc("lib/customer-landing/landing-store.ts");
   assert.match(store, /function syncStatusPatch/);
+  assert.match(store, /identityUpsertRow\(passport\)/);
+  assert.match(store, /if \(passport\.address\)/);
+  assert.match(store, /address_street/);
   assert.match(store, /synced_at:\s*new Date\(\)\.toISOString\(\)/);
   assert.match(store, /from\("customer_sync"\)/);
   assert.match(store, /\.upsert\(/);
@@ -114,6 +173,11 @@ test("table searches by name and has no upload control", () => {
   assert.doesNotMatch(table, /Upload/);
   assert.doesNotMatch(table, /landLocalCustomer/);
   assert.doesNotMatch(table, /Not from Booqable/);
+  assert.doesNotMatch(table, /Search by name or email/);
+  assert.match(
+    table,
+    /HeaderCell>Name<\/Table.HeaderCell>\s*<Table.HeaderCell>Email<\/Table.HeaderCell>\s*<Table.HeaderCell>Phone<\/Table.HeaderCell>\s*<Table.HeaderCell>Birthday<\/Table.HeaderCell>\s*<Table.HeaderCell>Address<\/Table.HeaderCell>\s*<Table.HeaderCell>Google<\/Table.HeaderCell>\s*<Table.HeaderCell>Holded<\/Table.HeaderCell>\s*<Table.HeaderCell>Mailchimp<\/Table.HeaderCell>/,
+  );
   assert.match(table, /variant="success"/);
   assert.match(table, /variant="error"/);
   assert.match(table, /variant="neutral"/);
@@ -174,4 +238,28 @@ test("page does not use the service role and upload is gone", () => {
   assert.doesNotMatch(migration, /CREATE POLICY "Staff can update customer landing status"/);
   assert.doesNotMatch(migration, /landing_at = updated_at/);
   assert.doesNotMatch(migration, /GRANT UPDATE \(\s*landing_/);
+
+  const addressMigration = readFileSync(
+    join(root, "supabase/migrations/20260901140000_customers_landing_address.sql"),
+    "utf8",
+  );
+  assert.match(addressMigration, /ADD COLUMN IF NOT EXISTS address_street text/);
+  assert.match(addressMigration, /ADD COLUMN IF NOT EXISTS address_city text/);
+  assert.match(addressMigration, /ADD COLUMN IF NOT EXISTS address_region text/);
+  assert.match(addressMigration, /ADD COLUMN IF NOT EXISTS address_zip text/);
+  assert.match(addressMigration, /ADD COLUMN IF NOT EXISTS address_country text/);
+  assert.match(addressMigration, /c\.email/);
+  assert.match(addressMigration, /c\.phone/);
+  assert.match(addressMigration, /c\.birthday/);
+  assert.match(addressMigration, /c\.address_street/);
+  assert.match(addressMigration, /c\.address_city/);
+  assert.match(addressMigration, /c\.address_region/);
+  assert.match(addressMigration, /c\.address_zip/);
+  assert.match(addressMigration, /c\.address_country/);
+  assert.match(addressMigration, /DROP VIEW IF EXISTS public\.customer_sync_list/);
+  assert.match(addressMigration, /security_invoker = true/);
+  assert.match(
+    addressMigration,
+    /GRANT SELECT ON TABLE public.customer_sync_list TO authenticated/,
+  );
 });
