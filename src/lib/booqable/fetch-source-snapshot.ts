@@ -272,3 +272,15 @@ export async function fetchAllOrdersListPage(
 ): Promise<ReservedListPage> {
   return fetchOrderListPage(page, {}, env);
 }
+
+/** GET one customer. `include=properties` is required for structured address. */
+export async function fetchLandingCustomerDocument(
+  booqableCustomerId: string,
+  env: EnvMap = process.env,
+): Promise<unknown> {
+  const { slug } = booqableConfig(env);
+  const url = `https://${slug}.booqable.com/api/4/customers/${encodeURIComponent(
+    booqableCustomerId,
+  )}?include=properties`;
+  return booqableGetJson(url, env);
+}
