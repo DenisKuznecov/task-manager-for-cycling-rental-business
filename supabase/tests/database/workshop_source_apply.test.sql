@@ -274,7 +274,7 @@ SELECT is(
     WHERE o.booqable_order_id = 'bq-road'
       AND i.stage = 'preparation'
   ),
-  19,
+  20,
   'identified road copies ROAD items'
 );
 
@@ -844,7 +844,7 @@ SELECT ok(
         'reserved',
         '2026-12-10T10:00:00Z',
         jsonb_build_array(
-          pg_temp.assignment('stock-a', 'sip-a', '["workshop-gravel-bike"]'::jsonb)
+          pg_temp.assignment('stock-a', 'sip-a', '["workshop-e-mtb-bike"]'::jsonb)
         ),
         jsonb_build_array(
           pg_temp.line('bq-prep-replace-bike', 'Road Bike', 1, NULL, 1),
@@ -853,7 +853,7 @@ SELECT ok(
       )
     )->>'ok'
   )::boolean,
-  'to_prepare gravel re-apply succeeds'
+  'to_prepare e-mtb re-apply succeeds'
 );
 
 SELECT is(
@@ -919,7 +919,7 @@ SELECT is(
     WHERE o.booqable_order_id = 'bq-prep-replace'
       AND i.stage = 'preparation'
   ),
-  19,
+  20,
   'to_prepare road restore recopies ROAD items'
 );
 
@@ -932,6 +932,96 @@ SELECT is(
   ),
   false,
   'to_prepare road restore clears warning'
+);
+
+-- to_prepare road → gravel replaces onto the gravel catalog
+SELECT ok(
+  (pg_temp.apply_snap('bq-prep-gravel', pg_temp.road_snap('bq-prep-gravel'))->>'ok')::boolean,
+  'to_prepare gravel replace setup succeeds'
+);
+
+SELECT ok(
+  (
+    pg_temp.apply_snap(
+      'bq-prep-gravel',
+      pg_temp.snap(
+        'bq-prep-gravel',
+        'reserved',
+        '2026-12-10T10:00:00Z',
+        jsonb_build_array(
+          pg_temp.assignment('stock-a', 'sip-a', '["workshop-gravel-bike"]'::jsonb)
+        ),
+        jsonb_build_array(
+          pg_temp.line('bq-prep-gravel-bike', 'Road Bike', 1, NULL, 1),
+          pg_temp.line('bq-prep-gravel-extra', 'Helmet', 1, NULL, 2)
+        )
+      )
+    )->>'ok'
+  )::boolean,
+  'to_prepare gravel re-apply succeeds'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.bike_task_items i
+    JOIN public.bike_tasks t ON t.id = i.task_id
+    JOIN public.orders o ON o.id = t.order_id
+    WHERE o.booqable_order_id = 'bq-prep-gravel'
+      AND i.stage = 'preparation'
+  ),
+  20,
+  'to_prepare gravel replace copies 20 items'
+);
+
+SELECT is(
+  (
+    SELECT i.label
+    FROM public.bike_task_items i
+    JOIN public.bike_tasks t ON t.id = i.task_id
+    JOIN public.orders o ON o.id = t.order_id
+    WHERE o.booqable_order_id = 'bq-prep-gravel'
+      AND i.stage = 'preparation'
+    ORDER BY i.sort_order DESC
+    LIMIT 1
+  ),
+  'Attach a haribo pouch to the bike',
+  'to_prepare gravel replace last item is Haribo'
+);
+
+SELECT is(
+  (
+    SELECT d.definition_key
+    FROM public.bike_tasks t
+    JOIN public.orders o ON o.id = t.order_id
+    JOIN public.checklist_definitions d ON d.id = t.selected_definition_id
+    WHERE o.booqable_order_id = 'bq-prep-gravel'
+  ),
+  'gravel_bike_preparation',
+  'to_prepare gravel replace selects gravel_bike_preparation'
+);
+
+SELECT is(
+  (
+    SELECT d.version
+    FROM public.bike_tasks t
+    JOIN public.orders o ON o.id = t.order_id
+    JOIN public.checklist_definitions d ON d.id = t.selected_definition_id
+    WHERE o.booqable_order_id = 'bq-prep-gravel'
+  ),
+  1,
+  'to_prepare gravel replace selects gravel v1'
+);
+
+SELECT is(
+  (
+    SELECT t.has_configuration_warning
+    FROM public.bike_tasks t
+    JOIN public.orders o ON o.id = t.order_id
+    WHERE o.booqable_order_id = 'bq-prep-gravel'
+  ),
+  false,
+  'to_prepare gravel replace clears warning'
 );
 
 -- started/stopped must not cancel
@@ -1096,20 +1186,31 @@ SELECT ok(
       )
     )->>'ok'
   )::boolean,
-  'unknown gravel tag still creates a task'
+  'gravel tag still creates a task'
 );
 
 SELECT is(
   (
-    SELECT t.has_configuration_warning AND count(i.id) = 0
+    SELECT t.has_configuration_warning
     FROM public.bike_tasks t
     JOIN public.orders o ON o.id = t.order_id
-    LEFT JOIN public.bike_task_items i ON i.task_id = t.id
     WHERE o.booqable_order_id = 'bq-gravel'
-    GROUP BY t.has_configuration_warning
   ),
-  true,
-  'gravel tag is warning-only with no prep items'
+  false,
+  'gravel tag has no configuration warning'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.bike_task_items i
+    JOIN public.bike_tasks t ON t.id = i.task_id
+    JOIN public.orders o ON o.id = t.order_id
+    WHERE o.booqable_order_id = 'bq-gravel'
+      AND i.stage = 'preparation'
+  ),
+  20,
+  'gravel tag copies ROAD snapshot items'
 );
 
 SELECT pg_temp.create_staff(
@@ -1128,10 +1229,10 @@ SELECT is(
     public.workshop_start_preparation(
       (SELECT t.id FROM public.bike_tasks t JOIN public.orders o ON o.id = t.order_id WHERE o.booqable_order_id = 'bq-gravel'),
       1
-    )->>'code'
+    )->>'status'
   ),
-  'CONFIGURATION_BLOCKED',
-  'unknown tag blocks start preparation'
+  'being_prepared',
+  'gravel tag start preparation → being_prepared'
 );
 
 RESET ROLE;
@@ -1158,10 +1259,17 @@ SELECT is(
 
 RESET ROLE;
 
-CREATE TEMP TABLE drift_items AS
-SELECT count(*)::integer AS n, min(t.version) AS version
-FROM public.bike_task_items i
-JOIN public.bike_tasks t ON t.id = i.task_id
+CREATE TEMP TABLE drift_before AS
+SELECT
+  t.selected_definition_id,
+  ARRAY(
+    SELECT i.id
+    FROM public.bike_task_items i
+    WHERE i.task_id = t.id
+      AND i.stage = 'preparation'
+    ORDER BY i.id
+  ) AS item_ids
+FROM public.bike_tasks t
 JOIN public.orders o ON o.id = t.order_id
 WHERE o.booqable_order_id = 'bq-drift';
 
@@ -1210,14 +1318,37 @@ SELECT is(
 
 SELECT is(
   (
-    SELECT count(*)::integer
+    SELECT t.selected_definition_id
+    FROM public.bike_tasks t
+    JOIN public.orders o ON o.id = t.order_id
+    WHERE o.booqable_order_id = 'bq-drift'
+  ),
+  (SELECT selected_definition_id FROM drift_before),
+  'tag drift keeps selected_definition_id'
+);
+
+SELECT isnt(
+  (SELECT selected_definition_id FROM drift_before),
+  (
+    SELECT d.id
+    FROM public.checklist_definitions d
+    WHERE d.definition_key = 'gravel_bike_preparation' AND d.version = 1
+  ),
+  'tag drift selected_definition_id is not gravel v1'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.id
     FROM public.bike_task_items i
     JOIN public.bike_tasks t ON t.id = i.task_id
     JOIN public.orders o ON o.id = t.order_id
     WHERE o.booqable_order_id = 'bq-drift'
+      AND i.stage = 'preparation'
+    ORDER BY i.id
   ),
-  (SELECT n FROM drift_items),
-  'tag drift freezes checklist items'
+  (SELECT item_ids FROM drift_before),
+  'tag drift freezes checklist item ids'
 );
 
 -- After ready_for_pickup extras 1→0
@@ -1468,7 +1599,7 @@ SET enabled = true,
     definition_id = (
       SELECT d.id
       FROM public.checklist_definitions d
-      WHERE d.definition_key = 'e_city_bike_preparation' AND d.version = 1
+      WHERE d.definition_key = 'e_city_bike_preparation' AND d.version = 2
     )
 WHERE tag = 'workshop-e-city-bike';
 
@@ -1516,7 +1647,7 @@ SELECT is(
     WHERE o.booqable_order_id = 'bq-map-enable'
       AND i.stage = 'preparation'
   ),
-  22,
+  23,
   'mapping enable on unchanged snapshot copies e-city items'
 );
 
