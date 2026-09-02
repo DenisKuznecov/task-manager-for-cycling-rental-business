@@ -190,6 +190,13 @@ INSERT INTO public.orders (
     9207,
     timestamptz '2026-09-14 12:00:00+02',
     timestamptz '2026-09-19 19:00:00+02'
+  ),
+  (
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0008',
+    'bq-addons-section',
+    9208,
+    timestamptz '2026-09-14 12:00:00+02',
+    timestamptz '2026-09-19 19:00:00+02'
   );
 
 -- Two bundles
@@ -243,6 +250,17 @@ INSERT INTO public.order_items (
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-b-extra', 'dup-b', 'Extra B', 1, 4),
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-other', NULL, 'Unrelated extra', 1, 5);
 
+-- Section → bundle → bike + extras (and an extra nested under the bike)
+INSERT INTO public.order_items (
+  order_id, booqable_line_id, parent_booqable_line_id, title, quantity, position, line_type
+) VALUES
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0008', 'sec-root', NULL, 'Road section', 1, 1, 'section'),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0008', 'sec-bundle', 'sec-root', 'Road bundle nested', 1, 2, 'charge'),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0008', 'sec-bike', 'sec-bundle', 'Section Focus', 1, 3, 'charge'),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0008', 'sec-helm', 'sec-bundle', 'Section helmet', 1, 4, 'charge'),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0008', 'sec-nested', 'sec-bike', 'Section nest extra', 1, 5, 'charge'),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0008', 'sec-no', 'sec-bundle', 'No section pedals', 1, 6, 'charge');
+
 CREATE TEMP TABLE ws_addon_ids (
   bundle_m uuid,
   bundle_s uuid,
@@ -252,7 +270,8 @@ CREATE TEMP TABLE ws_addon_ids (
   share_b uuid,
   empty uuid,
   legacy uuid,
-  titles uuid
+  titles uuid,
+  section uuid
 );
 
 INSERT INTO ws_addon_ids
@@ -283,6 +302,9 @@ SELECT
   ),
   pg_temp.make_task(
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'stock-dup', 'ECF/D-1', 'Same Title Bike', NULL
+  ),
+  pg_temp.make_task(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0008', 'stock-sec', 'ECF/N-1', 'Section Focus', 'sec-bike'
   );
 
 GRANT SELECT ON ws_addon_ids TO authenticated;
@@ -346,13 +368,13 @@ SET ROLE authenticated;
 
 SELECT is(
   pg_temp.addon_titles((SELECT bundle_m FROM ws_addon_ids)),
-  ARRAY['Focus M', 'Helmet M', 'No powermeter', 'Road bundle M']::text[],
-  'two bundles: M task sees only the M package'
+  ARRAY['Focus M', 'Helmet M', 'No powermeter']::text[],
+  'two bundles: M task sees bike and extras, not the wrapper'
 );
 SELECT is(
   pg_temp.addon_titles((SELECT bundle_s FROM ws_addon_ids)),
-  ARRAY['Focus S', 'Helmet S', 'Road bundle S']::text[],
-  'two bundles: S task sees only the S package'
+  ARRAY['Focus S', 'Helmet S']::text[],
+  'two bundles: S task sees bike and extras, not the wrapper'
 );
 SELECT is(
   (
@@ -402,8 +424,13 @@ SELECT is(
 
 SELECT is(
   pg_temp.addon_titles((SELECT legacy FROM ws_addon_ids)),
-  ARRAY['Legacy bundle', 'Legacy Focus', 'Legacy helmet']::text[],
-  'legacy null row id: unique title match returns that package'
+  ARRAY['Legacy Focus', 'Legacy helmet']::text[],
+  'legacy null row id: unique title match omits the wrapper'
+);
+SELECT is(
+  pg_temp.addon_titles((SELECT section FROM ws_addon_ids)),
+  ARRAY['No section pedals', 'Section Focus', 'Section helmet', 'Section nest extra']::text[],
+  'section over bundle: omits section and bundle, keeps bike and extras'
 );
 
 SELECT is(
