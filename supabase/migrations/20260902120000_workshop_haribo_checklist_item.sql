@@ -1,5 +1,7 @@
 -- Workshop prep catalogs: ROAD v3 (20 items), e-city v2 (23 items),
 -- plus independent gravel/e-road v1 snapshot copies of Road v3.
+-- Start preparation adopts the new mapping on to_prepare so a catalog remap
+-- does not CONFIGURATION_BLOCK until a Booqable sync.
 -- Append-only catalog inserts; mappings are the active-version pointer.
 -- Idempotent. Apply locally only.
 
@@ -177,3 +179,103 @@ FROM public.checklist_definitions d
 WHERE m.tag = 'workshop-e-road-bike'
   AND d.definition_key = 'e_road_bike_preparation'
   AND d.version = 1;
+
+CREATE OR REPLACE FUNCTION private.workshop_start_preparation(
+  p_task_id uuid,
+  p_expected_version integer
+)
+RETURNS jsonb
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = ''
+AS $$
+DECLARE
+  v_ctx private.workshop_begin_result;
+  v_enabled boolean;
+  v_map_def uuid;
+  v_task public.bike_tasks;
+  v_has_prep boolean;
+BEGIN
+  v_ctx := private.workshop_begin_command(p_task_id, p_expected_version, false);
+  IF v_ctx.err IS NOT NULL THEN
+    RETURN v_ctx.err;
+  END IF;
+
+  IF v_ctx.status <> 'to_prepare'::public.bike_task_status THEN
+    RETURN private.workshop_err('INVALID_TRANSITION', 'Preparation can only start from To Prepare.');
+  END IF;
+
+  SELECT m.enabled, m.definition_id
+  INTO v_enabled, v_map_def
+  FROM public.checklist_tag_mappings m
+  WHERE m.tag = v_ctx.workshop_tag;
+
+  IF v_ctx.workshop_tag IS NULL
+     OR v_enabled IS DISTINCT FROM true
+     OR v_map_def IS NULL
+  THEN
+    RETURN private.workshop_err(
+      'CONFIGURATION_BLOCKED',
+      'This bike has no recognized workshop checklist.'
+    );
+  END IF;
+
+  SELECT EXISTS (
+    SELECT 1
+    FROM public.bike_task_items i
+    WHERE i.task_id = v_ctx.task_id
+      AND i.stage = 'preparation'::public.bike_task_item_stage
+  ) INTO v_has_prep;
+
+  IF v_ctx.selected_definition_id IS DISTINCT FROM v_map_def
+     OR NOT v_has_prep
+     OR v_ctx.has_configuration_warning
+  THEN
+    PERFORM private.workshop_replace_preparation_items(v_ctx.task_id, v_map_def);
+    UPDATE public.bike_tasks
+    SET selected_definition_id = v_map_def,
+        has_configuration_warning = false
+    WHERE id = v_ctx.task_id;
+  END IF;
+
+  v_task := private.workshop_bump_task(v_ctx.task_id, 'being_prepared');
+  PERFORM private.workshop_record_event(
+    v_task.id, 'transition', v_ctx.status, v_task.status, v_task.version,
+    v_ctx.user_id, v_ctx.first_name, v_ctx.last_name, NULL
+  );
+  RETURN private.workshop_ok(v_task);
+END;
+$$;
+
+-- Align waiting tasks so the queue/task page is current before anyone clicks Start.
+-- Do not touch in-progress rows.
+DO $$
+DECLARE
+  r record;
+BEGIN
+  FOR r IN
+    SELECT t.id, m.definition_id
+    FROM public.bike_tasks t
+    JOIN public.checklist_tag_mappings m ON m.tag = t.workshop_tag
+    WHERE t.status = 'to_prepare'::public.bike_task_status
+      AND m.enabled
+      AND m.definition_id IS NOT NULL
+      AND (
+        t.selected_definition_id IS DISTINCT FROM m.definition_id
+        OR t.has_configuration_warning
+        OR NOT EXISTS (
+          SELECT 1
+          FROM public.bike_task_items i
+          WHERE i.task_id = t.id
+            AND i.stage = 'preparation'::public.bike_task_item_stage
+        )
+      )
+  LOOP
+    PERFORM private.workshop_replace_preparation_items(r.id, r.definition_id);
+    UPDATE public.bike_tasks
+    SET selected_definition_id = r.definition_id,
+        has_configuration_warning = false
+    WHERE id = r.id;
+  END LOOP;
+END;
+$$;

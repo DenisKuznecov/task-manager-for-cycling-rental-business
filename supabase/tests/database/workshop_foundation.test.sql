@@ -134,6 +134,27 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION pg_temp.make_stale_road_task()
+RETURNS uuid
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  v_task_id uuid;
+  v_old uuid;
+BEGIN
+  SELECT d.id INTO v_old
+  FROM public.checklist_definitions d
+  WHERE d.definition_key = 'road_bike_preparation' AND d.version = 2;
+
+  v_task_id := pg_temp.make_task('workshop-road-bike', false, true);
+  PERFORM private.workshop_replace_preparation_items(v_task_id, v_old);
+  UPDATE public.bike_tasks
+  SET selected_definition_id = v_old
+  WHERE id = v_task_id;
+  RETURN v_task_id;
+END;
+$$;
+
 CREATE OR REPLACE FUNCTION pg_temp.fill_m1(p_task_id uuid, p_na_keys text[] DEFAULT '{}')
 RETURNS integer
 LANGUAGE plpgsql
@@ -938,7 +959,9 @@ SELECT * FROM (
     ('e-city', pg_temp.make_task('workshop-e-city-bike', false, true)),
     ('e-mtb', pg_temp.make_task('workshop-e-mtb-bike', true, false)),
     ('gravel', pg_temp.make_task('workshop-gravel-bike', false, true)),
-    ('e-road', pg_temp.make_task('workshop-e-road-bike', false, true))
+    ('e-road', pg_temp.make_task('workshop-e-road-bike', false, true)),
+    ('stale-road', pg_temp.make_stale_road_task()),
+    ('warn-gravel', pg_temp.make_task('workshop-gravel-bike', true, false))
 ) AS t(kind, id);
 
 GRANT SELECT ON ws_ids TO authenticated;
@@ -1008,6 +1031,45 @@ SELECT is(
   public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'e-road'), 1) ->> 'status',
   'being_prepared',
   'mapped e-road start prep → being_prepared'
+);
+SELECT is(
+  public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'stale-road'), 1) ->> 'status',
+  'being_prepared',
+  'stale road catalog start prep realigns and starts'
+);
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.bike_task_items i
+    WHERE i.task_id = (SELECT id FROM ws_config_tasks WHERE kind = 'stale-road')
+      AND i.stage = 'preparation'
+  ),
+  20,
+  'stale road start recopies current ROAD catalog'
+);
+SELECT is(
+  (
+    SELECT i.label
+    FROM public.bike_task_items i
+    WHERE i.task_id = (SELECT id FROM ws_config_tasks WHERE kind = 'stale-road')
+      AND i.item_key = 'ROAD-20'
+  ),
+  'Attach a haribo pouch to the bike',
+  'stale road start picks up Haribo item'
+);
+SELECT is(
+  public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'warn-gravel'), 1) ->> 'status',
+  'being_prepared',
+  'gravel warning-only start prep copies catalog and starts'
+);
+SELECT is(
+  (
+    SELECT t.has_configuration_warning
+    FROM public.bike_tasks t
+    WHERE t.id = (SELECT id FROM ws_config_tasks WHERE kind = 'warn-gravel')
+  ),
+  false,
+  'gravel warning-only start prep clears configuration warning'
 );
 
 -- Incomplete M1
