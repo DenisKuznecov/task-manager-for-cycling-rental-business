@@ -27,6 +27,7 @@ Source: road prep checklist supplied 2026-08-24 (replaces the previous 25-item p
 | 17 | `ROAD-17` | Charge + check shifting batteries | Action | Yes | Yes | No |
 | 18 | `ROAD-18` | Check powermeter battery | Action | Yes | No | Yes |
 | 19 | `ROAD-19` | Customer name on a bike | Action | Yes | No | No |
+| 20 | `ROAD-20` | Attach a haribo pouch to the bike | Action | Yes | No | Yes |
 
 For a required item that allows N/A, an explicit N/A selection satisfies M1 only when the equipment or service does not apply. If the item requires M2, M2 must confirm the N/A selection.
 
@@ -62,6 +63,23 @@ Source: e-city prep checklist supplied 2026-08-24.
 | 20 | `ECITY-20` | Customer name tag attached | Action | Yes | No | No |
 | 21 | `ECITY-21` | Check saddle level | Action | Yes | No | No |
 | 22 | `ECITY-22` | Bikefit applied | Action | Yes | No | Yes |
+| 23 | `ECITY-23` | Attach a haribo pouch to the bike | Action | Yes | No | Yes |
+
+## Gravel Bike
+
+Tag: `workshop-gravel-bike`
+
+Definition key: `gravel_bike_preparation`
+
+Independent snapshot copy of Road (`ROAD-01`…`ROAD-20`), including last item **Attach a haribo pouch to the bike**. Own definition id and version (`v1`); later Road catalog versions do not change these rows.
+
+## E-road Bike
+
+Tag: `workshop-e-road-bike`
+
+Definition key: `e_road_bike_preparation`
+
+Independent snapshot copy of Road (`ROAD-01`…`ROAD-20`), including last item **Attach a haribo pouch to the bike**. Own definition id and version (`v1`); later Road catalog versions do not change these rows.
 
 ## Shared Prepare for Storage
 
@@ -81,5 +99,3 @@ An explicit N/A selection satisfies an allowed item when the bike has no saddle 
 ## Checklists Still Required
 
 - `workshop-e-mtb-bike`
-- `workshop-gravel-bike`
-- `workshop-e-road-bike`
