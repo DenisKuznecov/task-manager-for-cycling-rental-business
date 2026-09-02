@@ -247,8 +247,8 @@ SELECT is(
     JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
     WHERE m.tag = 'workshop-road-bike'
   ),
-  19,
-  'mapped ROAD seed has 19 items'
+  20,
+  'mapped ROAD seed has 20 items'
 );
 
 SELECT is(
@@ -274,7 +274,7 @@ SELECT is(
     'ROAD-01','ROAD-02','ROAD-03','ROAD-04','ROAD-05',
     'ROAD-06','ROAD-07','ROAD-08','ROAD-09','ROAD-10',
     'ROAD-11','ROAD-12','ROAD-13','ROAD-14','ROAD-15',
-    'ROAD-16','ROAD-17','ROAD-18','ROAD-19'
+    'ROAD-16','ROAD-17','ROAD-18','ROAD-19','ROAD-20'
   ],
   'ROAD item keys match launch-checklists.md'
 );
@@ -306,7 +306,8 @@ SELECT is(
     'Charger/lube with a bike',
     'Charge + check shifting batteries',
     'Check powermeter battery',
-    'Customer name on a bike'
+    'Customer name on a bike',
+    'Attach a haribo pouch to the bike'
   ],
   'ROAD labels match launch-checklists.md'
 );
@@ -323,7 +324,7 @@ SELECT is(
     'action','action','action','action','action',
     'action','action','action','action','tyre_pressure_psi',
     'tyre_pressure_psi','action','action','action','action',
-    'action','action','action','action'
+    'action','action','action','action','action'
   ],
   'ROAD item types match launch-checklists.md'
 );
@@ -340,7 +341,7 @@ SELECT is(
     true,true,true,true,true,
     true,true,true,true,true,
     true,true,true,true,true,
-    true,true,true,true
+    true,true,true,true,true
   ],
   'ROAD required flags are all true'
 );
@@ -357,7 +358,7 @@ SELECT is(
     false,false,false,false,false,
     false,true,true,false,true,
     true,false,false,true,true,
-    true,true,false,false
+    true,true,false,false,false
   ],
   'ROAD m2_verifies flags match launch-checklists.md'
 );
@@ -374,7 +375,7 @@ SELECT is(
     true,false,false,true,false,
     false,false,false,false,false,
     false,false,false,false,false,
-    true,false,true,false
+    true,false,true,false,true
   ],
   'ROAD na_allowed flags match launch-checklists.md'
 );
@@ -386,8 +387,8 @@ SELECT is(
     JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
     WHERE m.tag = 'workshop-e-city-bike'
   ),
-  22,
-  'mapped e-city seed has 22 items'
+  23,
+  'mapped e-city seed has 23 items'
 );
 
 SELECT is(
@@ -403,7 +404,7 @@ SELECT is(
     'ECITY-06','ECITY-07','ECITY-08','ECITY-09','ECITY-10',
     'ECITY-11','ECITY-12','ECITY-13','ECITY-14','ECITY-15',
     'ECITY-16','ECITY-17','ECITY-18','ECITY-19','ECITY-20',
-    'ECITY-21','ECITY-22'
+    'ECITY-21','ECITY-22','ECITY-23'
   ],
   'e-city item keys match launch-checklists.md'
 );
@@ -438,7 +439,8 @@ SELECT is(
     'Verify keys matched and included',
     'Customer name tag attached',
     'Check saddle level',
-    'Bikefit applied'
+    'Bikefit applied',
+    'Attach a haribo pouch to the bike'
   ],
   'e-city labels match launch-checklists.md'
 );
@@ -456,7 +458,7 @@ SELECT is(
     'action','action','action','action','action',
     'action','action','action','tyre_pressure_psi','tyre_pressure_psi',
     'action','action','action','action','action',
-    'action','action'
+    'action','action','action'
   ],
   'e-city item types match launch-checklists.md'
 );
@@ -474,7 +476,7 @@ SELECT is(
     true,true,true,true,true,
     true,true,true,true,true,
     true,true,true,true,true,
-    true,true
+    true,true,true
   ],
   'e-city required flags are all true'
 );
@@ -492,7 +494,7 @@ SELECT is(
     true,true,true,true,false,
     true,false,true,true,true,
     true,true,true,true,false,
-    false,false
+    false,false,false
   ],
   'e-city m2_verifies flags match launch-checklists.md'
 );
@@ -510,7 +512,7 @@ SELECT is(
     false,false,false,false,false,
     false,false,false,false,false,
     false,false,false,false,false,
-    false,true
+    false,true,true
   ],
   'e-city na_allowed flags match launch-checklists.md'
 );
@@ -618,8 +620,8 @@ SELECT is(
     JOIN public.checklist_definitions d ON d.id = m.definition_id
     WHERE m.tag = 'workshop-road-bike'
   ),
-  2,
-  'road mapping points at version 2'
+  3,
+  'road mapping points at version 3'
 );
 
 SELECT is(
@@ -646,8 +648,227 @@ SELECT is(
     JOIN public.checklist_definitions d ON d.id = m.definition_id
     WHERE m.tag = 'workshop-e-city-bike'
   ),
+  2,
+  'e-city mapping points at version 2'
+);
+
+SELECT is(
+  (SELECT enabled FROM public.checklist_tag_mappings WHERE tag = 'workshop-gravel-bike'),
+  true,
+  'gravel mapping is enabled'
+);
+
+SELECT is(
+  (
+    SELECT d.definition_key
+    FROM public.checklist_tag_mappings m
+    JOIN public.checklist_definitions d ON d.id = m.definition_id
+    WHERE m.tag = 'workshop-gravel-bike'
+  ),
+  'gravel_bike_preparation',
+  'gravel mapping uses gravel_bike_preparation'
+);
+
+SELECT is(
+  (
+    SELECT d.version
+    FROM public.checklist_tag_mappings m
+    JOIN public.checklist_definitions d ON d.id = m.definition_id
+    WHERE m.tag = 'workshop-gravel-bike'
+  ),
   1,
-  'e-city mapping points at version 1'
+  'gravel mapping points at version 1'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-gravel-bike'
+  ),
+  20,
+  'mapped gravel seed has 20 items'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM (
+      SELECT i.item_key, i.sort_order, i.label, i.item_type, i.required, i.m2_verifies, i.na_allowed
+      FROM public.checklist_definition_items i
+      JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+      WHERE m.tag = 'workshop-gravel-bike'
+      EXCEPT
+      SELECT i.item_key, i.sort_order, i.label, i.item_type, i.required, i.m2_verifies, i.na_allowed
+      FROM public.checklist_definition_items i
+      JOIN public.checklist_definitions d ON d.id = i.definition_id
+      WHERE d.definition_key = 'road_bike_preparation' AND d.version = 3
+    ) extra
+  ),
+  0,
+  'gravel rows are a subset of road_bike_preparation v3'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM (
+      SELECT i.item_key, i.sort_order, i.label, i.item_type, i.required, i.m2_verifies, i.na_allowed
+      FROM public.checklist_definition_items i
+      JOIN public.checklist_definitions d ON d.id = i.definition_id
+      WHERE d.definition_key = 'road_bike_preparation' AND d.version = 3
+      EXCEPT
+      SELECT i.item_key, i.sort_order, i.label, i.item_type, i.required, i.m2_verifies, i.na_allowed
+      FROM public.checklist_definition_items i
+      JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+      WHERE m.tag = 'workshop-gravel-bike'
+    ) missing
+  ),
+  0,
+  'road_bike_preparation v3 rows are a subset of gravel'
+);
+
+SELECT is(
+  (
+    SELECT i.label
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-gravel-bike'
+    ORDER BY i.sort_order DESC
+    LIMIT 1
+  ),
+  'Attach a haribo pouch to the bike',
+  'mapped gravel last item is Haribo'
+);
+
+SELECT is(
+  (SELECT enabled FROM public.checklist_tag_mappings WHERE tag = 'workshop-e-road-bike'),
+  true,
+  'e-road mapping is enabled'
+);
+
+SELECT is(
+  (
+    SELECT d.definition_key
+    FROM public.checklist_tag_mappings m
+    JOIN public.checklist_definitions d ON d.id = m.definition_id
+    WHERE m.tag = 'workshop-e-road-bike'
+  ),
+  'e_road_bike_preparation',
+  'e-road mapping uses e_road_bike_preparation'
+);
+
+SELECT is(
+  (
+    SELECT d.version
+    FROM public.checklist_tag_mappings m
+    JOIN public.checklist_definitions d ON d.id = m.definition_id
+    WHERE m.tag = 'workshop-e-road-bike'
+  ),
+  1,
+  'e-road mapping points at version 1'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-e-road-bike'
+  ),
+  20,
+  'mapped e-road seed has 20 items'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM (
+      SELECT i.item_key, i.sort_order, i.label, i.item_type, i.required, i.m2_verifies, i.na_allowed
+      FROM public.checklist_definition_items i
+      JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+      WHERE m.tag = 'workshop-e-road-bike'
+      EXCEPT
+      SELECT i.item_key, i.sort_order, i.label, i.item_type, i.required, i.m2_verifies, i.na_allowed
+      FROM public.checklist_definition_items i
+      JOIN public.checklist_definitions d ON d.id = i.definition_id
+      WHERE d.definition_key = 'road_bike_preparation' AND d.version = 3
+    ) extra
+  ),
+  0,
+  'e-road rows are a subset of road_bike_preparation v3'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM (
+      SELECT i.item_key, i.sort_order, i.label, i.item_type, i.required, i.m2_verifies, i.na_allowed
+      FROM public.checklist_definition_items i
+      JOIN public.checklist_definitions d ON d.id = i.definition_id
+      WHERE d.definition_key = 'road_bike_preparation' AND d.version = 3
+      EXCEPT
+      SELECT i.item_key, i.sort_order, i.label, i.item_type, i.required, i.m2_verifies, i.na_allowed
+      FROM public.checklist_definition_items i
+      JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+      WHERE m.tag = 'workshop-e-road-bike'
+    ) missing
+  ),
+  0,
+  'road_bike_preparation v3 rows are a subset of e-road'
+);
+
+SELECT is(
+  (
+    SELECT i.label
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-e-road-bike'
+    ORDER BY i.sort_order DESC
+    LIMIT 1
+  ),
+  'Attach a haribo pouch to the bike',
+  'mapped e-road last item is Haribo'
+);
+
+SELECT is(
+  (
+    SELECT count(DISTINCT m.definition_id)::integer
+    FROM public.checklist_tag_mappings m
+    WHERE m.tag IN (
+      'workshop-road-bike',
+      'workshop-e-city-bike',
+      'workshop-gravel-bike',
+      'workshop-e-road-bike'
+    )
+  ),
+  4,
+  'four enabled mappings use distinct definition ids'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_definitions d ON d.id = i.definition_id
+    WHERE d.definition_key = 'prepare_for_storage'
+      AND i.label = 'Attach a haribo pouch to the bike'
+  ),
+  0,
+  'storage catalog has no Haribo item'
+);
+
+SELECT is(
+  (SELECT enabled FROM public.checklist_tag_mappings WHERE tag = 'workshop-e-mtb-bike'),
+  false,
+  'e-mtb mapping stays disabled'
+);
+
+SELECT is(
+  (SELECT definition_id FROM public.checklist_tag_mappings WHERE tag = 'workshop-e-mtb-bike'),
+  NULL,
+  'e-mtb mapping has no definition'
 );
 
 SELECT is(
@@ -657,12 +878,8 @@ SELECT is(
     WHERE enabled = false
     ORDER BY tag
   ),
-  ARRAY[
-    'workshop-e-mtb-bike',
-    'workshop-e-road-bike',
-    'workshop-gravel-bike'
-  ],
-  'three unsupplied tags stay disabled'
+  ARRAY['workshop-e-mtb-bike'],
+  'only e-mtb stays disabled'
 );
 
 -- Users
@@ -720,8 +937,8 @@ SELECT * FROM (
     ('multiple', pg_temp.make_task(NULL, true, false)),
     ('e-city', pg_temp.make_task('workshop-e-city-bike', false, true)),
     ('e-mtb', pg_temp.make_task('workshop-e-mtb-bike', true, false)),
-    ('gravel', pg_temp.make_task('workshop-gravel-bike', true, false)),
-    ('e-road', pg_temp.make_task('workshop-e-road-bike', true, false))
+    ('gravel', pg_temp.make_task('workshop-gravel-bike', false, true)),
+    ('e-road', pg_temp.make_task('workshop-e-road-bike', false, true))
 ) AS t(kind, id);
 
 GRANT SELECT ON ws_ids TO authenticated;
@@ -783,14 +1000,14 @@ SELECT is(
   'disabled e-mtb tag is not startable'
 );
 SELECT is(
-  public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'gravel'), 1) ->> 'code',
-  'CONFIGURATION_BLOCKED',
-  'disabled gravel tag is not startable'
+  public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'gravel'), 1) ->> 'status',
+  'being_prepared',
+  'mapped gravel start prep → being_prepared'
 );
 SELECT is(
-  public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'e-road'), 1) ->> 'code',
-  'CONFIGURATION_BLOCKED',
-  'disabled e-road tag is not startable'
+  public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'e-road'), 1) ->> 'status',
+  'being_prepared',
+  'mapped e-road start prep → being_prepared'
 );
 
 -- Incomplete M1
@@ -1070,7 +1287,19 @@ SELECT is(
   'INCOMPLETE_CHECKLIST',
   'N/A on item with na_allowed false → INCOMPLETE_CHECKLIST'
 );
-SELECT pg_temp.fill_m1((SELECT id FROM ws_item_task), ARRAY['ROAD-16']::text[]);
+SELECT ok(
+  (
+    public.workshop_set_item_outcome(
+      (SELECT id FROM ws_item_task),
+      (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_item_task)),
+      (SELECT i.id FROM public.bike_task_items i WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-20'),
+      'not_applicable',
+      NULL
+    )->>'ok'
+  )::boolean,
+  'N/A on ROAD-20 Haribo → ok'
+);
+SELECT pg_temp.fill_m1((SELECT id FROM ws_item_task), ARRAY['ROAD-16','ROAD-20']::text[]);
 SELECT public.workshop_complete_m1(
   (SELECT id FROM ws_item_task),
   (SELECT t.version FROM public.bike_tasks t WHERE t.id = (SELECT id FROM ws_item_task))
@@ -1113,6 +1342,24 @@ SELECT is(
   ),
   false,
   'ROAD-16 stays unconfirmed after complete M2'
+);
+SELECT is(
+  (
+    SELECT i.m1_outcome::text
+    FROM public.bike_task_items i
+    WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-20'
+  ),
+  'not_applicable',
+  'ROAD-20 Haribo stays not_applicable after complete M2'
+);
+SELECT is(
+  (
+    SELECT i.m2_verifies
+    FROM public.bike_task_items i
+    WHERE i.task_id = (SELECT id FROM ws_item_task) AND i.item_key = 'ROAD-20'
+  ),
+  false,
+  'ROAD-20 Haribo is not an M2 item'
 );
 RESET ROLE;
 
