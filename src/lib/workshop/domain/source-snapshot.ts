@@ -8,6 +8,7 @@ const nullableInt = z.number().int().nullable();
 export const SourceAssignmentV1Schema = z.object({
   stockItemId: z.string().min(1),
   sipId: z.string().min(1),
+  booqableLineId: z.string().min(1),
   displayId: nullableString,
   title: nullableString,
   workshopTags: z.array(z.string()),

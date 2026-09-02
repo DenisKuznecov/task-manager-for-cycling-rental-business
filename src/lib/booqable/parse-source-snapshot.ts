@@ -232,6 +232,7 @@ function parseAssignments(
       assignments.push({
         stockItemId: stock.id,
         sipId: sip.id,
+        booqableLineId: line.id,
         displayId: toStringOrNull(stock.attributes?.identifier),
         title,
         workshopTags: tags,

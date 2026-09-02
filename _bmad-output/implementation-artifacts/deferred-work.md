@@ -68,3 +68,7 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-customers-landing-status.md`
   summary: Staff customer edit UI so missing passport fields (address, email) can be filled before a destination upload.
   evidence: Bike-fit rows have no address and often no email; dests (especially Mailchimp) reject incomplete data. This run lands what exists and shows red; editing is a later stage.
+
+- source_spec: `_bmad-output/implementation-artifacts/spec-fix-bike-tasks-duplicated-info.md`
+  summary: After scoping the task list, a change on another bike can still trip M2 `ADD_ONS_CHANGED` because the fingerprint stays whole-order.
+  evidence: Spec Ask First forbids changing `addon_fingerprint` / M2 snapshot in this run; the display is per-bike and the confirm token is not.

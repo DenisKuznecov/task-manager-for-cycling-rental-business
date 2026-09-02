@@ -79,6 +79,7 @@ test("fixture parses to SourceOrderSnapshotV1 with identified road assignment", 
   const assignment = snapshot.assignments[0];
   assert.equal(assignment.stockItemId, "stock-road-1");
   assert.equal(assignment.sipId, "sip-road-1");
+  assert.equal(assignment.booqableLineId, "line-bike");
   assert.equal(assignment.displayId, "RF89RIVXL-2");
   assert.equal(assignment.title, "Focus IZALCO");
   assert.deepEqual(assignment.workshopTags, ["workshop-road-bike"]);
@@ -277,7 +278,14 @@ test("parser output keys match SQL snapshot keys", () => {
   assert.equal("parentBooqableLineId" in line, true);
   assert.equal("quantity" in line, true);
   const assignment = snapshot.assignments[0];
-  for (const key of ["sipId", "stockItemId", "displayId", "title", "workshopTags"]) {
+  for (const key of [
+    "sipId",
+    "stockItemId",
+    "booqableLineId",
+    "displayId",
+    "title",
+    "workshopTags",
+  ]) {
     assert.equal(key in assignment, true, `assignment missing ${key}`);
   }
 
