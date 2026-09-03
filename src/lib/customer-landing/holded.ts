@@ -1,6 +1,13 @@
 import type { CustomerPassport, PassportAddress } from "./types.ts";
 import type { DestWriteResult, EnvMap } from "./types.ts";
-import { destNextAction, isRecord, omitEmpty, presentString } from "./dest-error.ts";
+import {
+  destNextAction,
+  isRecord,
+  normalizePhoneDigits,
+  omitEmpty,
+  phonesMatch,
+  presentString,
+} from "./dest-error.ts";
 
 const LOG_PREFIX = "[customer-landing/holded]";
 const CONTACTS_URL = "https://api.holded.com/api/v2/contacts";
@@ -101,20 +108,16 @@ async function holdedRequest(
   return { res, payload: await readJson(res) };
 }
 
-type EmailLookup =
+type ContactLookup =
   | { ok: true; id: string | null }
   | { ok: false; error: string };
 
-async function findByEmail(
+async function listContacts(
   apiKey: string,
-  email: string,
+  query: URLSearchParams,
   fetchImpl: FetchLike,
-): Promise<EmailLookup> {
+): Promise<{ ok: true; rows: Record<string, unknown>[] } | { ok: false; error: string }> {
   try {
-    const query = new URLSearchParams({
-      email,
-      limit: "100",
-    });
     const { res, payload } = await holdedRequest(
       `${CONTACTS_URL}?${query.toString()}`,
       apiKey,
@@ -127,13 +130,7 @@ async function findByEmail(
         error: destNextAction("Holded", `list contacts failed (${res.status}).`),
       };
     }
-    const wanted = email.trim().toLowerCase();
-    for (const row of asContactList(payload)) {
-      if (typeof row.email === "string" && row.email.trim().toLowerCase() === wanted) {
-        return { ok: true, id: contactId(row) };
-      }
-    }
-    return { ok: true, id: null };
+    return { ok: true, rows: asContactList(payload) };
   } catch (error) {
     console.error(LOG_PREFIX, error);
     return {
@@ -141,6 +138,72 @@ async function findByEmail(
       error: destNextAction("Holded", "list contacts request failed."),
     };
   }
+}
+
+async function findByEmail(
+  apiKey: string,
+  email: string,
+  fetchImpl: FetchLike,
+): Promise<ContactLookup> {
+  const listed = await listContacts(
+    apiKey,
+    new URLSearchParams({ email, limit: "100" }),
+    fetchImpl,
+  );
+  if (!listed.ok) return listed;
+  const wanted = email.trim().toLowerCase();
+  for (const row of listed.rows) {
+    if (typeof row.email === "string" && row.email.trim().toLowerCase() === wanted) {
+      return { ok: true, id: contactId(row) };
+    }
+  }
+  return { ok: true, id: null };
+}
+
+function asPhoneString(value: unknown): string | null {
+  if (typeof value === "string") return value;
+  if (typeof value === "number" && Number.isFinite(value)) return String(value);
+  return null;
+}
+
+function rowPhonesMatch(row: Record<string, unknown>, phone: string): boolean {
+  return [row.phone, row.mobile].some((value) => {
+    const text = asPhoneString(value);
+    return text != null && phonesMatch(text, phone);
+  });
+}
+
+async function findByPhone(
+  apiKey: string,
+  phone: string,
+  fetchImpl: FetchLike,
+): Promise<ContactLookup> {
+  const queries = [phone];
+  const digits = normalizePhoneDigits(phone);
+  if (digits && digits !== phone) queries.push(digits);
+  for (const query of queries) {
+    for (const field of ["phone", "mobile"] as const) {
+      const listed = await listContacts(
+        apiKey,
+        new URLSearchParams({ [field]: query, limit: "100" }),
+        fetchImpl,
+      );
+      if (!listed.ok) return listed;
+      for (const row of listed.rows) {
+        if (rowPhonesMatch(row, phone)) {
+          const id = contactId(row);
+          if (!id) {
+            return {
+              ok: false,
+              error: destNextAction("Holded", "matched contact is missing id."),
+            };
+          }
+          return { ok: true, id };
+        }
+      }
+    }
+  }
+  return { ok: true, id: null };
 }
 
 async function createContact(
@@ -230,6 +293,17 @@ export async function writeHoldedContact(
   const email = presentString(input.passport.email);
   if (email) {
     const found = await findByEmail(apiKey, email, fetchImpl);
+    if (!found.ok) {
+      return { ok: false, error: found.error, destId: input.storedId };
+    }
+    if (found.id) {
+      return updateContact(apiKey, found.id, body, fetchImpl);
+    }
+  }
+
+  const phone = presentString(input.passport.phone);
+  if (phone) {
+    const found = await findByPhone(apiKey, phone, fetchImpl);
     if (!found.ok) {
       return { ok: false, error: found.error, destId: input.storedId };
     }
