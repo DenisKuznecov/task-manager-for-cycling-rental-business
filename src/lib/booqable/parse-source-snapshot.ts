@@ -115,6 +115,8 @@ function resourceKey(type: string, id: string): string {
   return `${type}:${id}`;
 }
 
+const PARTNER_WORKSHOP_TAG = "workshop-partner-bike";
+
 function workshopTagsFromProduct(product: JsonApiResource | null): string[] {
   const raw = product?.attributes?.tag_list;
   if (!Array.isArray(raw)) return [];
@@ -124,6 +126,16 @@ function workshopTagsFromProduct(product: JsonApiResource | null): string[] {
       tag.startsWith("workshop-") &&
       !tag.endsWith("-bundle"),
   );
+}
+
+function isPartnerOnlyTags(tags: string[]): boolean {
+  return tags.length === 1 && tags[0] === PARTNER_WORKSHOP_TAG;
+}
+
+function partnerUnitCount(quantity: number | null): number {
+  if (quantity === null) return 1;
+  if (quantity <= 0) return 0;
+  return quantity;
 }
 
 function properties(attrs: Record<string, unknown> | undefined): Record<string, unknown> {
@@ -197,13 +209,6 @@ function parseAssignments(
   const assignments: SourceAssignmentV1[] = [];
 
   for (const line of lines) {
-    const planningRef = relationshipRefs(line, "planning")[0];
-    if (!planningRef) continue;
-    const planning = byId.get(resourceKey(planningRef.type, planningRef.id));
-    if (!planning) {
-      throw new InvalidSourceSnapshotError("INVALID_SNAPSHOT");
-    }
-
     const itemRef = relationshipRefs(line, "item")[0];
     let product: JsonApiResource | null = null;
     if (itemRef) {
@@ -215,7 +220,36 @@ function parseAssignments(
     const tags = workshopTagsFromProduct(product);
     const title = toStringOrNull(line.attributes?.title);
 
-    const sipRefs = relationshipRefs(planning, "stock_item_plannings");
+    const planningRef = relationshipRefs(line, "planning")[0];
+    let planning: JsonApiResource | null = null;
+    if (planningRef) {
+      planning = byId.get(resourceKey(planningRef.type, planningRef.id)) ?? null;
+      if (!planning) {
+        throw new InvalidSourceSnapshotError("INVALID_SNAPSHOT");
+      }
+    }
+
+    const sipRefs = planning
+      ? relationshipRefs(planning, "stock_item_plannings")
+      : [];
+
+    if (sipRefs.length === 0 && isPartnerOnlyTags(tags)) {
+      const qty = partnerUnitCount(toIntOrNull(line.attributes?.quantity));
+      for (let n = 1; n <= qty; n += 1) {
+        assignments.push({
+          stockItemId: `partner:${line.id}:${n}`,
+          sipId: `partner-sip:${line.id}:${n}`,
+          booqableLineId: line.id,
+          displayId: "Partner Bike",
+          title,
+          workshopTags: [PARTNER_WORKSHOP_TAG],
+        });
+      }
+      continue;
+    }
+
+    if (!planning) continue;
+
     for (const sipRef of sipRefs) {
       const sip = byId.get(resourceKey(sipRef.type, sipRef.id));
       if (!sip) {

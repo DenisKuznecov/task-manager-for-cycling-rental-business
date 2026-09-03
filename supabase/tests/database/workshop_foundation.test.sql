@@ -854,6 +854,130 @@ SELECT is(
 );
 
 SELECT is(
+  (SELECT enabled FROM public.checklist_tag_mappings WHERE tag = 'workshop-partner-bike'),
+  true,
+  'partner mapping is enabled'
+);
+
+SELECT is(
+  (
+    SELECT d.definition_key
+    FROM public.checklist_tag_mappings m
+    JOIN public.checklist_definitions d ON d.id = m.definition_id
+    WHERE m.tag = 'workshop-partner-bike'
+  ),
+  'partner_bike_preparation',
+  'partner mapping uses partner_bike_preparation'
+);
+
+SELECT is(
+  (
+    SELECT d.version
+    FROM public.checklist_tag_mappings m
+    JOIN public.checklist_definitions d ON d.id = m.definition_id
+    WHERE m.tag = 'workshop-partner-bike'
+  ),
+  1,
+  'partner mapping points at version 1'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-partner-bike'
+  ),
+  6,
+  'mapped partner seed has 6 items'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.item_key
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-partner-bike'
+    ORDER BY i.sort_order
+  ),
+  ARRAY[
+    'PARTNER-01','PARTNER-02','PARTNER-03',
+    'PARTNER-04','PARTNER-05','PARTNER-06'
+  ],
+  'partner item keys match launch-checklists.md'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.label
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-partner-bike'
+    ORDER BY i.sort_order
+  ),
+  ARRAY[
+    'Check saddle bag, charger',
+    'Tyre pressure front',
+    'Tyre pressure back',
+    'Attach haribo pouch',
+    'Bolt check stem, saddle, handlebar',
+    'Check computer mount'
+  ],
+  'partner labels match launch-checklists.md'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.item_type::text
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-partner-bike'
+    ORDER BY i.sort_order
+  ),
+  ARRAY[
+    'action','tyre_pressure_psi','tyre_pressure_psi',
+    'action','action','action'
+  ],
+  'partner item types match launch-checklists.md'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.required
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-partner-bike'
+    ORDER BY i.sort_order
+  ),
+  ARRAY[true,true,true,true,true,true],
+  'partner required flags are all true'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.m2_verifies
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-partner-bike'
+    ORDER BY i.sort_order
+  ),
+  ARRAY[true,true,true,false,true,true],
+  'partner m2_verifies flags match launch-checklists.md'
+);
+
+SELECT is(
+  ARRAY(
+    SELECT i.na_allowed
+    FROM public.checklist_definition_items i
+    JOIN public.checklist_tag_mappings m ON m.definition_id = i.definition_id
+    WHERE m.tag = 'workshop-partner-bike'
+    ORDER BY i.sort_order
+  ),
+  ARRAY[true,true,true,true,true,true],
+  'partner na_allowed flags match launch-checklists.md'
+);
+
+SELECT is(
   (
     SELECT count(DISTINCT m.definition_id)::integer
     FROM public.checklist_tag_mappings m
@@ -861,11 +985,12 @@ SELECT is(
       'workshop-road-bike',
       'workshop-e-city-bike',
       'workshop-gravel-bike',
-      'workshop-e-road-bike'
+      'workshop-e-road-bike',
+      'workshop-partner-bike'
     )
   ),
-  4,
-  'four enabled mappings use distinct definition ids'
+  5,
+  'five enabled mappings use distinct definition ids'
 );
 
 SELECT is(
@@ -960,6 +1085,7 @@ SELECT * FROM (
     ('e-mtb', pg_temp.make_task('workshop-e-mtb-bike', true, false)),
     ('gravel', pg_temp.make_task('workshop-gravel-bike', false, true)),
     ('e-road', pg_temp.make_task('workshop-e-road-bike', false, true)),
+    ('partner', pg_temp.make_task('workshop-partner-bike', false, true)),
     ('stale-road', pg_temp.make_stale_road_task()),
     ('warn-gravel', pg_temp.make_task('workshop-gravel-bike', true, false))
 ) AS t(kind, id);
@@ -1031,6 +1157,58 @@ SELECT is(
   public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'e-road'), 1) ->> 'status',
   'being_prepared',
   'mapped e-road start prep → being_prepared'
+);
+SELECT is(
+  public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'partner'), 1) ->> 'status',
+  'being_prepared',
+  'mapped partner start prep → being_prepared'
+);
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.bike_task_items i
+    WHERE i.task_id = (SELECT id FROM ws_config_tasks WHERE kind = 'partner')
+      AND i.stage = 'preparation'
+  ),
+  6,
+  'partner start prep keeps 6 copied items'
+);
+SELECT pg_temp.fill_m1(
+  (SELECT id FROM ws_config_tasks WHERE kind = 'partner'),
+  ARRAY['PARTNER-02','PARTNER-03']::text[]
+);
+SELECT is(
+  public.workshop_complete_m1(
+    (SELECT id FROM ws_config_tasks WHERE kind = 'partner'),
+    (SELECT t.version FROM public.bike_tasks t
+      WHERE t.id = (SELECT id FROM ws_config_tasks WHERE kind = 'partner'))
+  ) ->> 'status',
+  'needs_recheck',
+  'partner M1 with PARTNER-02/03 N/A → needs_recheck'
+);
+SELECT pg_temp.fill_m2((SELECT id FROM ws_config_tasks WHERE kind = 'partner'));
+SELECT is(
+  public.workshop_complete_m2(
+    (SELECT id FROM ws_config_tasks WHERE kind = 'partner'),
+    (SELECT t.version FROM public.bike_tasks t
+      WHERE t.id = (SELECT id FROM ws_config_tasks WHERE kind = 'partner')),
+    'fp-v1',
+    true
+  ) ->> 'status',
+  'ready_for_pickup',
+  'partner complete M2 without confirming PARTNER-02/03 N/A → ready_for_pickup'
+);
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.bike_task_items i
+    WHERE i.task_id = (SELECT id FROM ws_config_tasks WHERE kind = 'partner')
+      AND i.item_key IN ('PARTNER-02', 'PARTNER-03')
+      AND i.m1_outcome = 'not_applicable'
+      AND COALESCE(i.m2_confirmed, false) IS NOT TRUE
+  ),
+  2,
+  'partner PSI N/A rows stay unconfirmed after complete M2'
 );
 SELECT is(
   public.workshop_start_preparation((SELECT id FROM ws_config_tasks WHERE kind = 'stale-road'), 1) ->> 'status',
