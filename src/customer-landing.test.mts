@@ -8,7 +8,10 @@ import {
   parseLandingCustomer,
   type CustomerPassport,
 } from "./lib/booqable/parse-landing-customer.ts";
-import { destNextAction } from "./lib/customer-landing/dest-error.ts";
+import {
+  destNextAction,
+  phonesMatch,
+} from "./lib/customer-landing/dest-error.ts";
 import { googleContactPerson, writeGoogleContact } from "./lib/customer-landing/google.ts";
 import { holdedContactBody, writeHoldedContact } from "./lib/customer-landing/holded.ts";
 import { landBooqableCustomer } from "./lib/customer-landing/land-customer.ts";
@@ -601,13 +604,13 @@ test("first Holded land creates when list misses and updates a list hit", async 
       assert.equal(headers.get("authorization"), "Bearer holded-test");
       assert.match(String(url), /api\/v2\/contacts/);
       if ((init?.method ?? "GET") === "GET") {
-        assert.match(String(url), /email=landing/);
         return jsonResponse(200, { items: [] });
       }
       return jsonResponse(201, { id: 7788 });
     },
   );
   assert.deepEqual(created, { ok: true, destId: "7788" });
+  assert.equal(methods.some((call) => call.includes("email=landing")), true);
   assert.equal(methods.some((call) => call.startsWith("POST ")), true);
 
   const hitMethods: string[] = [];
@@ -630,6 +633,289 @@ test("first Holded land creates when list misses and updates a list hit", async 
     hitMethods.some((call) => call.startsWith("PUT ") && call.includes("/99")),
     true,
   );
+});
+
+test("digit-normalize phone match treats formatted numbers as equal", () => {
+  assert.equal(phonesMatch("+34 000 000 000", "34000000000"), true);
+  assert.equal(phonesMatch("+34000000000", "34 000 000 000"), true);
+  assert.equal(phonesMatch("+34000000000", "+34111111111"), false);
+  assert.equal(phonesMatch("", "+34000000000"), false);
+});
+
+test("Google finds by phone after email miss and when there is no email", async () => {
+  const phoneHit = await writeGoogleContact(
+    { passport: passport(), storedId: null },
+    googleEnv(),
+    async (url, init) => {
+      const href = String(url);
+      if (href.includes("oauth2.googleapis.com/token")) {
+        return jsonResponse(200, { access_token: "token" });
+      }
+      if (href.includes("people:searchContacts")) {
+        if (href.includes(encodeURIComponent("landing@example.test"))) {
+          return jsonResponse(200, { results: [] });
+        }
+        assert.match(href, /34000000000|\+34000000000|%2B34000000000/);
+        return jsonResponse(200, {
+          results: [
+            {
+              person: {
+                resourceName: "people/c-phone",
+                phoneNumbers: [{ value: "34 000 000 000" }],
+              },
+            },
+          ],
+        });
+      }
+      if (href.includes("people/c-phone") && !href.includes("updateContact")) {
+        return jsonResponse(200, { resourceName: "people/c-phone", etag: "etag-p" });
+      }
+      if (href.includes("updateContact")) {
+        return jsonResponse(200, { resourceName: "people/c-phone" });
+      }
+      throw new Error(`unexpected Google URL ${href} ${init?.method}`);
+    },
+  );
+  assert.deepEqual(phoneHit, { ok: true, destId: "people/c-phone" });
+
+  const canonical = await writeGoogleContact(
+    { passport: passport({ email: null }), storedId: null },
+    googleEnv(),
+    async (url) => {
+      const href = String(url);
+      if (href.includes("oauth2.googleapis.com/token")) {
+        return jsonResponse(200, { access_token: "token" });
+      }
+      if (href.includes("people:searchContacts")) {
+        return jsonResponse(200, {
+          results: [
+            {
+              person: {
+                resourceName: "people/c-canonical",
+                phoneNumbers: [{ canonicalForm: "+34000000000" }],
+              },
+            },
+          ],
+        });
+      }
+      if (href.includes("people/c-canonical") && !href.includes("updateContact")) {
+        return jsonResponse(200, {
+          resourceName: "people/c-canonical",
+          etag: "etag-c",
+        });
+      }
+      if (href.includes("updateContact")) {
+        return jsonResponse(200, { resourceName: "people/c-canonical" });
+      }
+      throw new Error(`unexpected Google URL ${href}`);
+    },
+  );
+  assert.deepEqual(canonical, { ok: true, destId: "people/c-canonical" });
+
+  const created: string[] = [];
+  const noEmail = await writeGoogleContact(
+    { passport: passport({ email: null }), storedId: null },
+    googleEnv(),
+    async (url) => {
+      const href = String(url);
+      if (href.includes("oauth2.googleapis.com/token")) {
+        return jsonResponse(200, { access_token: "token" });
+      }
+      if (href.includes("people:searchContacts")) {
+        assert.equal(href.includes("landing@example.test"), false);
+        return jsonResponse(200, {
+          results: [
+            {
+              person: {
+                resourceName: "people/c-phone-only",
+                phoneNumbers: [{ value: "+34 000 000 000" }],
+              },
+            },
+          ],
+        });
+      }
+      if (href.includes("people/c-phone-only") && !href.includes("updateContact")) {
+        return jsonResponse(200, {
+          resourceName: "people/c-phone-only",
+          etag: "etag-p2",
+        });
+      }
+      if (href.includes("updateContact")) {
+        return jsonResponse(200, { resourceName: "people/c-phone-only" });
+      }
+      if (href.includes("people:createContact")) {
+        created.push(href);
+        return jsonResponse(200, { resourceName: "people/c-dup" });
+      }
+      throw new Error(`unexpected Google URL ${href}`);
+    },
+  );
+  assert.deepEqual(noEmail, { ok: true, destId: "people/c-phone-only" });
+  assert.deepEqual(created, []);
+});
+
+test("Google phone search failure after email miss is red and does not create", async () => {
+  const created: string[] = [];
+  const afterEmail = await writeGoogleContact(
+    { passport: passport(), storedId: null },
+    googleEnv(),
+    async (url) => {
+      const href = String(url);
+      if (href.includes("oauth2.googleapis.com/token")) {
+        return jsonResponse(200, { access_token: "token" });
+      }
+      if (href.includes("people:searchContacts")) {
+        if (href.includes(encodeURIComponent("landing@example.test"))) {
+          return jsonResponse(200, { results: [] });
+        }
+        return jsonResponse(500, { error: "unavailable" });
+      }
+      if (href.includes("people:createContact")) {
+        created.push(href);
+        return jsonResponse(200, { resourceName: "people/c-dup" });
+      }
+      throw new Error(`unexpected Google URL ${href}`);
+    },
+  );
+  assert.equal(afterEmail.ok, false);
+  if (afterEmail.ok) throw new Error("expected red");
+  assert.match(afterEmail.error, /searchContacts failed/);
+  assert.deepEqual(created, []);
+
+  const noEmailCreated: string[] = [];
+  const noEmail = await writeGoogleContact(
+    { passport: passport({ email: null }), storedId: null },
+    googleEnv(),
+    async (url) => {
+      const href = String(url);
+      if (href.includes("oauth2.googleapis.com/token")) {
+        return jsonResponse(200, { access_token: "token" });
+      }
+      if (href.includes("people:searchContacts")) {
+        return jsonResponse(500, { error: "unavailable" });
+      }
+      if (href.includes("people:createContact")) {
+        noEmailCreated.push(href);
+        return jsonResponse(200, { resourceName: "people/c-dup" });
+      }
+      throw new Error(`unexpected Google URL ${href}`);
+    },
+  );
+  assert.equal(noEmail.ok, false);
+  if (noEmail.ok) throw new Error("expected red");
+  assert.match(noEmail.error, /searchContacts failed/);
+  assert.deepEqual(noEmailCreated, []);
+});
+
+test("Holded finds by phone after email miss and when there is no email", async () => {
+  const afterEmailMiss = await writeHoldedContact(
+    { passport: passport(), storedId: null },
+    { HOLDED_API_KEY: "holded-test" },
+    async (url, init) => {
+      const href = String(url);
+      if ((init?.method ?? "GET") === "GET") {
+        if (href.includes("email=")) {
+          return jsonResponse(200, { items: [] });
+        }
+        assert.match(href, /phone=|mobile=/);
+        return jsonResponse(200, [
+          { id: "holded-phone", phone: "34 000 000 000" },
+        ]);
+      }
+      assert.equal((init?.method ?? "GET") === "POST", false);
+      return jsonResponse(200, { id: "holded-phone" });
+    },
+  );
+  assert.deepEqual(afterEmailMiss, { ok: true, destId: "holded-phone" });
+
+  const created: string[] = [];
+  const noEmail = await writeHoldedContact(
+    { passport: passport({ email: null }), storedId: null },
+    { HOLDED_API_KEY: "holded-test" },
+    async (url, init) => {
+      const href = String(url);
+      if ((init?.method ?? "GET") === "GET") {
+        assert.equal(href.includes("email="), false);
+        return jsonResponse(200, {
+          items: [{ id: 55, mobile: "+34000000000" }],
+        });
+      }
+      if ((init?.method ?? "GET") === "POST") {
+        created.push(href);
+      }
+      return jsonResponse(200, { id: 55 });
+    },
+  );
+  assert.deepEqual(noEmail, { ok: true, destId: "55" });
+  assert.deepEqual(created, []);
+});
+
+test("Holded phone list failure after email miss is red and does not create", async () => {
+  const methods: string[] = [];
+  const afterEmail = await writeHoldedContact(
+    { passport: passport(), storedId: null },
+    { HOLDED_API_KEY: "holded-test" },
+    async (url, init) => {
+      methods.push(`${init?.method ?? "GET"} ${String(url)}`);
+      if ((init?.method ?? "GET") === "GET" && String(url).includes("email=")) {
+        return jsonResponse(200, { items: [] });
+      }
+      return jsonResponse(503, { error: "down" });
+    },
+  );
+  assert.equal(afterEmail.ok, false);
+  if (afterEmail.ok) throw new Error("expected red");
+  assert.match(afterEmail.error, /list contacts failed/);
+  assert.equal(methods.some((call) => call.startsWith("POST ")), false);
+
+  const noEmailMethods: string[] = [];
+  const noEmail = await writeHoldedContact(
+    { passport: passport({ email: null }), storedId: null },
+    { HOLDED_API_KEY: "holded-test" },
+    async (url, init) => {
+      noEmailMethods.push(`${init?.method ?? "GET"} ${String(url)}`);
+      return jsonResponse(503, { error: "down" });
+    },
+  );
+  assert.equal(noEmail.ok, false);
+  if (noEmail.ok) throw new Error("expected red");
+  assert.match(noEmail.error, /list contacts failed/);
+  assert.equal(noEmailMethods.some((call) => call.startsWith("POST ")), false);
+});
+
+test("Holded phone match without an id is red and does not create", async () => {
+  const methods: string[] = [];
+  const result = await writeHoldedContact(
+    { passport: passport({ email: null }), storedId: null },
+    { HOLDED_API_KEY: "holded-test" },
+    async (url, init) => {
+      methods.push(`${init?.method ?? "GET"} ${String(url)}`);
+      if ((init?.method ?? "GET") === "GET") {
+        return jsonResponse(200, [{ phone: 34000000000 }]);
+      }
+      return jsonResponse(201, { id: "should-not-create" });
+    },
+  );
+  assert.equal(result.ok, false);
+  if (result.ok) throw new Error("expected red");
+  assert.match(result.error, /missing id/);
+  assert.equal(methods.some((call) => call.startsWith("POST ")), false);
+});
+
+test("Mailchimp stays email-keyed when the passport has only a phone", async () => {
+  const result = await writeMailchimpMember(
+    { passport: passport({ email: null }), storedId: null },
+    {
+      MAILCHIMP_API_KEY: "key-us21",
+      MAILCHIMP_AUDIENCE_ID: "audience-test",
+    },
+    async () => {
+      throw new Error("Mailchimp must not run without email");
+    },
+  );
+  assert.equal(result.ok, false);
+  if (result.ok) throw new Error("expected red");
+  assert.match(result.error, /an email is required/);
 });
 
 test("Holded list failure is red and does not create", async () => {
@@ -1139,6 +1425,7 @@ test("only src/lib/booqable calls Booqable and landing stays off client surfaces
   const fetchSource = readSrc("lib/booqable/fetch-source-snapshot.ts");
   assert.match(fetchSource, /\/api\/4\/customers\//);
   assert.match(fetchSource, /include=properties/);
+  assert.doesNotMatch(fetchSource, /fields\[customers\]/);
 
   for (const file of collectTsFiles(srcRoot)) {
     const relative = file.slice(srcRoot.length + 1);

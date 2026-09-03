@@ -1,6 +1,13 @@
 import type { CustomerPassport, PassportAddress } from "./types.ts";
 import type { DestWriteResult, EnvMap } from "./types.ts";
-import { destNextAction, isRecord, omitEmpty, presentString } from "./dest-error.ts";
+import {
+  destNextAction,
+  isRecord,
+  normalizePhoneDigits,
+  omitEmpty,
+  phonesMatch,
+  presentString,
+} from "./dest-error.ts";
 
 const LOG_PREFIX = "[customer-landing/google]";
 const TOKEN_URL = "https://oauth2.googleapis.com/token";
@@ -281,22 +288,31 @@ function emailsOnPerson(payload: unknown): string[] {
   });
 }
 
-type EmailLookup =
+function phonesOnPerson(payload: unknown): string[] {
+  if (!isRecord(payload) || !Array.isArray(payload.phoneNumbers)) return [];
+  return payload.phoneNumbers.flatMap((entry) => {
+    if (!isRecord(entry)) return [];
+    const values: string[] = [];
+    if (typeof entry.value === "string") values.push(entry.value);
+    if (typeof entry.canonicalForm === "string") values.push(entry.canonicalForm);
+    return values;
+  });
+}
+
+type ContactLookup =
   | { ok: true; id: string | null }
   | { ok: false; error: string };
 
-async function findByEmail(
+async function searchContacts(
   token: string,
-  email: string,
+  query: string,
+  readMask: string,
   fetchImpl: FetchLike,
-): Promise<EmailLookup> {
-  const query = new URLSearchParams({
-    query: email,
-    readMask: "names,emailAddresses",
-  });
+): Promise<{ ok: true; results: unknown[] } | { ok: false; error: string }> {
+  const params = new URLSearchParams({ query, readMask });
   try {
     const { res, payload } = await peopleRequest(
-      `${PEOPLE_URL}/people:searchContacts?${query.toString()}`,
+      `${PEOPLE_URL}/people:searchContacts?${params.toString()}`,
       token,
       fetchImpl,
     );
@@ -321,17 +337,7 @@ async function findByEmail(
         ),
       };
     }
-    const wanted = email.trim().toLowerCase();
-    for (const row of results) {
-      if (!isRecord(row)) continue;
-      const person = row.person;
-      if (!isRecord(person)) continue;
-      const resourceName = personResourceName(person);
-      if (resourceName && emailsOnPerson(person).includes(wanted)) {
-        return { ok: true, id: resourceName };
-      }
-    }
-    return { ok: true, id: null };
+    return { ok: true, results };
   } catch (error) {
     console.error(LOG_PREFIX, error);
     return {
@@ -339,6 +345,66 @@ async function findByEmail(
       error: destNextAction("Google Contacts", "searchContacts request failed."),
     };
   }
+}
+
+function personFromSearchRow(row: unknown): Record<string, unknown> | null {
+  if (!isRecord(row) || !isRecord(row.person)) return null;
+  return row.person;
+}
+
+async function findByEmail(
+  token: string,
+  email: string,
+  fetchImpl: FetchLike,
+): Promise<ContactLookup> {
+  const searched = await searchContacts(
+    token,
+    email,
+    "names,emailAddresses",
+    fetchImpl,
+  );
+  if (!searched.ok) return searched;
+  const wanted = email.trim().toLowerCase();
+  for (const row of searched.results) {
+    const person = personFromSearchRow(row);
+    if (!person) continue;
+    const resourceName = personResourceName(person);
+    if (resourceName && emailsOnPerson(person).includes(wanted)) {
+      return { ok: true, id: resourceName };
+    }
+  }
+  return { ok: true, id: null };
+}
+
+async function findByPhone(
+  token: string,
+  phone: string,
+  fetchImpl: FetchLike,
+): Promise<ContactLookup> {
+  const queries = [phone];
+  const digits = normalizePhoneDigits(phone);
+  if (digits && digits !== phone) queries.push(digits);
+  for (const query of queries) {
+    const searched = await searchContacts(
+      token,
+      query,
+      "names,phoneNumbers",
+      fetchImpl,
+    );
+    if (!searched.ok) return searched;
+    for (const row of searched.results) {
+      const person = personFromSearchRow(row);
+      if (!person) continue;
+      const resourceName = personResourceName(person);
+      if (
+        resourceName &&
+        phonesOnPerson(person).some((value) => phonesMatch(value, phone))
+      ) {
+        return { ok: true, id: resourceName };
+      }
+    }
+  }
+  return { ok: true, id: null };
 }
 
 export async function writeGoogleContact(
@@ -376,6 +442,17 @@ export async function writeGoogleContact(
   const email = presentString(input.passport.email);
   if (email) {
     const found = await findByEmail(tokenResult.token, email, fetchImpl);
+    if (!found.ok) {
+      return { ok: false, error: found.error, destId: input.storedId };
+    }
+    if (found.id) {
+      return updateContact(tokenResult.token, found.id, person, fetchImpl);
+    }
+  }
+
+  const phone = presentString(input.passport.phone);
+  if (phone) {
+    const found = await findByPhone(tokenResult.token, phone, fetchImpl);
     if (!found.ok) {
       return { ok: false, error: found.error, destId: input.storedId };
     }
