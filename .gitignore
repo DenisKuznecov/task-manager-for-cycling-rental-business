@@ -51,6 +51,3 @@ docs/
 
 # booqable tenant spike — raw captures may contain customer PII
 scripts/booqable-spike/captures/
-
-# historical dest backfill — cursor may contain Booqable ids
-scripts/backfill-customer-dests/cursor.json

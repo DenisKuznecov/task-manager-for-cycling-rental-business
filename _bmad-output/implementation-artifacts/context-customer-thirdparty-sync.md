@@ -1,6 +1,6 @@
 # Customer → third-party sync (split context)
 
-Saved from the 2026-09-03 build conversation. First spec: historical dest backfill. Later stories must honor these locks.
+Saved from the 2026-09-03 build conversation. Later stories must honor these locks.
 
 ## Product locks
 
@@ -10,15 +10,8 @@ Saved from the 2026-09-03 build conversation. First spec: historical dest backfi
 - Zapier is **off**. No triple-write with the live webhook.
 - Review-tag column (deferred): **Yes** = successful tag upload; **Error** = tag write failed; **dash** = local customer that was never uploaded.
 - Review-tag backfill (deferred): allowed; no Mailchimp review campaign exists yet. Order is **land first, then tag**.
-
-## First goal (this run)
-
-Walk **every Booqable customer**, land into Google Contacts / Holded / Mailchimp without a second contact, upsert identity into `customers`, and write results to **production** `customer_sync`.
-
-- Dedup: existing dest id, then **email**, then **phone**.
-- Runner: **one local script**, not a Vercel job. Laptop talks to live dest APIs. Production `customers` / `customer_sync` writes go through the logged-in **Supabase CLI** against project-ref `iwawhxfptzimluqyebiq` (not staging `aoupusbxtznqvnpmlhox`, not local). No pasted URL or service-role env vars.
-- Identity upsert stays `onConflict: booqable_customer_id`. Do not collapse a bike-fit row into a Booqable row in this run. Directory “show both” is deferred.
-- Do not apply migrations to production from the laptop. DML only, and only after the human approves the live run.
+- Dest find on `customer.created` / `customer.updated`: stored dest id, then **email**, then digit-normalized **phone** (Google / Holded). Mailchimp stays email-keyed.
+- Identity upsert stays `onConflict: booqable_customer_id`. Do not collapse a bike-fit row into a Booqable row until the directory story.
 
 ## Out of scope here
 

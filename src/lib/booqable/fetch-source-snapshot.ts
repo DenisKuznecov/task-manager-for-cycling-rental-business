@@ -273,58 +273,6 @@ export async function fetchAllOrdersListPage(
   return fetchOrderListPage(page, {}, env);
 }
 
-export type CustomerListPage = {
-  ids: string[];
-  hasMore: boolean;
-};
-
-function mapListCustomerId(entry: unknown): string | null {
-  if (!isRecord(entry) || typeof entry.id !== "string") return null;
-  const id = entry.id.trim();
-  return id === "" ? null : id;
-}
-
-export function parseCustomerListDocument(
-  doc: unknown,
-  currentUrl: string,
-): CustomerListPage {
-  if (!isRecord(doc) || !Array.isArray(doc.data)) {
-    throw new BooqableFetchError("INVALID_SNAPSHOT");
-  }
-  if ("included" in doc && doc.included != null && !Array.isArray(doc.included)) {
-    throw new BooqableFetchError("INVALID_SNAPSHOT");
-  }
-  const ids: string[] = [];
-  for (const row of doc.data) {
-    const id = mapListCustomerId(row);
-    if (!id) {
-      throw new BooqableFetchError("INVALID_SNAPSHOT");
-    }
-    ids.push(id);
-  }
-  const hasNext = paginationNextUrl(doc.links, currentUrl) != null;
-  const hasMore = hasNext || doc.data.length === LIST_PAGE_SIZE;
-  if (ids.length === 0 && hasMore) {
-    throw new BooqableFetchError("INVALID_SNAPSHOT");
-  }
-  return { ids, hasMore };
-}
-
-/** List page of customer ids only. Passport still comes from GET :id. */
-export async function fetchCustomerListPage(
-  page: number,
-  env: EnvMap = process.env,
-): Promise<CustomerListPage> {
-  const { slug } = booqableConfig(env);
-  const params = new URLSearchParams({
-    "page[size]": String(LIST_PAGE_SIZE),
-    "page[number]": String(page),
-    "fields[customers]": "id",
-  });
-  const url = `https://${slug}.booqable.com/api/4/customers?${params.toString()}`;
-  return parseCustomerListDocument(await booqableGetJson(url, env), url);
-}
-
 /** GET one customer. `include=properties` is required for structured address. */
 export async function fetchLandingCustomerDocument(
   booqableCustomerId: string,
