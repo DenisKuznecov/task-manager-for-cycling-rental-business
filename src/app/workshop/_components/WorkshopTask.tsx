@@ -777,6 +777,7 @@ function AddonsList({
   const rows = addons.map((addon) => {
     const { label, value } = parseAddonTitle(addon.title);
     const isSection = addon.lineType === "section";
+    const extraInformation = addon.extraInformation?.trim() || null;
     return {
       id: addon.id,
       label,
@@ -784,6 +785,7 @@ function AddonsList({
       isSection,
       declined: !isSection && isDeclinedAddonChoice(value),
       quantityLabel: addonQuantityLabel(addon.quantity),
+      extraInformation,
     };
   });
   const included = rows.filter((row) => !row.declined);
@@ -809,38 +811,47 @@ function AddonsList({
           <ul className="flex w-full flex-col items-start gap-2">
             {included.map((row) => (
               <li key={row.id} className="w-full">
-                {row.isSection ? (
-                  <span
-                    className={`${taskCopyClass(tabletMode, true)} text-subtext-color`}
-                  >
-                    {row.label}
-                  </span>
-                ) : row.value ? (
-                  <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-0">
+                <div className="flex w-full flex-col items-start gap-1">
+                  {row.isSection ? (
                     <span
-                      className={`${taskCopyClass(tabletMode)} text-subtext-color`}
+                      className={`${taskCopyClass(tabletMode, true)} text-subtext-color`}
                     >
                       {row.label}
                     </span>
+                  ) : row.value ? (
+                    <div className="flex w-full flex-wrap items-baseline gap-x-3 gap-y-0">
+                      <span
+                        className={`${taskCopyClass(tabletMode)} text-subtext-color`}
+                      >
+                        {row.label}
+                      </span>
+                      <span
+                        className={`min-w-0 break-words ${
+                          tabletMode
+                            ? "text-heading-3 font-heading-3"
+                            : "text-body font-medium"
+                        } text-default-font`}
+                      >
+                        {row.value}
+                        {row.quantityLabel}
+                      </span>
+                    </div>
+                  ) : (
                     <span
-                      className={`min-w-0 break-words ${
-                        tabletMode
-                          ? "text-heading-3 font-heading-3"
-                          : "text-body font-medium"
-                      } text-default-font`}
+                      className={`${taskCopyClass(tabletMode, true)} text-default-font`}
                     >
-                      {row.value}
+                      {row.label}
                       {row.quantityLabel}
                     </span>
-                  </div>
-                ) : (
-                  <span
-                    className={`${taskCopyClass(tabletMode, true)} text-default-font`}
-                  >
-                    {row.label}
-                    {row.quantityLabel}
-                  </span>
-                )}
+                  )}
+                  {row.extraInformation ? (
+                    <span
+                      className={`min-w-0 w-full break-words whitespace-pre-line ${taskCopyClass(tabletMode)} text-subtext-color`}
+                    >
+                      {row.extraInformation}
+                    </span>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>
@@ -853,11 +864,19 @@ function AddonsList({
           </span>
           <ul className="flex w-full flex-col items-start gap-2">
             {declined.map((row) => (
-              <li
-                key={row.id}
-                className={`${taskCopyClass(tabletMode)} text-subtext-color`}
-              >
-                {row.label}
+              <li key={row.id} className="w-full">
+                <div className="flex w-full flex-col items-start gap-1">
+                  <span className={`${taskCopyClass(tabletMode)} text-subtext-color`}>
+                    {row.label}
+                  </span>
+                  {row.extraInformation ? (
+                    <span
+                      className={`min-w-0 w-full break-words whitespace-pre-line ${taskCopyClass(tabletMode)} text-subtext-color`}
+                    >
+                      {row.extraInformation}
+                    </span>
+                  ) : null}
+                </div>
               </li>
             ))}
           </ul>
