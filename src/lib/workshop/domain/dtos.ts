@@ -49,6 +49,7 @@ export type WorkshopAddon = {
   title: string | null;
   quantity: number | null;
   lineType: string | null;
+  extraInformation: string | null;
 };
 
 export type WorkshopAttestation = {

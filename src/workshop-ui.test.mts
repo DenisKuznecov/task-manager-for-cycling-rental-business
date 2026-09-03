@@ -854,6 +854,31 @@ test("task page reuses all-orders drawer via ?order=", () => {
   assert.match(task, /OrderDetailsButtonFallback/);
 });
 
+test("AddonsList renders extraInformation and keeps declined split", () => {
+  const task = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopTask.tsx"),
+    "utf8",
+  );
+  assert.match(task, /isDeclinedAddonChoice/);
+  assert.match(task, /\/\^no\\b\/i/);
+  assert.match(task, /addon\.extraInformation/);
+  assert.match(task, /row\.extraInformation/);
+});
+
+test("order drawer shows stock tags on the matching line and keeps parents", () => {
+  const drawer = readFileSync(
+    join(root, "src/components/orders/OrderDetailsDrawer.tsx"),
+    "utf8",
+  );
+  const orders = readFileSync(join(root, "src/lib/orders.ts"), "utf8");
+  assert.match(orders, /booqable_assignment_instances/);
+  assert.match(orders, /attachStockDisplayIdsToItems/);
+  assert.match(drawer, /stock_display_ids/);
+  assert.match(drawer, /stockTags\.map/);
+  assert.match(drawer, /item\.line_type === "section"/);
+  assert.doesNotMatch(drawer, /line_type === "bundle"/);
+});
+
 test("tablet mode storage is off unless the stored value is on", () => {
   const store = new Map<string, string>();
   const storage = {
