@@ -93,39 +93,60 @@ test("fixture parses to SourceOrderSnapshotV1 with identified road assignment", 
   assert.equal(SourceOrderSnapshotV1Schema.safeParse(snapshot).success, true);
 });
 
-test("unidentified sibling is omitted from assignments", () => {
-  const payload = cloneFixture();
+function addEmptySipLine(
+  payload: ReturnType<typeof cloneFixture>,
+  opts: {
+    lineId: string;
+    planningId: string;
+    productId: string;
+    title: string;
+    quantity: number | null;
+    tags: string[];
+  },
+) {
   payload.data.relationships?.lines?.data?.push({
-    id: "line-unidentified",
+    id: opts.lineId,
     type: "lines",
   });
   payload.included.push({
-    id: "line-unidentified",
+    id: opts.lineId,
     type: "lines",
     attributes: {
-      item_id: "product-unidentified",
+      item_id: opts.productId,
       parent_line_id: null,
-      title: "Unidentified gravel",
-      quantity: 1,
+      title: opts.title,
+      quantity: opts.quantity,
       line_type: "charge",
       position: 5,
       relevant: true,
     },
     relationships: {
-      planning: { data: { id: "planning-unidentified", type: "plannings" } },
-      item: { data: { id: "product-unidentified", type: "products" } },
+      planning: { data: { id: opts.planningId, type: "plannings" } },
+      item: { data: { id: opts.productId, type: "products" } },
     },
   });
   payload.included.push({
-    id: "planning-unidentified",
+    id: opts.planningId,
     type: "plannings",
     attributes: {},
     relationships: { stock_item_plannings: { data: [] } },
   });
   payload.included.push({
-    id: "product-unidentified",
+    id: opts.productId,
     type: "products",
-    attributes: { tag_list: ["workshop-gravel-bike"] },
+    attributes: { tag_list: opts.tags },
+  });
+}
+
+test("unidentified sibling is omitted from assignments", () => {
+  const payload = cloneFixture();
+  addEmptySipLine(payload, {
+    lineId: "line-unidentified",
+    planningId: "planning-unidentified",
+    productId: "product-unidentified",
+    title: "Unidentified gravel",
+    quantity: 1,
+    tags: ["workshop-gravel-bike"],
   });
 
   const snapshot = parseSourceOrderSnapshot(payload, "2026-08-21T14:00:00.000Z");
@@ -135,6 +156,196 @@ test("unidentified sibling is omitted from assignments", () => {
     snapshot.lines.some((line) => line.booqableLineId === "line-unidentified"),
     true,
   );
+});
+
+test("partner qty 1 empty SIP emits one synthetic assignment", () => {
+  const payload = cloneFixture();
+  addEmptySipLine(payload, {
+    lineId: "line-partner",
+    planningId: "planning-partner",
+    productId: "product-partner",
+    title: "Partner Canyon",
+    quantity: 1,
+    tags: ["workshop-partner-bike"],
+  });
+
+  const snapshot = parseSourceOrderSnapshot(payload, "2026-08-21T14:00:00.000Z");
+  const partner = snapshot.assignments.filter((row) =>
+    row.stockItemId.startsWith("partner:"),
+  );
+  assert.equal(partner.length, 1);
+  assert.equal(partner[0].stockItemId, "partner:line-partner:1");
+  assert.equal(partner[0].sipId, "partner-sip:line-partner:1");
+  assert.equal(partner[0].booqableLineId, "line-partner");
+  assert.equal(partner[0].displayId, "Partner Bike");
+  assert.equal(partner[0].title, "Partner Canyon");
+  assert.deepEqual(partner[0].workshopTags, ["workshop-partner-bike"]);
+  assert.equal(snapshot.assignments.some((row) => row.stockItemId === "stock-road-1"), true);
+});
+
+test("partner qty 2 empty SIP emits two synthetic assignments", () => {
+  const payload = cloneFixture();
+  addEmptySipLine(payload, {
+    lineId: "line-partner",
+    planningId: "planning-partner",
+    productId: "product-partner",
+    title: "Partner Canyon",
+    quantity: 2,
+    tags: ["workshop-partner-bike"],
+  });
+
+  const snapshot = parseSourceOrderSnapshot(payload, "2026-08-21T14:00:00.000Z");
+  const partner = snapshot.assignments
+    .filter((row) => row.stockItemId.startsWith("partner:"))
+    .sort((a, b) => a.stockItemId.localeCompare(b.stockItemId));
+  assert.equal(partner.length, 2);
+  assert.equal(partner[0].stockItemId, "partner:line-partner:1");
+  assert.equal(partner[0].sipId, "partner-sip:line-partner:1");
+  assert.equal(partner[1].stockItemId, "partner:line-partner:2");
+  assert.equal(partner[1].sipId, "partner-sip:line-partner:2");
+  assert.equal(partner[0].displayId, "Partner Bike");
+  assert.equal(partner[1].displayId, "Partner Bike");
+  assert.equal(partner[0].title, "Partner Canyon");
+  assert.equal(partner[1].title, "Partner Canyon");
+});
+
+test("partner qty 2→1 keeps :1 and drops :2", () => {
+  const qty2 = cloneFixture();
+  addEmptySipLine(qty2, {
+    lineId: "line-partner",
+    planningId: "planning-partner",
+    productId: "product-partner",
+    title: "Partner Canyon",
+    quantity: 2,
+    tags: ["workshop-partner-bike"],
+  });
+  const qty1 = cloneFixture();
+  addEmptySipLine(qty1, {
+    lineId: "line-partner",
+    planningId: "planning-partner",
+    productId: "product-partner",
+    title: "Partner Canyon",
+    quantity: 1,
+    tags: ["workshop-partner-bike"],
+  });
+
+  const first = parseSourceOrderSnapshot(qty2, "2026-08-21T14:00:00.000Z");
+  const second = parseSourceOrderSnapshot(qty1, "2026-08-21T14:00:00.000Z");
+  const firstKeys = first.assignments
+    .filter((row) => row.stockItemId.startsWith("partner:"))
+    .map((row) => row.stockItemId)
+    .sort();
+  const secondKeys = second.assignments
+    .filter((row) => row.stockItemId.startsWith("partner:"))
+    .map((row) => row.stockItemId)
+    .sort();
+  assert.deepEqual(firstKeys, ["partner:line-partner:1", "partner:line-partner:2"]);
+  assert.deepEqual(secondKeys, ["partner:line-partner:1"]);
+});
+
+test("partner line with no planning still emits a synthetic assignment", () => {
+  const payload = cloneFixture();
+  payload.data.relationships?.lines?.data?.push({
+    id: "line-partner-no-planning",
+    type: "lines",
+  });
+  payload.included.push({
+    id: "line-partner-no-planning",
+    type: "lines",
+    attributes: {
+      item_id: "product-partner-no-planning",
+      parent_line_id: null,
+      title: "Partner Canyon",
+      quantity: 1,
+      line_type: "charge",
+      position: 6,
+      relevant: true,
+    },
+    relationships: {
+      item: { data: { id: "product-partner-no-planning", type: "products" } },
+    },
+  });
+  payload.included.push({
+    id: "product-partner-no-planning",
+    type: "products",
+    attributes: { tag_list: ["workshop-partner-bike"] },
+  });
+
+  const snapshot = parseSourceOrderSnapshot(payload, "2026-08-21T14:00:00.000Z");
+  const partner = snapshot.assignments.filter((row) =>
+    row.stockItemId.startsWith("partner:"),
+  );
+  assert.equal(partner.length, 1);
+  assert.equal(partner[0].stockItemId, "partner:line-partner-no-planning:1");
+  assert.equal(partner[0].displayId, "Partner Bike");
+});
+
+test("partner quantity null emits one unit and quantity 0 emits none", () => {
+  const missingQty = cloneFixture();
+  addEmptySipLine(missingQty, {
+    lineId: "line-partner-null",
+    planningId: "planning-partner-null",
+    productId: "product-partner-null",
+    title: "Partner Canyon",
+    quantity: null,
+    tags: ["workshop-partner-bike"],
+  });
+  const zeroQty = cloneFixture();
+  addEmptySipLine(zeroQty, {
+    lineId: "line-partner-zero",
+    planningId: "planning-partner-zero",
+    productId: "product-partner-zero",
+    title: "Partner Canyon",
+    quantity: 0,
+    tags: ["workshop-partner-bike"],
+  });
+
+  const one = parseSourceOrderSnapshot(missingQty, "2026-08-21T14:00:00.000Z");
+  const none = parseSourceOrderSnapshot(zeroQty, "2026-08-21T14:00:00.000Z");
+  assert.deepEqual(
+    one.assignments
+      .filter((row) => row.stockItemId.startsWith("partner:"))
+      .map((row) => row.stockItemId),
+    ["partner:line-partner-null:1"],
+  );
+  assert.equal(
+    none.assignments.some((row) => row.stockItemId.startsWith("partner:")),
+    false,
+  );
+});
+
+test("partner tag plus another workshop tag does not emit synthetics", () => {
+  const payload = cloneFixture();
+  addEmptySipLine(payload, {
+    lineId: "line-partner-multi",
+    planningId: "planning-partner-multi",
+    productId: "product-partner-multi",
+    title: "Partner Canyon",
+    quantity: 1,
+    tags: ["workshop-partner-bike", "workshop-road-bike"],
+  });
+
+  const snapshot = parseSourceOrderSnapshot(payload, "2026-08-21T14:00:00.000Z");
+  assert.equal(
+    snapshot.assignments.some((row) => row.stockItemId.startsWith("partner:")),
+    false,
+  );
+});
+
+test("partner-tagged line with SIPs stays on the stock path", () => {
+  const payload = cloneFixture();
+  const product = payload.included.find((entry) => entry.id === "product-road");
+  assert.ok(product);
+  product.attributes = {
+    ...(product.attributes as object),
+    tag_list: ["workshop-partner-bike"],
+  };
+
+  const snapshot = parseSourceOrderSnapshot(payload, "2026-08-21T14:00:00.000Z");
+  assert.equal(snapshot.assignments.length, 1);
+  assert.equal(snapshot.assignments[0].stockItemId, "stock-road-1");
+  assert.equal(snapshot.assignments[0].displayId, "RF89RIVXL-2");
+  assert.deepEqual(snapshot.assignments[0].workshopTags, ["workshop-partner-bike"]);
 });
 
 test("links.next without extra pages is INVALID_SNAPSHOT", () => {
