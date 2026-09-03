@@ -107,6 +107,24 @@ AS $$
   );
 $$;
 
+CREATE OR REPLACE FUNCTION pg_temp.partner_assignment(
+  p_line text,
+  p_n integer,
+  p_title text DEFAULT 'Partner Canyon'
+)
+RETURNS jsonb
+LANGUAGE sql
+AS $$
+  SELECT jsonb_build_object(
+    'stockItemId', 'partner:' || p_line || ':' || p_n,
+    'sipId', 'partner-sip:' || p_line || ':' || p_n,
+    'booqableLineId', p_line,
+    'displayId', 'Partner Bike',
+    'title', p_title,
+    'workshopTags', '["workshop-partner-bike"]'::jsonb
+  );
+$$;
+
 CREATE OR REPLACE FUNCTION pg_temp.snap(
   p_order_id text,
   p_status text,
@@ -1649,6 +1667,98 @@ SELECT is(
   ),
   23,
   'mapping enable on unchanged snapshot copies e-city items'
+);
+
+-- Partner qty 2 → qty 1 retain/cancel
+SELECT is(
+  (
+    pg_temp.apply_snap(
+      'bq-partner',
+      pg_temp.snap(
+        'bq-partner',
+        'reserved',
+        '2026-12-10T10:00:00Z',
+        jsonb_build_array(
+          pg_temp.partner_assignment('bq-partner-bike', 1),
+          pg_temp.partner_assignment('bq-partner-bike', 2)
+        ),
+        jsonb_build_array(pg_temp.line('bq-partner-bike', 'Partner Canyon', 2))
+      )
+    )->>'created'
+  )::integer,
+  2,
+  'partner qty-2 mints two tasks'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.bike_tasks t
+    JOIN public.orders o ON o.id = t.order_id
+    WHERE o.booqable_order_id = 'bq-partner'
+      AND t.status = 'to_prepare'
+      AND t.bike_display_id = 'Partner Bike'
+      AND t.bike_title = 'Partner Canyon'
+      AND t.workshop_tag = 'workshop-partner-bike'
+  ),
+  2,
+  'partner qty-2 tasks use Partner Bike display, line title, and partner tag'
+);
+
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.bike_task_items i
+    JOIN public.bike_tasks t ON t.id = i.task_id
+    JOIN public.orders o ON o.id = t.order_id
+    WHERE o.booqable_order_id = 'bq-partner'
+      AND i.stage = 'preparation'
+  ),
+  12,
+  'partner qty-2 copies 6 items per task'
+);
+
+SELECT is(
+  (
+    pg_temp.apply_snap(
+      'bq-partner',
+      pg_temp.snap(
+        'bq-partner',
+        'reserved',
+        '2026-12-10T10:00:00Z',
+        jsonb_build_array(
+          pg_temp.partner_assignment('bq-partner-bike', 1)
+        ),
+        jsonb_build_array(pg_temp.line('bq-partner-bike', 'Partner Canyon', 1))
+      )
+    )->>'cancelled'
+  )::integer,
+  1,
+  'partner qty 2→1 cancels :2'
+);
+
+SELECT is(
+  (
+    SELECT t.status::text
+    FROM public.bike_tasks t
+    JOIN public.orders o ON o.id = t.order_id
+    WHERE o.booqable_order_id = 'bq-partner'
+      AND t.booqable_stock_item_id = 'partner:bq-partner-bike:1'
+  ),
+  'to_prepare',
+  'partner qty 2→1 retains :1'
+);
+
+SELECT is(
+  (
+    SELECT t.status::text
+    FROM public.bike_tasks t
+    JOIN public.orders o ON o.id = t.order_id
+    WHERE o.booqable_order_id = 'bq-partner'
+      AND t.booqable_stock_item_id = 'partner:bq-partner-bike:2'
+  ),
+  'cancelled',
+  'partner qty 2→1 cancels :2 task'
 );
 
 SELECT * FROM finish();
