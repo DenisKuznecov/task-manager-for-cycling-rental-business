@@ -102,13 +102,23 @@ function ItemRow({ item, nested }: { item: OrderItemRow; nested?: boolean }) {
   const isZeroPriceAccessory =
     nested && item.price_in_cents != null && item.price_in_cents === 0;
   const showMeta = meta && !isZeroPriceAccessory;
+  const stockTags = [...(item.stock_display_ids ?? [])].sort((a, b) =>
+    a.localeCompare(b),
+  );
 
   return (
     <div className="flex w-full items-start justify-between gap-3">
       <div className="flex min-w-0 flex-col items-start">
-        <span className="break-words text-body-bold font-body-bold text-default-font">
-          {item.title || "Untitled item"}
-        </span>
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="break-words text-body-bold font-body-bold text-default-font">
+            {item.title || "Untitled item"}
+          </span>
+          {stockTags.map((tag) => (
+            <Badge key={tag} variant="neutral">
+              {tag}
+            </Badge>
+          ))}
+        </div>
         {showMeta ? (
           <span className="break-words text-caption font-caption text-subtext-color">
             {meta}

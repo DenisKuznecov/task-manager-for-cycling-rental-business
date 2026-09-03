@@ -1,4 +1,4 @@
--- Scope workshop_task_detail addons to this bike's order-item package.
+-- Stock→line only: bundle = package minus wrappers; flat = seed + extraInformation.
 -- Idempotent. Apply locally only.
 
 ALTER TABLE public.booqable_assignment_instances
@@ -222,32 +222,17 @@ STABLE
 SECURITY DEFINER
 SET search_path = ''
 AS $$
-  WITH RECURSIVE resolved_line AS (
+  WITH RECURSIVE linked AS (
     SELECT NULLIF(btrim(i.booqable_line_id), '') AS line_id
     FROM public.booqable_assignment_instances i
     WHERE i.id = p_task.assignment_instance_id
-  ),
-  linked AS (
-    SELECT rl.line_id
-    FROM resolved_line rl
-    WHERE rl.line_id IS NOT NULL
+      AND NULLIF(btrim(i.booqable_line_id), '') IS NOT NULL
       AND EXISTS (
         SELECT 1
         FROM public.order_items oi
         WHERE oi.order_id = p_task.order_id
-          AND oi.booqable_line_id = rl.line_id
+          AND btrim(oi.booqable_line_id) = NULLIF(btrim(i.booqable_line_id), '')
       )
-  ),
-  seeds AS (
-    SELECT line_id AS booqable_line_id
-    FROM linked
-    UNION
-    SELECT oi.booqable_line_id
-    FROM public.order_items oi
-    WHERE NOT EXISTS (SELECT 1 FROM linked)
-      AND NULLIF(btrim(p_task.bike_title), '') IS NOT NULL
-      AND oi.order_id = p_task.order_id
-      AND oi.title IS NOT DISTINCT FROM p_task.bike_title
   ),
   walk_up AS (
     SELECT
@@ -257,7 +242,7 @@ AS $$
       1 AS depth,
       ARRAY[oi.booqable_line_id]::text[] AS seen
     FROM public.order_items oi
-    JOIN seeds s ON s.booqable_line_id = oi.booqable_line_id
+    JOIN linked s ON s.line_id = btrim(oi.booqable_line_id)
     WHERE oi.order_id = p_task.order_id
 
     UNION ALL
@@ -275,6 +260,15 @@ AS $$
     WHERE walk_up.parent_id IS NOT NULL
       AND walk_up.depth < 32
       AND NOT parent.booqable_line_id = ANY (walk_up.seen)
+  ),
+  ancestors AS (
+    SELECT DISTINCT w.booqable_line_id
+    FROM walk_up w
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM linked s
+      WHERE s.line_id = btrim(w.booqable_line_id)
+    )
   ),
   roots AS (
     SELECT DISTINCT w.booqable_line_id
@@ -295,11 +289,13 @@ AS $$
       oi.quantity,
       oi.line_type,
       oi.position,
+      oi.extra_information,
       1 AS depth,
       ARRAY[oi.booqable_line_id]::text[] AS seen
     FROM public.order_items oi
     JOIN roots r ON r.booqable_line_id = oi.booqable_line_id
     WHERE oi.order_id = p_task.order_id
+      AND EXISTS (SELECT 1 FROM ancestors)
 
     UNION ALL
 
@@ -310,6 +306,7 @@ AS $$
       child.quantity,
       child.line_type,
       child.position,
+      child.extra_information,
       walk_down.depth + 1,
       walk_down.seen || child.booqable_line_id
     FROM walk_down
@@ -318,19 +315,49 @@ AS $$
      AND NULLIF(btrim(child.parent_booqable_line_id), '') = walk_down.booqable_line_id
     WHERE walk_down.depth < 32
       AND NOT child.booqable_line_id = ANY (walk_down.seen)
+  ),
+  scoped AS (
+    SELECT
+      wd.id,
+      wd.title,
+      wd.quantity,
+      wd.line_type,
+      wd.position,
+      wd.extra_information
+    FROM walk_down wd
+    WHERE NOT EXISTS (
+      SELECT 1
+      FROM ancestors a
+      WHERE a.booqable_line_id = wd.booqable_line_id
+    )
+
+    UNION ALL
+
+    SELECT
+      oi.id,
+      oi.title,
+      oi.quantity,
+      oi.line_type,
+      oi.position,
+      oi.extra_information
+    FROM public.order_items oi
+    JOIN linked s ON s.line_id = btrim(oi.booqable_line_id)
+    WHERE oi.order_id = p_task.order_id
+      AND NOT EXISTS (SELECT 1 FROM ancestors)
   )
   SELECT COALESCE(
     (
       SELECT jsonb_agg(
         jsonb_build_object(
-          'id', wd.id,
-          'title', wd.title,
-          'quantity', wd.quantity,
-          'lineType', wd.line_type
+          'id', scoped.id,
+          'title', scoped.title,
+          'quantity', scoped.quantity,
+          'lineType', scoped.line_type,
+          'extraInformation', scoped.extra_information
         )
-        ORDER BY wd.position NULLS LAST, wd.id
+        ORDER BY scoped.position NULLS LAST, scoped.id
       )
-      FROM walk_down wd
+      FROM scoped
     ),
     '[]'::jsonb
   );

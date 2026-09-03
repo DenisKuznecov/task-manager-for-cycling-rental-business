@@ -1,3 +1,4 @@
+import { attachStockDisplayIdsToItems } from "@/src/lib/order-stock-tags";
 import { createClient } from "@/src/utils/supabase/server";
 
 export const ORDERS_PAGE_SIZE = 10;
@@ -61,6 +62,7 @@ export type OrderItemRow = {
   price_in_cents: number | null;
   position: number | null;
   relevant: boolean;
+  stock_display_ids: string[];
 };
 
 export type OrderDetails = {
@@ -124,7 +126,9 @@ export async function loadOrderDetails(
        order_items ( id, booqable_line_id, booqable_item_id,
          parent_booqable_line_id, title, quantity, line_type, charge_label,
          extra_information, price_each_in_cents, price_in_cents, position,
-         relevant )`,
+         relevant ),
+       booqable_assignment_instances ( booqable_line_id, bike_display_id,
+         closed_at )`,
     )
     .eq("id", orderId)
     .order("position", { referencedTable: "order_items", ascending: true })
@@ -135,7 +139,32 @@ export async function loadOrderDetails(
     return { order: null, error: error.message };
   }
 
-  return { order: (data as unknown as OrderDetails | null) ?? null, error: null };
+  if (!data) {
+    return { order: null, error: null };
+  }
+
+  return { order: attachStockDisplayIds(data), error: null };
+}
+
+type OrderDetailsQueryRow = Omit<OrderDetails, "order_items"> & {
+  order_items: Omit<OrderItemRow, "stock_display_ids">[] | null;
+  booqable_assignment_instances?: Array<{
+    booqable_line_id: string | null;
+    bike_display_id: string | null;
+    closed_at: string | null;
+  }> | null;
+};
+
+function attachStockDisplayIds(row: unknown): OrderDetails {
+  const data = row as OrderDetailsQueryRow;
+  const { booqable_assignment_instances, ...order } = data;
+  return {
+    ...order,
+    order_items: attachStockDisplayIdsToItems(
+      data.order_items,
+      booqable_assignment_instances,
+    ),
+  };
 }
 
 export async function loadOrdersPage(

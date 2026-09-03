@@ -326,6 +326,7 @@ function mapDetailPayload(data: unknown): WorkshopTaskDetail | null {
             title: asString(row.title),
             quantity: asNumber(row.quantity),
             lineType: asString(row.lineType),
+            extraInformation: asString(row.extraInformation),
           },
         ];
       })

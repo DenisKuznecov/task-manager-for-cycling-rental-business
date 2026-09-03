@@ -213,19 +213,32 @@ INSERT INTO public.order_items (
 
 -- Flat bikes + sibling extras
 INSERT INTO public.order_items (
-  order_id, booqable_line_id, parent_booqable_line_id, title, quantity, position
+  order_id, booqable_line_id, parent_booqable_line_id, title, quantity, position,
+  extra_information
 ) VALUES
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002', 'flat-m', NULL, 'Aventura M', 1, 1),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002', 'flat-l', NULL, 'Aventura L', 2, 2),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002', 'flat-helm', NULL, 'Helmet Smith', 2, 3),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002', 'flat-del', NULL, 'Delivery+Pickup', 1, 4);
+  (
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002',
+    'flat-m',
+    NULL,
+    'Aventura M',
+    1,
+    1,
+    E'Included:\n-Charger Di2\n-Frame pump'
+  ),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002', 'flat-l', NULL, 'Aventura L', 2, 2, NULL),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002', 'flat-helm', NULL, 'Helmet Smith', 2, 3, NULL),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0002', 'flat-del', NULL, 'Delivery+Pickup', 1, 4, NULL);
 
--- Shared qty-2 line plus another size
+-- Shared qty-2 bundled line plus another package
 INSERT INTO public.order_items (
   order_id, booqable_line_id, parent_booqable_line_id, title, quantity, position
 ) VALUES
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0003', 'share-l', NULL, 'Aventura L shared', 2, 1),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0003', 'share-xl', NULL, 'Aventura XL', 1, 2);
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0003', 'share-bundle', NULL, 'Shared bundle', 1, 1),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0003', 'share-l', 'share-bundle', 'Aventura L shared', 2, 2),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0003', 'share-helm', 'share-bundle', 'Shared helmet', 1, 3),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0003', 'share-no', 'share-bundle', 'No shared pedals', 1, 4),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0003', 'share-other', NULL, 'Other bundle', 1, 5),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0003', 'share-xl', 'share-other', 'Aventura XL', 1, 6);
 
 -- Legacy title match
 INSERT INTO public.order_items (
@@ -244,11 +257,13 @@ INSERT INTO public.order_items (
 INSERT INTO public.order_items (
   order_id, booqable_line_id, parent_booqable_line_id, title, quantity, position
 ) VALUES
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-a', NULL, 'Same Title Bike', 1, 1),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-a-extra', 'dup-a', 'Extra A', 1, 2),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-b', NULL, 'Same Title Bike', 1, 3),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-b-extra', 'dup-b', 'Extra B', 1, 4),
-  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-other', NULL, 'Unrelated extra', 1, 5);
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-wrap-a', NULL, 'Package A', 1, 1),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-a', 'dup-wrap-a', 'Same Title Bike', 1, 2),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-a-extra', 'dup-wrap-a', 'Extra A', 1, 3),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-wrap-b', NULL, 'Package B', 1, 4),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-b', 'dup-wrap-b', 'Same Title Bike', 1, 5),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-b-extra', 'dup-wrap-b', 'Extra B', 1, 6),
+  ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'dup-other', NULL, 'Unrelated extra', 1, 7);
 
 -- Section → bundle → bike + extras (and an extra nested under the bike)
 INSERT INTO public.order_items (
@@ -271,6 +286,8 @@ CREATE TEMP TABLE ws_addon_ids (
   empty uuid,
   legacy uuid,
   titles uuid,
+  titles_a uuid,
+  titles_b uuid,
   section uuid
 );
 
@@ -302,6 +319,12 @@ SELECT
   ),
   pg_temp.make_task(
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'stock-dup', 'ECF/D-1', 'Same Title Bike', NULL
+  ),
+  pg_temp.make_task(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'stock-dup-a', 'ECF/D-2', 'Same Title Bike', 'dup-a'
+  ),
+  pg_temp.make_task(
+    'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0007', 'stock-dup-b', 'ECF/D-3', 'Same Title Bike', 'dup-b'
   ),
   pg_temp.make_task(
     'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaa0008', 'stock-sec', 'ECF/N-1', 'Section Focus', 'sec-bike'
@@ -391,41 +414,63 @@ SELECT is(
   'flat: M task sees only its bike row'
 );
 SELECT is(
+  (
+    SELECT a->>'extraInformation'
+    FROM jsonb_array_elements(
+      public.workshop_task_detail((SELECT flat_m FROM ws_addon_ids))->'addons'
+    ) a
+    WHERE a->>'title' = 'Aventura M'
+  ),
+  E'Included:\n-Charger Di2\n-Frame pump',
+  'flat: extraInformation is returned for the seed row'
+);
+SELECT is(
   pg_temp.addon_titles((SELECT flat_l FROM ws_addon_ids)),
   ARRAY['Aventura L']::text[],
   'flat: L task sees only its bike row'
 );
+SELECT is(
+  (
+    SELECT a->>'extraInformation'
+    FROM jsonb_array_elements(
+      public.workshop_task_detail((SELECT flat_l FROM ws_addon_ids))->'addons'
+    ) a
+    WHERE a->>'title' = 'Aventura L'
+  ),
+  NULL,
+  'flat: extraInformation is null when unset'
+);
 
 SELECT is(
   pg_temp.addon_titles((SELECT share_a FROM ws_addon_ids)),
-  ARRAY['Aventura L shared']::text[],
-  'shared qty-2: first task sees the shared row'
+  ARRAY['Aventura L shared', 'No shared pedals', 'Shared helmet']::text[],
+  'bundled qty-2: first task sees that package as its own'
 );
 SELECT is(
   pg_temp.addon_titles((SELECT share_b FROM ws_addon_ids)),
-  ARRAY['Aventura L shared']::text[],
-  'shared qty-2: second task sees the shared row'
+  ARRAY['Aventura L shared', 'No shared pedals', 'Shared helmet']::text[],
+  'bundled qty-2: second task sees that package as its own'
 );
 SELECT is(
   (
     SELECT count(*)::integer
     FROM unnest(pg_temp.addon_titles((SELECT share_a FROM ws_addon_ids))) t(title)
-    WHERE title = 'Aventura XL'
+    WHERE title IN ('Shared bundle', 'Other bundle', 'Aventura XL')
   ),
   0,
-  'shared qty-2: other size is hidden'
+  'bundled qty-2: wrapper and other package stay hidden'
 );
 
 SELECT is(
   pg_temp.addon_titles((SELECT empty FROM ws_addon_ids)),
   ARRAY[]::text[],
-  'no items: addons is empty'
+  'unknown line id: addons is empty'
 );
 
 SELECT is(
   pg_temp.addon_titles((SELECT legacy FROM ws_addon_ids)),
-  ARRAY['Legacy Focus', 'Legacy helmet']::text[],
-  'legacy null row id: unique title match omits the wrapper'
+  ARRAY[]::text[],
+  'unlinked: missing line id yields empty addons, no title fallback'
 );
 SELECT is(
   pg_temp.addon_titles((SELECT section FROM ws_addon_ids)),
@@ -435,8 +480,18 @@ SELECT is(
 
 SELECT is(
   pg_temp.addon_titles((SELECT titles FROM ws_addon_ids)),
-  ARRAY['Extra A', 'Extra B', 'Same Title Bike', 'Same Title Bike']::text[],
-  'legacy several title matches: only those packages, not the rest of the order'
+  ARRAY[]::text[],
+  'same title, unlinked: empty even when other packages match the title'
+);
+SELECT is(
+  pg_temp.addon_titles((SELECT titles_a FROM ws_addon_ids)),
+  ARRAY['Extra A', 'Same Title Bike']::text[],
+  'same title with line id: A task sees only package A'
+);
+SELECT is(
+  pg_temp.addon_titles((SELECT titles_b FROM ws_addon_ids)),
+  ARRAY['Extra B', 'Same Title Bike']::text[],
+  'same title with line id: B task sees only package B'
 );
 
 SELECT ok(
@@ -449,8 +504,9 @@ SELECT ok(
       AND a->>'title' = 'Aventura L shared'
       AND (a->>'quantity')::integer = 2
       AND a ? 'lineType'
+      AND a ? 'extraInformation'
   ),
-  'scoped addon payload keeps id, quantity, and lineType'
+  'scoped addon payload keeps id, quantity, lineType, and extraInformation'
 );
 
 RESET ROLE;
