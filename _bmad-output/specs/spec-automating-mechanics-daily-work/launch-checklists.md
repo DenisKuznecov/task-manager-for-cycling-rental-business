@@ -81,6 +81,27 @@ Definition key: `e_road_bike_preparation`
 
 Independent snapshot copy of Road (`ROAD-01`…`ROAD-20`), including last item **Attach a haribo pouch to the bike**. Own definition id and version (`v1`); later Road catalog versions do not change these rows.
 
+## Partner Bike
+
+Tag: `workshop-partner-bike`
+
+Definition key: `partner_bike_preparation`
+
+Source: partner prep checklist for Booqable products that have no stock numbers.
+
+| Order | ID | Item | Type | Required | M2 verifies | N/A allowed |
+|---:|---|---|---|---|---|---|
+| 1 | `PARTNER-01` | Check saddle bag, charger | Action | Yes | Yes | Yes |
+| 2 | `PARTNER-02` | Tyre pressure front | PSI | Yes | Yes | Yes |
+| 3 | `PARTNER-03` | Tyre pressure back | PSI | Yes | Yes | Yes |
+| 4 | `PARTNER-04` | Attach haribo pouch | Action | Yes | No | Yes |
+| 5 | `PARTNER-05` | Bolt check stem, saddle, handlebar | Action | Yes | Yes | Yes |
+| 6 | `PARTNER-06` | Check computer mount | Action | Yes | Yes | Yes |
+
+For a required item that allows N/A, an explicit N/A selection satisfies M1 only when the equipment or service does not apply. M2 does not see or confirm N/A rows.
+
+The queue shows `Partner Bike` as the bike id and the Booqable line title as the bike name. Mechanic 1 and Mechanic 2 paper signature rows become the authenticated M1 and M2 stage attestations, not checklist items.
+
 ## Shared Prepare for Storage
 
 Used for every bike type in MVP.
