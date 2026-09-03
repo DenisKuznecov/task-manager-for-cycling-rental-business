@@ -77,3 +77,15 @@
 
 - Folded `CREATE OR REPLACE` copies of `booqable_create_instance_task_inner`, `booqable_sync_retained_task`, and `workshop_task_detail` in `20260902140000_workshop_task_addons_scope.sql` can overwrite later staging/Haribo bodies of those functions. Spec parked merge/rebase onto staging for a later run.
 - Drawer stock tags are proven only in `attachStockDisplayIdsToItems` plus a source grep. `loadOrderDetails` and `ItemRow` never run in tests; a qty-2 line can load without badges and CI stays green. Matches the existing workshop-ui grep style.
+
+- source_spec: none
+  summary: Switch `/customers` from the landed-only activity list to a full customer directory (Booqable people plus local bike-fit rows, left-join dest badges).
+  evidence: Split from the historical dest backfill so this run can land every Booqable person and write production `customer_sync` without rewriting the page. Locked decision: activity list was a temporary shortcut; the directory is the intended product. Local `customers` rows stay; they merge with Booqable identity, they are not deleted.
+
+- source_spec: none
+  summary: Persist Mailchimp `review-request` tag state on `customer_sync` and show Yes / Error / dash on the customers table.
+  evidence: Split from the historical dest backfill. Locked meaning: Yes = successful tag write; Error = tag write failed; dash = local-only customer that was never uploaded (not “never attempted” in the generic sense). No event-log table — latest snapshot only, same as dest badges.
+
+- source_spec: none
+  summary: After dest landing, backfill the Mailchimp `review-request` tag for customers whose Booqable order has already stopped.
+  evidence: Split from the historical dest backfill. Order is land first, then tag (tagger does not create a member). No review email campaign exists yet, so journey-fire risk is accepted. Zapier is already off.
