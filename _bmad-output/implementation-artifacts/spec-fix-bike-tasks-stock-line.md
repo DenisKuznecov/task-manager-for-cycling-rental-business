@@ -176,3 +176,11 @@ Qty≥2 shares one seed line across stock tasks. Squash locally: keep `140000`, 
 
 - Drawer qty-2: both tags on the bike line; parents stay.
   [`order-stock-tags.test.mts:5`](../../src/order-stock-tags.test.mts#L5)
+
+### Review Findings
+
+- [ ] [Review][Patch] Stale v1 handover still describes title fallback and an unchanged drawer [`_bmad-output/implementation-artifacts/handover-fix-bike-tasks-duplicated-info.md:13`]
+- [ ] [Review][Patch] Parent/child walks join raw line ids after `linked` already trims [`supabase/migrations/20260902140000_workshop_task_addons_scope.sql:259`]
+- [ ] [Review][Patch] AddonsList `extraInformation` is only grep-locked [`src/workshop-ui.test.mts:857`]
+- [x] [Review][Defer] Folded CREATE OR REPLACE copies of create/retain/detail can overwrite later staging/Haribo bodies [`supabase/migrations/20260902140000_workshop_task_addons_scope.sql:6`] — deferred, pre-existing
+- [x] [Review][Defer] Drawer stock tags are tested at the helper, not through loadOrderDetails/ItemRow [`src/order-stock-tags.test.mts:5`] — deferred, pre-existing

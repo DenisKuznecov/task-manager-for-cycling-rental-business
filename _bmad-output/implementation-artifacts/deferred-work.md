@@ -72,3 +72,8 @@
 - source_spec: `_bmad-output/implementation-artifacts/spec-fix-bike-tasks-duplicated-info.md`
   summary: After scoping the task list, a change on another bike can still trip M2 `ADD_ONS_CHANGED` because the fingerprint stays whole-order.
   evidence: Spec Ask First forbids changing `addon_fingerprint` / M2 snapshot in this run; the display is per-bike and the confirm token is not.
+
+## Deferred from: code review of spec-fix-bike-tasks-stock-line.md (2026-09-03)
+
+- Folded `CREATE OR REPLACE` copies of `booqable_create_instance_task_inner`, `booqable_sync_retained_task`, and `workshop_task_detail` in `20260902140000_workshop_task_addons_scope.sql` can overwrite later staging/Haribo bodies of those functions. Spec parked merge/rebase onto staging for a later run.
+- Drawer stock tags are proven only in `attachStockDisplayIdsToItems` plus a source grep. `loadOrderDetails` and `ItemRow` never run in tests; a qty-2 line can load without badges and CI stays green. Matches the existing workshop-ui grep style.
