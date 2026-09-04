@@ -801,6 +801,48 @@ test("queue surface: All-first tabs, status tiles, columns, sync help, load erro
   assert.match(tasks, /customer_name\.ilike/);
 });
 
+test("queue refreshes use a table-local transition skeleton, separate from sync", () => {
+  const queue = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopQueue.tsx"),
+    "utf8",
+  );
+  const skeleton = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopLoadingSkeleton.tsx"),
+    "utf8",
+  );
+
+  assert.match(
+    queue,
+    /const \[isQueueNavigationPending, startQueueNavigationTransition\] =\s*useTransition\(\);/,
+  );
+  assert.match(
+    queue,
+    /const \[isSyncPending, startSyncTransition\] = useTransition\(\);/,
+  );
+  assert.match(queue, /startQueueNavigationTransition\(\(\) => \{\s*router\.push/s);
+  assert.match(queue, /shouldBlockQueueNavigation\(isSyncPending, health\)/);
+  assert.match(queue, /isQueueNavigationPending \? \(\s*<WorkshopTaskTableSkeleton \/>\s*\)/s);
+  assert.match(queue, /syncInFlight \? \(\s*<WorkshopQueueSyncOverlay/s);
+  assert.match(queue, /pushQueue\(search, 1, filter, status\)/);
+  assert.match(
+    queue,
+    /onValueChange=\{\(value\) => \{\s*pushQueue\(query, 1, filter, statusFromQueueSelectValue\(value\)\);/s,
+  );
+  assert.match(queue, /const nextStatus = selected \? null : tileStatus;\s*pushQueue\(query, 1, filter, nextStatus\)/s);
+  assert.match(queue, /pushQueue\(query, 1, tab\.value, status\)/);
+  assert.match(queue, /onPageChange=\{\(nextPage\) =>\s*pushQueue\(query, nextPage, filter, status\)/s);
+
+  assert.match(skeleton, /export function WorkshopTaskTableSkeleton/);
+  assert.match(skeleton, /role="status"/);
+  assert.match(skeleton, /aria-live="polite"/);
+  assert.match(skeleton, /aria-busy="true"/);
+  assert.match(skeleton, /Loading workshop tasks/);
+  assert.match(skeleton, /const TABLE_ROW_COUNT = 15/);
+  assert.doesNotMatch(skeleton, /aria-label="Loading workshop tasks"/);
+  assert.match(skeleton, /"Bike ID"/);
+  assert.match(skeleton, /"Warnings"/);
+});
+
 test("task page: not-found vs error vs cancelled tombstone and named actions", () => {
   const page = readFileSync(
     join(root, "src/app/workshop/[taskId]/page.tsx"),

@@ -39,6 +39,7 @@ import {
   WORKSHOP_QUEUE_STATUS_SELECT_NONE,
   WORKSHOP_STATUS_LABELS,
 } from "./workshop-ui";
+import { WorkshopTaskTableSkeleton } from "./WorkshopLoadingSkeleton";
 import { useWorkshopTabletMode } from "./WorkshopTabletModeProvider";
 
 interface WorkshopQueueProps {
@@ -154,7 +155,9 @@ export function WorkshopQueue({
   const buttonSize = tabletMode ? "large" : "medium";
   const [search, setSearch] = useState(query);
   const [prevQuery, setPrevQuery] = useState(query);
-  const [isPending, startTransition] = useTransition();
+  const [isQueueNavigationPending, startQueueNavigationTransition] =
+    useTransition();
+  const [isSyncPending, startSyncTransition] = useTransition();
   const [syncError, setSyncError] = useState<{
     code: WorkshopErrorCode;
     error: string;
@@ -165,7 +168,7 @@ export function WorkshopQueue({
     setSearch(query);
   }
 
-  const syncInFlight = shouldBlockQueueNavigation(isPending, health);
+  const syncInFlight = shouldBlockQueueNavigation(isSyncPending, health);
   const overlayListed = workshopSyncOverlayListed(health);
 
   useEffect(() => {
@@ -218,7 +221,9 @@ export function WorkshopQueue({
     nextStatus: WorkshopQueueStatus | null,
   ) => {
     if (syncInFlight) return;
-    router.push(buildHref(nextQuery, nextPage, nextFilter, nextStatus));
+    startQueueNavigationTransition(() => {
+      router.push(buildHref(nextQuery, nextPage, nextFilter, nextStatus));
+    });
   };
 
   useEffect(() => {
@@ -252,7 +257,7 @@ export function WorkshopQueue({
     if (syncInFlight) return;
     setSyncError(null);
     setPendingScope(pending);
-    startTransition(async () => {
+    startSyncTransition(async () => {
       try {
         const result = await fn();
         if (!result.ok) {
@@ -426,7 +431,9 @@ export function WorkshopQueue({
         </TextField>
 
         <div className="flex w-full flex-col items-start gap-6 overflow-hidden overflow-x-auto mobile:overflow-auto mobile:max-w-full">
-          {tasks.length === 0 ? (
+          {isQueueNavigationPending ? (
+            <WorkshopTaskTableSkeleton />
+          ) : tasks.length === 0 ? (
             <div className="flex w-full flex-col items-center justify-center gap-2 rounded-md border border-solid border-neutral-border bg-default-background py-12">
               <span
                 className={`${queueCopyClass(tabletMode, true)} text-default-font text-center`}
