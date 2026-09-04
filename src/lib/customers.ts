@@ -4,6 +4,7 @@ import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/src/utils/supabase/server";
 import { withAuth } from "@/src/utils/auth/with-auth";
 import { isoDateToDdMmYyyy } from "@/src/utils/date-format";
+import { CUSTOMERS_DIRECTORY_PAGE_SIZE } from "./customers-config";
 import type {
   CustomerAddressPart,
   CustomerBikeFitSummary,
@@ -93,9 +94,8 @@ async function createCustomerAction(
 }
 
 const SEARCH_LIMIT = 20;
-export const CUSTOMERS_DIRECTORY_PAGE_SIZE = 10;
 const UUID_RE =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 type CustomerDirectoryDbRow = {
   id: string;

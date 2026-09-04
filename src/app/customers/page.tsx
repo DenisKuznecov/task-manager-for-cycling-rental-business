@@ -1,10 +1,8 @@
 import React from "react";
 import { redirect } from "next/navigation";
 import { DataLoadError } from "@/src/components/DataLoadError";
-import {
-  CUSTOMERS_DIRECTORY_PAGE_SIZE,
-  loadCustomerDirectoryPage,
-} from "@/src/lib/customers";
+import { loadCustomerDirectoryPage } from "@/src/lib/customers";
+import { CUSTOMERS_DIRECTORY_PAGE_SIZE } from "@/src/lib/customers-config";
 import { CustomersLandingTable } from "./_components/CustomersLandingTable";
 
 export default async function CustomersPage({
