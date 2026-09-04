@@ -1,0 +1,1 @@
+export const CUSTOMERS_DIRECTORY_PAGE_SIZE = 10;
