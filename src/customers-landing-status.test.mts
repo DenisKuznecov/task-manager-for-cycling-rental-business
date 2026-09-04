@@ -15,7 +15,7 @@ test("Customers navigation preserves the staff customer directory entry", () => 
   const nav = readSrc("ui/layouts/nav-config.ts");
   assert.match(nav, /label: "Customers"/);
   assert.match(nav, /href: "\/customers"/);
-  assert.match(nav, /roles: \["admin", "manager"\]/);
+  assert.match(nav, /roles: \["admin", "manager", "mechanic"\]/);
 });
 
 test("directory starts at customer_directory and searches all contact identifiers", () => {
@@ -86,6 +86,13 @@ test("customer drawer has authenticated details loading and the resolved destina
   assert.match(drawer, /\/orders\?order=\$\{order\.id\}/);
   assert.match(drawer, /\/bike-fits\/\$\{fit\.id\}/);
   assert.match(drawer, /No qualifying partner order exists/);
+
+  const orderDrawer = readSrc("components/orders/OrderDetailsDrawer.tsx");
+  const orders = readSrc("lib/orders.ts");
+  assert.match(orders, /customers \( id, name, email, phone, birthday \)/);
+  assert.match(orderDrawer, /useHasRole\("admin", "manager", "mechanic"\)/);
+  assert.match(orderDrawer, /href=\{`\/customers\?customer=\$\{order\.customers\.id\}`\}/);
+  assert.match(orderDrawer, /focus-visible:ring-2/);
 });
 
 test("customer layout retains its authorization boundary and mounts the drawer host", () => {
@@ -94,6 +101,10 @@ test("customer layout retains its authorization boundary and mounts the drawer h
   assert.match(layout, /redirect\("\/pending"\)/);
   assert.match(layout, /redirect\("\/partner\/overview"\)/);
   assert.match(layout, /redirect\("\/unauthorized"\)/);
+  assert.match(
+    layout,
+    /const ALLOWED_ROLES = \["admin", "manager", "mechanic"\]/,
+  );
   assert.match(layout, /<CustomerDetailsDrawerHost \/>/);
   assert.match(layout, /<Suspense fallback=\{null\}>/);
 });

@@ -14,7 +14,11 @@ export const NAV_ITEMS: NavItem[] = [
     roles: ["admin", "manager"],
     href: "/bike-fits/all-bike-fits",
   },
-  { label: "Customers", roles: ["admin", "manager"], href: "/customers" },
+  {
+    label: "Customers",
+    roles: ["admin", "manager", "mechanic"],
+    href: "/customers",
+  },
   {
     label: "Workshop",
     roles: ["admin", "manager", "mechanic"],
