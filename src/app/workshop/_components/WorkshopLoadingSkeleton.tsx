@@ -1,7 +1,55 @@
 import React from "react";
 import { SkeletonText } from "@/ui/components/SkeletonText";
 
-const TABLE_ROW_COUNT = 8;
+const TABLE_ROW_COUNT = 15;
+const TASK_TABLE_COLUMNS = [
+  "Bike ID",
+  "Bike title",
+  "Customer",
+  "Order #",
+  "From",
+  "Until",
+  "Status",
+  "Warnings",
+] as const;
+
+/** The queue's eight-column footprint, shared by route and refresh loading states. */
+export function WorkshopTaskTableSkeleton() {
+  return (
+    <div
+      role="status"
+      aria-live="polite"
+      aria-busy="true"
+      className="flex w-full flex-col items-start gap-4 rounded-md border border-solid border-neutral-border bg-default-background p-4"
+    >
+      <span className="sr-only">Loading workshop tasks</span>
+      <div aria-hidden className="flex w-full min-w-max items-center gap-3 border-b border-solid border-neutral-border pb-3">
+        {TASK_TABLE_COLUMNS.map((column) => (
+          <SkeletonText
+            key={column}
+            size="default"
+            className="min-w-20 flex-1"
+          />
+        ))}
+      </div>
+      {Array.from({ length: TABLE_ROW_COUNT }).map((_, rowIndex) => (
+        <div
+          key={rowIndex}
+          aria-hidden
+          className="flex w-full min-w-max items-center gap-3 border-t border-solid border-neutral-border pt-3 first:border-t-0 first:pt-0"
+        >
+          {TASK_TABLE_COLUMNS.map((column) => (
+            <SkeletonText
+              key={column}
+              size="default"
+              className="min-w-20 flex-1"
+            />
+          ))}
+        </div>
+      ))}
+    </div>
+  );
+}
 
 export function WorkshopLoadingSkeleton() {
   return (
@@ -42,29 +90,7 @@ export function WorkshopLoadingSkeleton() {
         <SkeletonText size="default" className="h-8 max-w-md grow" />
       </div>
 
-      <div className="flex w-full flex-col items-start gap-4 rounded-md border border-solid border-neutral-border bg-default-background p-4">
-        <div className="flex w-full items-center gap-3 border-b border-solid border-neutral-border pb-3">
-          <SkeletonText size="default" className="max-w-28" />
-          <SkeletonText size="default" className="max-w-20" />
-          <SkeletonText size="default" className="max-w-24" />
-          <SkeletonText size="default" className="max-w-24" />
-          <SkeletonText size="default" className="max-w-20" />
-          <SkeletonText size="default" className="max-w-16" />
-        </div>
-        {Array.from({ length: TABLE_ROW_COUNT }).map((_, rowIndex) => (
-          <div
-            key={rowIndex}
-            className="flex w-full items-center gap-3 border-t border-solid border-neutral-border pt-3 first:border-t-0 first:pt-0"
-          >
-            <SkeletonText size="default" className="max-w-40" />
-            <SkeletonText size="default" className="max-w-16" />
-            <SkeletonText size="default" className="max-w-24" />
-            <SkeletonText size="default" className="max-w-28" />
-            <SkeletonText size="default" className="max-w-16" />
-            <SkeletonText size="default" className="max-w-16" />
-          </div>
-        ))}
-      </div>
+      <WorkshopTaskTableSkeleton />
     </div>
   );
 }
