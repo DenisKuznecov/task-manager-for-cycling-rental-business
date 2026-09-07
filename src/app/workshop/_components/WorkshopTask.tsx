@@ -17,8 +17,10 @@ import { TextField } from "@/ui/components/TextField";
 import { useOpenOrderDetails } from "@/src/components/orders/useOpenOrderDetails";
 import { useUser } from "@/src/context/UserContext";
 import * as workshopActions from "@/src/lib/workshop/actions";
+import type { WorkshopPrinterConfig } from "@/src/lib/workshop/printing/config";
 import { useWorkshopTabletMode } from "./WorkshopTabletModeProvider";
 import { WorkshopTabletModeSwitch } from "./WorkshopTabletModeSwitch";
+import { WorkshopPrintActions } from "./WorkshopPrintActions";
 import type {
   ChecklistItemOutcome,
   WorkshopAttestation,
@@ -56,6 +58,7 @@ type WorkshopNamedAction =
 
 interface WorkshopTaskProps {
   detail: WorkshopTaskDetail;
+  printerConfig: WorkshopPrinterConfig;
 }
 
 function formatSignedAt(iso: string): string {
@@ -180,7 +183,7 @@ function AddonsAcknowledge({
   );
 }
 
-export function WorkshopTask({ detail }: WorkshopTaskProps) {
+export function WorkshopTask({ detail, printerConfig }: WorkshopTaskProps) {
   const router = useRouter();
   const { tabletMode } = useWorkshopTabletMode();
   const buttonSize = tabletMode ? "large" : "medium";
@@ -225,6 +228,8 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
     itemSuccessPendingRefreshRef.current = false;
     namedActionLockRef.current = false;
     itemEnqueueBlockedRef.current = false;
+    // Task identity is the source of truth for these optimistic item-save values.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setItemSavesInFlight(0);
     setItemOverrides({});
   }, [task.taskId]);
@@ -515,6 +520,8 @@ export function WorkshopTask({ detail }: WorkshopTaskProps) {
         />
       ) : null}
 
+      <WorkshopPrintActions detail={detail} printerConfig={printerConfig} />
+
       {isTombstone ? (
         <Alert
           variant="neutral"
@@ -801,7 +808,7 @@ function AddonsList({
     >
       <div className="flex min-w-0 w-full flex-col items-start gap-2">
         <span className="text-heading-3 font-heading-3 text-default-font">
-          What's included in the order
+          What&apos;s included in the order
         </span>
         {included.length === 0 ? (
           <span className={`${taskCopyClass(tabletMode)} text-subtext-color`}>

@@ -1,0 +1,73 @@
+{
+  "today": "2026-09-07",
+  "claims": [
+    {
+      "ref": 1,
+      "status": "unverified",
+      "class": "hardware",
+      "pub_date": "2024-07-10",
+      "claim": "Epson documents TM-m30II protocols, media geometry and firmware-dependent certificate support; sources=[1],[12],[13],[14]; publisher=Epson; accessed=2026-09-07.",
+      "recheck": null,
+      "stale": null
+    },
+    {
+      "ref": 2,
+      "status": "unverified",
+      "class": "compatibility",
+      "pub_date": "2026-01-20",
+      "claim": "Retrieved Epson SDK browser range ends at Chrome 125; this does not prove current Chrome works or fails; sources=[2]; publisher=Epson; accessed=2026-09-07.",
+      "recheck": "2026-02-20",
+      "stale": true
+    },
+    {
+      "ref": 3,
+      "status": "verified",
+      "class": "compatibility",
+      "pub_date": "2026-08-12",
+      "claim": "Secure sites may request HTTP private IP literals with granted LNA permission and mixed-content exemption; mechanism only; sources=[3],[16]; publishers=Google,MDN; accessed=2026-09-07.",
+      "recheck": "2026-09-12",
+      "stale": false
+    },
+    {
+      "ref": 5,
+      "status": "unverified",
+      "class": "compatibility",
+      "pub_date": "2026-09-04",
+      "claim": "CORS is separate from LNA; XML Content-Type can require preflight, actual printer response untested; sources=[5]; publisher=MDN; accessed=2026-09-07.",
+      "recheck": "2026-10-04",
+      "stale": false
+    },
+    {
+      "ref": 7,
+      "status": "verified",
+      "class": "patterns",
+      "pub_date": "1996-02",
+      "claim": "Private addresses require a connected routing path; a public cloud server cannot directly address the shop private printer without one; sources=[7],[17]; publishers=RFC Editor,AWS; accessed=2026-09-07.",
+      "recheck": "1998-02-01",
+      "stale": true
+    },
+    {
+      "ref": 10,
+      "status": "verified",
+      "class": "patterns",
+      "pub_date": "2021-01-07",
+      "claim": "General print submission/completion states do not unconditionally prove physical paper output; this does not independently verify Epson codes; sources=[10],[19]; publishers=QZ,Microsoft; accessed=2026-09-07.",
+      "recheck": "2023-01-07",
+      "stale": true
+    },
+    {
+      "ref": 15,
+      "status": "unverified",
+      "class": "compatibility",
+      "pub_date": "2026-07-01",
+      "claim": "Another Epson model download listing shows SDK 2.27.0i, which is availability evidence not TM-m30II certification; sources=[15]; publisher=Epson; accessed=2026-09-07.",
+      "recheck": "2026-08-01",
+      "stale": true
+    }
+  ],
+  "stale_count": 4,
+  "earliest_recheck": "1998-02-01",
+  "no_window_classes": [
+    "hardware"
+  ]
+}

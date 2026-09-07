@@ -997,3 +997,29 @@ test("tablet mode switch is on list and task; density classes are conditional", 
   assert.match(task, /tabletMode \? "min-h-16" : "min-h-12"/);
   assert.match(skeleton, /h-12 min-w-28/);
 });
+
+test("task printing is a persistent, client-only surface outside task commands", () => {
+  const task = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopTask.tsx"),
+    "utf8",
+  );
+  const actions = readFileSync(
+    join(root, "src/app/workshop/_components/WorkshopPrintActions.tsx"),
+    "utf8",
+  );
+  const page = readFileSync(
+    join(root, "src/app/workshop/[taskId]/page.tsx"),
+    "utf8",
+  );
+
+  assert.match(page, /resolveWorkshopPrinterConfig\(\)/);
+  assert.match(task, /<WorkshopPrintActions detail=\{detail\} printerConfig=\{printerConfig\}/);
+  assert.match(actions, /if \(detail\.task\.status === "cancelled"\) return null/);
+  assert.match(actions, /createPrintAttemptGuard/);
+  assert.match(actions, /sendPrintAttempt/);
+  assert.doesNotMatch(actions, /workshopActions\./);
+  assert.equal(
+    existsSync(join(root, "src/app/workshop/printer-spike/page.tsx")),
+    false,
+  );
+});

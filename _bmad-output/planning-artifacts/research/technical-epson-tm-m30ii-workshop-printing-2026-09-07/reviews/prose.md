@@ -1,0 +1,8 @@
+This document exists to help a technical owner with frontend experience choose a printer integration and define its pilot. Preserve its concise technical voice, explicit confidence labels, distinction between documentation and installation evidence, and concrete acceptance language. Microsoft style guide baseline; human reader. This dependent pass respects the author's decision to retain dimension ordering and a condensed cross-dimension synthesis, and attaches the accepted completion-contract move to its surviving failure-handling location.
+
+| Pass | Original Text | Revised Text | Changes |
+| --- | --- | --- | --- |
+| prose | §Connection from Windows Chrome: “Google and MDN describe an exception allowing an HTTPS website to request an HTTP local IP literal or `.local` destination after Local Network Access permission.” | “Google and MDN describe an exception allowing an HTTPS website to send an HTTP request to a local IP literal or `.local` destination after Local Network Access permission is granted.” | Clarifies that HTTP describes the request, the address is its destination, and permission must be granted. Preserves the stated mechanism and scope. |
+| prose | §Options and operating burden, completion-contract passage moving to §Failure handling and reprinting: “Its print API resolves when the document has been sent to the printer.” | “The promise returned by QZ's print API resolves when the document has been sent to the printer.” | Names QZ explicitly so the moved passage retains its referent, and identifies the promise as the object that resolves. Preserves the existing completion boundary. |
+
+Two localized clarity fixes; no broad style rewrite or changes to factual claims recommended.
