@@ -87,6 +87,7 @@ export type OrderDetails = {
   billing_address: string | null;
   partner_promo: string | null;
   customers: {
+    id: string;
     name: string | null;
     email: string | null;
     phone: string | null;
@@ -121,7 +122,7 @@ export async function loadOrderDetails(
        coupon_discount_in_cents, deposit_in_cents, tax_in_cents,
        grand_total_with_tax_in_cents, to_be_paid_in_cents, item_count,
        delivery_address, billing_address, partner_promo,
-       customers ( name, email, phone, birthday ),
+       customers ( id, name, email, phone, birthday ),
        partners ( name, slug ),
        order_items ( id, booqable_line_id, booqable_item_id,
          parent_booqable_line_id, title, quantity, line_type, charge_label,

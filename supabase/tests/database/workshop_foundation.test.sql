@@ -1802,8 +1802,8 @@ SELECT is(
 );
 RESET ROLE;
 
--- Mechanic SELECT on parent order (and nested customer/partner/items);
--- deny an order that has no bike_tasks row.
+-- Mechanics can read the complete customer and order history, including
+-- records unrelated to a workshop task, but no DML is granted.
 INSERT INTO public.customers (id, name, email)
 VALUES
   ('aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', 'Task Customer', 'task-cust@test.local'),
@@ -1827,13 +1827,15 @@ FROM public.bike_tasks t
 WHERE t.id = (SELECT road_task FROM ws_ids);
 
 INSERT INTO public.orders (
-  id, booqable_order_id, order_number, customer_id, partner_id
+  id, booqable_order_id, order_number, status, customer_id, partner_id, partner_promo
 ) VALUES (
   'eeeeeeee-eeee-4eee-8eee-eeeeeeeeeeee',
   'bq-orphan-no-task',
   8001,
+  'reserved',
   'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
-  'dddddddd-dddd-4ddd-8ddd-dddddddddddd'
+  'dddddddd-dddd-4ddd-8ddd-dddddddddddd',
+  'mechanic-visible'
 );
 
 INSERT INTO public.order_items (order_id, booqable_line_id, title, position)
@@ -1842,6 +1844,17 @@ VALUES (
   'line-orphan-no-task',
   'Lock',
   1
+);
+
+INSERT INTO public.bike_fits (
+  id, fit_number, customer_id, date_of_fit, bike_type, status
+) VALUES (
+  'ffffffff-ffff-4fff-8fff-ffffffffffff',
+  8001,
+  'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb',
+  date '2026-09-04',
+  'road',
+  'completed'
 );
 
 CREATE TEMP TABLE ws_order_select AS
@@ -1869,8 +1882,17 @@ SELECT is(
 SELECT is(
   (SELECT count(*)::integer FROM public.orders
     WHERE id = (SELECT orphan_order_id FROM ws_order_select)),
-  0,
-  'mechanic cannot SELECT an order with no bike task'
+  1,
+  'mechanic can SELECT an order with no bike task'
+);
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.bookings_view
+    WHERE id = (SELECT orphan_order_id FROM ws_order_select)
+  ),
+  1,
+  'mechanic can SELECT a no-task order from bookings_view'
 );
 SELECT is(
   (SELECT count(*)::integer FROM public.customers
@@ -1881,8 +1903,17 @@ SELECT is(
 SELECT is(
   (SELECT count(*)::integer FROM public.customers
     WHERE id = (SELECT orphan_customer_id FROM ws_order_select)),
-  0,
-  'mechanic cannot SELECT customer on an order with no bike task'
+  1,
+  'mechanic can SELECT customer on an order with no bike task'
+);
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.customer_directory
+    WHERE id = (SELECT orphan_customer_id FROM ws_order_select)
+  ),
+  1,
+  'mechanic can SELECT a no-task customer from customer_directory'
 );
 SELECT is(
   (SELECT count(*)::integer FROM public.partners
@@ -1893,8 +1924,18 @@ SELECT is(
 SELECT is(
   (SELECT count(*)::integer FROM public.partners
     WHERE id = (SELECT orphan_partner_id FROM ws_order_select)),
-  0,
-  'mechanic cannot SELECT partner on an order with no bike task'
+  1,
+  'mechanic can SELECT partner on an order with no bike task'
+);
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.customer_partner_history
+    WHERE customer_id = (SELECT orphan_customer_id FROM ws_order_select)
+      AND partner_id = (SELECT orphan_partner_id FROM ws_order_select)
+  ),
+  1,
+  'mechanic can SELECT qualifying partner history for a no-task customer'
 );
 SELECT is(
   (SELECT count(*)::integer FROM public.order_items
@@ -1905,8 +1946,17 @@ SELECT is(
 SELECT is(
   (SELECT count(*)::integer FROM public.order_items
     WHERE order_id = (SELECT orphan_order_id FROM ws_order_select)),
-  0,
-  'mechanic cannot SELECT items on an order with no bike task'
+  1,
+  'mechanic can SELECT items on an order with no bike task'
+);
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM public.bike_fits
+    WHERE id = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
+  ),
+  1,
+  'mechanic can SELECT a bike fit with no workshop task'
 );
 UPDATE public.orders
 SET partner_promo = 'x'
@@ -1920,6 +1970,18 @@ SELECT is(
   ),
   NULL,
   'mechanic cannot UPDATE a parent order'
+);
+UPDATE public.bike_fits
+SET fit_label = 'Mutated'
+WHERE id = 'ffffffff-ffff-4fff-8fff-ffffffffffff';
+SELECT is(
+  (
+    SELECT fit_label
+    FROM public.bike_fits
+    WHERE id = 'ffffffff-ffff-4fff-8fff-ffffffffffff'
+  ),
+  'Baseline Fit'::text,
+  'mechanic cannot UPDATE a bike fit'
 );
 
 RESET ROLE;
