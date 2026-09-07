@@ -1,0 +1,37 @@
+[
+  {
+    "ref": 4,
+    "status": "unverified",
+    "class": "compatibility",
+    "pub_date": "unknown",
+    "claim": "Google rolling notes document Chrome 145 permission split and 147 WebSocket coverage; installed browser policies untested; sources=[4]; publisher=Google; accessed=2026-09-07."
+  },
+  {
+    "ref": 6,
+    "status": "unverified",
+    "class": "patterns",
+    "pub_date": "unknown",
+    "claim": "Epson XML receipt HTTP endpoint and response contracts include timeout partial printing and spooler-dependent timing; source=[6]; publisher=Epson; accessed=2026-09-07."
+  },
+  {
+    "ref": 8,
+    "status": "verified",
+    "class": "patterns",
+    "pub_date": "unknown",
+    "claim": "A Windows QZ client installation and trust prompt are independently documented integration patterns; this does not verify raw ports or silent signing; sources=[8],[18]; publishers=QZ,Frappe; accessed=2026-09-07."
+  },
+  {
+    "ref": 9,
+    "status": "unverified",
+    "class": "compatibility",
+    "pub_date": "unknown",
+    "claim": "QZ documents trusted message signing and initial trust setup for silent printing; sources=[9]; publisher=QZ; accessed=2026-09-07."
+  },
+  {
+    "ref": 11,
+    "status": "unverified",
+    "class": "compatibility",
+    "pub_date": "unknown",
+    "claim": "Regional Epson TM-m30II listing advertises Server Direct Print but exact installed-SKU support remains unresolved; sources=[11],[12]; publisher=Epson; accessed=2026-09-07."
+  }
+]
