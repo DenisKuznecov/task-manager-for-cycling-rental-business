@@ -8,6 +8,12 @@ import {
   wrapThermalText,
 } from "./lib/workshop/printing/documents.ts";
 import {
+  ECHELON_LOGO_HEIGHT,
+  ECHELON_LOGO_RASTER_BASE64,
+  ECHELON_LOGO_WIDTH,
+  validateEchelonLogoRaster,
+} from "./lib/workshop/printing/logo.ts";
+import {
   classifyReply,
   createPrintAttemptGuard,
   EPOS_NAMESPACE,
@@ -222,22 +228,25 @@ test("private printer targets are bounded and reject public or injected configur
   assert.equal(validateTarget("http://192.168.1.38", "p&timeout=1").ok, false);
 });
 
-test("M1 is an ASCII re-check tag with order, bike name, stock ID, signer, feed and cut", () => {
+test("M1 uses RE-CHECK TAG as its sole enlarged cue and separates the preparer from the date", () => {
   const document = buildM1PrintDocument({
-    task,
+    task: { ...task, bikeTitle: "Focus Aventura2 6.7 - size L, 5′9″–6′3″" },
     m1,
     m1SignedAt: "7 Sep 2026, 12:20",
   });
-  assert.match(document, /<text align="center" dw="true" dh="true">1/);
+  assert.match(document, /<text align="center" dw="true" dh="true">RE-CHECK TAG/);
+  assert.equal(document.match(/<text[^>]*dw="true" dh="true"/g)?.length, 1);
+  assert.doesNotMatch(document, /<text[^>]*>\s*1\n<\/text>/);
   assert.match(document, /Order #42/);
-  assert.match(document, /Bike: Echelon Road Pro/);
+  assert.match(document, /Bike: Focus Aventura2 6\.7 - size L, 5&apos;9&quot;-6&apos;3&quot;/);
+  assert.doesNotMatch(document, /5\?9|6\?3/);
   assert.match(document, /Stock ID: STOCK-01/);
-  assert.match(document, /Prepared by Ana Garcia/);
+  assert.match(document, /Prepared by\nAna Garcia\n7 Sep 2026, 12:20/);
   assert.match(document, /<feed line="3"\/><cut type="feed"\/>/);
   assert.match(document, /^[\x00-\x7F]*$/);
 });
 
-test("M2 keeps every sorted preparation row with M1, applicable M2, PSI and N/A marks", () => {
+test("M2 starts with a validated centered one-bit logo and keeps sorted trailing-only checklist marks", () => {
   const document = buildM2PrintDocument({
     task,
     m1,
@@ -262,16 +271,85 @@ test("M2 keeps every sorted preparation row with M1, applicable M2, PSI and N/A 
       item({ itemId: "storage", stage: "storage", sortOrder: 0, label: "Do not print" }),
     ],
   });
+  assert.doesNotThrow(validateEchelonLogoRaster);
+  assert.equal(ECHELON_LOGO_WIDTH % 8, 0);
+  assert.equal(
+    Buffer.from(ECHELON_LOGO_RASTER_BASE64, "base64").length,
+    (ECHELON_LOGO_WIDTH / 8) * ECHELON_LOGO_HEIGHT,
+  );
+  assert.ok(
+    document.includes(
+      `<image width="${ECHELON_LOGO_WIDTH}" height="${ECHELON_LOGO_HEIGHT}" align="center" color="color_1" mode="mono">${ECHELON_LOGO_RASTER_BASE64}</image><text align="center" dw="true" dh="true">BIKE READY FOR PICKUP`,
+    ),
+  );
   assert.ok(document.indexOf("Optional lights") < document.indexOf("Front tyre"));
   assert.ok(document.indexOf("Front tyre") < document.indexOf("Late check"));
-  assert.match(document, /\[N\/A\] Optional lights/);
+  assert.match(document, /Optional lights \[N\/A\]/);
+  assert.doesNotMatch(document, /\[N\/A\] Optional lights/);
   assert.doesNotMatch(document, /Optional lights  M2/);
-  assert.match(document, /\[X\] Front tyre &lt;pressure&gt; \(80 PSI\)  M2 \[X\]/);
+  assert.match(document, /Front tyre &lt;pressure&gt; \(80 PSI\) \[X\]  M2 \[X\]/);
+  assert.match(document, /Late check \[X\]/);
+  assert.doesNotMatch(document, /Late check \[X\]  M2 \[X\]/);
   assert.match(document, /Bike: Echelon Road Pro/);
-  assert.match(document, /Stock ID: STOCK-01/);
+  assert.doesNotMatch(document, /Stock ID:/);
   assert.match(document, /Bike prepared by Ana Garcia/);
-  assert.match(document, /Preparation time 7 Sep 2026, 12:20/);
   assert.match(document, /Bike re-checked by Bo Recheck/);
+  assert.match(document, /Bike was prepared at 7 Sep 2026, 12:20/);
+  assert.ok(document.indexOf("Bike prepared by") < document.indexOf("Bike re-checked by"));
+  assert.ok(document.indexOf("Bike re-checked by") < document.indexOf("Bike was prepared at"));
+});
+
+test("logo validation rejects malformed, wrong-sized, and blank candidates", () => {
+  assert.throws(
+    () => validateEchelonLogoRaster({ width: 8, height: 1, base64: "not-base64" }),
+    /valid Base64/i,
+  );
+  assert.throws(
+    () => validateEchelonLogoRaster({ width: 8, height: 2, base64: "AA==" }),
+    /declared geometry/i,
+  );
+  assert.throws(
+    () => validateEchelonLogoRaster({ width: 8, height: 1, base64: "AA==" }),
+    /black pixel/i,
+  );
+});
+
+test("M2 checklist wrapping keeps its complete status suffix with the final label line", () => {
+  const longLabel = "Inspect chain and derailleur alignment ".repeat(4).trim();
+  const document = buildM2PrintDocument({
+    task,
+    m1,
+    m2,
+    m1SignedAt: "7 Sep 2026, 12:20",
+    items: [item({ label: longLabel })],
+  });
+  const textBlocks = [...document.matchAll(/<text[^>]*>([\s\S]*?)\n<\/text>/g)]
+    .map((match) => match[1].split("\n"));
+  const checklistLines = textBlocks[2];
+  assert.ok(checklistLines.every((line) => line.length <= 48));
+  assert.equal(checklistLines.filter((line) => /\[X\]|M2 \[X\]/.test(line)).length, 1);
+  assert.match(checklistLines.at(-1) ?? "", /.+ \[X\]  M2 \[X\]$/);
+  assert.ok(
+    checklistLines.every((line) => !/^(?:\[X\]|\[N\/A\]|M2 \[X\])/.test(line.trim())),
+  );
+});
+
+test("M2 uses item IDs as the deterministic tie-breaker for equal sort orders", () => {
+  const document = buildM2PrintDocument({
+    task,
+    m1,
+    m2,
+    m1SignedAt: "7 Sep 2026, 12:20",
+    items: [
+      item({ itemId: "z-item", sortOrder: 1, label: "Zulu item" }),
+      item({ itemId: "a-item", sortOrder: 1, label: "Alpha item" }),
+    ],
+  });
+  assert.ok(document.indexOf("Alpha item") < document.indexOf("Zulu item"));
+});
+
+test("thermal text converts curly double quotes before the ASCII fallback", () => {
+  assert.deepEqual(wrapThermalText("“Ready” at 5′9″"), ['"Ready" at 5\'9"']);
 });
 
 test("documents label the fallback source ID separately from the bike name", () => {
@@ -293,10 +371,10 @@ test("documents label the fallback source ID separately from the bike name", () 
     m1SignedAt: "7 Sep 2026, 12:20",
     items: [item()],
   });
-  for (const document of [m1Document, m2Document]) {
-    assert.match(document, /Bike: Echelon City/);
-    assert.match(document, /Stock ID: source-fallback-9/);
-  }
+  assert.match(m1Document, /Bike: Echelon City/);
+  assert.match(m1Document, /Stock ID: source-fallback-9/);
+  assert.match(m2Document, /Bike: Echelon City/);
+  assert.doesNotMatch(m2Document, /Stock ID:/);
 });
 
 test("XML-sensitive and long content is escaped, ASCII-safe and never truncated", () => {
@@ -306,7 +384,7 @@ test("XML-sensitive and long content is escaped, ASCII-safe and never truncated"
   assert.ok(lines.every((line) => line.length <= 48));
   assert.equal(lines.join(""), source);
   const document = buildM2PrintDocument({
-    task: { ...task, bikeDisplayId: "A & <bike> cafe" },
+    task: { ...task, bikeTitle: "A & <bike> cafe" },
     m1,
     m2,
     m1SignedAt: "7 Sep 2026, 12:20",

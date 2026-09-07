@@ -4,6 +4,11 @@ import type {
   WorkshopTaskListRow,
 } from "../domain/index.ts";
 import { EPOS_NAMESPACE } from "./epos.ts";
+import {
+  ECHELON_LOGO_HEIGHT,
+  ECHELON_LOGO_RASTER_BASE64,
+  ECHELON_LOGO_WIDTH,
+} from "./logo.ts";
 
 const SOAP_NAMESPACE = "http://schemas.xmlsoap.org/soap/envelope/";
 const PAPER_COLUMNS = 48;
@@ -24,8 +29,11 @@ type M2DocumentInput = M1DocumentInput & {
   items: WorkshopTaskItem[];
 };
 
-function ascii(value: string): string {
+function normalizePrintableText(value: string): string {
   return value
+    .replace(/[\u2032\u02B9]/g, "'")
+    .replace(/[\u2033\u02BA]/g, '"')
+    .replace(/[\u201C\u201D]/g, '"')
     .normalize("NFKD")
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[\u2018\u2019]/g, "'")
@@ -48,7 +56,7 @@ export function wrapThermalText(value: string, columns = PAPER_COLUMNS): string[
     throw new RangeError("Thermal paper width must be a positive integer.");
   }
   const result: string[] = [];
-  for (const rawLine of ascii(value).split("\n")) {
+  for (const rawLine of normalizePrintableText(value).split("\n")) {
     if (rawLine.length === 0) {
       result.push("");
       continue;
@@ -101,24 +109,30 @@ function m2Mark(item: WorkshopTaskItem): string {
   return item.m2Verifies && item.m1Outcome !== "not_applicable" ? "  M2 [X]" : "";
 }
 
-function checklistLine(item: WorkshopTaskItem): string {
+function checklistText(item: WorkshopTaskItem): string {
   const psi = item.itemType === "tyre_pressure_psi" && item.m1Psi != null
     ? ` (${item.m1Psi} PSI)`
     : "";
-  return `${m1Mark(item)} ${item.label}${psi}${m2Mark(item)}`;
+  return `${item.label}${psi}`;
+}
+
+function wrapChecklistLine(item: WorkshopTaskItem): string[] {
+  const status = ` ${m1Mark(item)}${m2Mark(item)}`;
+  const lines = wrapThermalText(checklistText(item), PAPER_COLUMNS - status.length);
+  const last = lines.pop() ?? "";
+  return [...lines, `${last}${status}`];
 }
 
 export function buildM1PrintDocument(input: M1DocumentInput): string {
   return soap(
     [
-      text(["1"], ' align="center" dw="true" dh="true"'),
+      text(["RE-CHECK TAG"], ' align="center" dw="true" dh="true"'),
       text([
-        "RE-CHECK TAG",
         order(input.task),
         `Bike: ${bikeName(input.task)}`,
         `Stock ID: ${stockId(input.task)}`,
       ]),
-      text([`Prepared by ${name(input.m1)}`, input.m1SignedAt]),
+      text(["Prepared by", name(input.m1), input.m1SignedAt]),
       '<feed line="3"/><cut type="feed"/>',
     ].join(""),
   );
@@ -127,23 +141,23 @@ export function buildM1PrintDocument(input: M1DocumentInput): string {
 export function buildM2PrintDocument(input: M2DocumentInput): string {
   const items = [...input.items]
     .filter((item) => item.stage === "preparation")
-    .sort((a, b) => a.sortOrder - b.sortOrder);
+    .sort((a, b) => a.sortOrder - b.sortOrder || a.itemId.localeCompare(b.itemId));
   return soap(
     [
-      text(["BIKE READY FOR PICKUP"], ' align="center"'),
+      `<image width="${ECHELON_LOGO_WIDTH}" height="${ECHELON_LOGO_HEIGHT}" align="center" color="color_1" mode="mono">${ECHELON_LOGO_RASTER_BASE64}</image>`,
+      text(["BIKE READY FOR PICKUP"], ' align="center" dw="true" dh="true"'),
       text([
         order(input.task),
         `Bike: ${bikeName(input.task)}`,
-        `Stock ID: ${stockId(input.task)}`,
         "",
         "CHECKLIST",
       ]),
-      text(items.map(checklistLine)),
+      text(items.flatMap(wrapChecklistLine)),
       text([
         "",
         `Bike prepared by ${name(input.m1)}`,
-        `Preparation time ${input.m1SignedAt}`,
         `Bike re-checked by ${name(input.m2)}`,
+        `Bike was prepared at ${input.m1SignedAt}`,
       ]),
       '<feed line="3"/><cut type="feed"/>',
     ].join(""),
