@@ -12,6 +12,11 @@ import {
 
 const SOAP_NAMESPACE = "http://schemas.xmlsoap.org/soap/envelope/";
 const PAPER_COLUMNS = 48;
+const M1_CHECKLIST_COLUMN_WIDTH = 5;
+const M2_CHECKLIST_COLUMN_WIDTH = 3;
+const CHECKLIST_COLUMN_GAP = 2;
+const CHECKLIST_STATUS_WIDTH =
+  M1_CHECKLIST_COLUMN_WIDTH + CHECKLIST_COLUMN_GAP + M2_CHECKLIST_COLUMN_WIDTH;
 
 type DocumentTask = Pick<
   WorkshopTaskListRow,
@@ -106,7 +111,7 @@ function m1Mark(item: WorkshopTaskItem): string {
 }
 
 function m2Mark(item: WorkshopTaskItem): string {
-  return item.m2Verifies && item.m1Outcome !== "not_applicable" ? "  M2 [X]" : "";
+  return item.m2Verifies && item.m1Outcome !== "not_applicable" ? "[X]" : "";
 }
 
 function checklistText(item: WorkshopTaskItem): string {
@@ -117,23 +122,29 @@ function checklistText(item: WorkshopTaskItem): string {
 }
 
 function wrapChecklistLine(item: WorkshopTaskItem): string[] {
-  const status = ` ${m1Mark(item)}${m2Mark(item)}`;
-  const lines = wrapThermalText(checklistText(item), PAPER_COLUMNS - status.length);
+  const status = `${m1Mark(item).padStart(M1_CHECKLIST_COLUMN_WIDTH)}${" ".repeat(CHECKLIST_COLUMN_GAP)}${m2Mark(item).padStart(M2_CHECKLIST_COLUMN_WIDTH)}`;
+  const lines = wrapThermalText(checklistText(item), PAPER_COLUMNS - CHECKLIST_STATUS_WIDTH);
   const last = lines.pop() ?? "";
-  return [...lines, `${last}${status}`];
+  return [...lines, `${last.padEnd(PAPER_COLUMNS - CHECKLIST_STATUS_WIDTH)}${status}`];
+}
+
+function checklistColumnHeader(): string {
+  const m1 = "M1".padStart(4).padEnd(M1_CHECKLIST_COLUMN_WIDTH);
+  const m2 = "M2".padStart(M2_CHECKLIST_COLUMN_WIDTH);
+  return `${"".padEnd(PAPER_COLUMNS - CHECKLIST_STATUS_WIDTH)}${m1}${" ".repeat(CHECKLIST_COLUMN_GAP)}${m2}`;
 }
 
 export function buildM1PrintDocument(input: M1DocumentInput): string {
   return soap(
     [
-      text(["RE-CHECK TAG"], ' align="center" dw="true" dh="true"'),
+      text(["RE-CHECK TAG"], ' align="center" width="3" height="3" dw="false" dh="false"'),
       text([
         order(input.task),
         `Bike: ${bikeName(input.task)}`,
         `Stock ID: ${stockId(input.task)}`,
-      ], ' dw="false" dh="false"'),
-      text(["Prepared by", name(input.m1), input.m1SignedAt], ' dw="false" dh="false"'),
-      '<feed line="3"/><cut type="feed"/>',
+      ], ' width="1" height="2" dw="false" dh="false"'),
+      text(["Prepared by", name(input.m1), input.m1SignedAt], ' width="1" height="2" dw="false" dh="false"'),
+      '<feed line="40"/><cut type="feed"/>',
     ].join(""),
   );
 }
@@ -153,7 +164,7 @@ export function buildM2PrintDocument(input: M2DocumentInput): string {
         "",
         "CHECKLIST",
       ], ' dw="false" dh="false"'),
-      text(items.flatMap(wrapChecklistLine), ' dw="false" dh="false"'),
+      text([checklistColumnHeader(), ...items.flatMap(wrapChecklistLine)], ' align="left" dw="false" dh="false"'),
       text([
         "",
         `Bike prepared by ${name(input.m1)}`,

@@ -234,13 +234,16 @@ test("M1 uses RE-CHECK TAG as its sole enlarged cue and separates the preparer f
     m1,
     m1SignedAt: "7 Sep 2026, 12:20",
   });
-  assert.match(document, /<text align="center" dw="true" dh="true">RE-CHECK TAG/);
+  assert.match(
+    document,
+    /<text align="center" width="3" height="3" dw="false" dh="false">RE-CHECK TAG/,
+  );
   assert.deepEqual(
     [...document.matchAll(/<text([^>]*)>/g)].map((match) => match[1]),
     [
-      ' align="center" dw="true" dh="true"',
-      ' dw="false" dh="false"',
-      ' dw="false" dh="false"',
+      ' align="center" width="3" height="3" dw="false" dh="false"',
+      ' width="1" height="2" dw="false" dh="false"',
+      ' width="1" height="2" dw="false" dh="false"',
     ],
   );
   assert.doesNotMatch(document, /<text[^>]*>\s*1\n<\/text>/);
@@ -249,7 +252,7 @@ test("M1 uses RE-CHECK TAG as its sole enlarged cue and separates the preparer f
   assert.doesNotMatch(document, /5\?9|6\?3/);
   assert.match(document, /Stock ID: STOCK-01/);
   assert.match(document, /Prepared by\nAna Garcia\n7 Sep 2026, 12:20/);
-  assert.match(document, /<feed line="3"\/><cut type="feed"\/>/);
+  assert.match(document, /<feed line="40"\/><cut type="feed"\/>/);
   assert.match(document, /^[\x00-\x7F]*$/);
 });
 
@@ -294,17 +297,26 @@ test("M2 starts with a validated centered one-bit logo and keeps sorted trailing
     [
       ' align="center" dw="true" dh="true"',
       ' dw="false" dh="false"',
-      ' dw="false" dh="false"',
+      ' align="left" dw="false" dh="false"',
       ' dw="false" dh="false"',
     ],
   );
+  const checklistLines = ([...document.matchAll(/<text[^>]*>([\s\S]*?)\n<\/text>/g)][2]?.[1] ?? "").split("\n");
+  assert.equal(checklistLines[0]?.length, 48);
+  assert.match(checklistLines[0] ?? "", /M1 +M2$/);
+  const optionalLights = checklistLines.find((line) => line.startsWith("Optional lights"));
+  const lateCheck = checklistLines.find((line) => line.startsWith("Late check"));
+  assert.equal(optionalLights?.length, 48);
+  assert.match(optionalLights ?? "", /\[N\/A\] +$/);
+  assert.equal(lateCheck?.length, 48);
+  assert.match(lateCheck ?? "", /\[X\] +$/);
   assert.ok(document.indexOf("Optional lights") < document.indexOf("Front tyre"));
   assert.ok(document.indexOf("Front tyre") < document.indexOf("Late check"));
-  assert.match(document, /Optional lights \[N\/A\]/);
+  assert.match(document, /Optional lights +\[N\/A\]/);
   assert.doesNotMatch(document, /\[N\/A\] Optional lights/);
-  assert.doesNotMatch(document, /Optional lights  M2/);
-  assert.match(document, /Front tyre &lt;pressure&gt; \(80 PSI\) \[X\]  M2 \[X\]/);
-  assert.match(document, /Late check \[X\]/);
+  assert.doesNotMatch(document, /M2 \[X\]/);
+  assert.match(document, /Front tyre &lt;pressure&gt; \(80 PSI\) +\[X\]  \[X\]/);
+  assert.match(document, /Late check +\[X\]/);
   assert.doesNotMatch(document, /Late check \[X\]  M2 \[X\]/);
   assert.match(document, /Bike: Echelon Road Pro/);
   assert.doesNotMatch(document, /Stock ID:/);
@@ -340,13 +352,14 @@ test("M2 checklist wrapping keeps its complete status suffix with the final labe
     items: [item({ label: longLabel })],
   });
   const textBlocks = [...document.matchAll(/<text([^>]*)>([\s\S]*?)\n<\/text>/g)];
-  assert.equal(textBlocks[2]?.[1], ' dw="false" dh="false"');
+  assert.equal(textBlocks[2]?.[1], ' align="left" dw="false" dh="false"');
   const checklistLines = (textBlocks[2]?.[2] ?? "").split("\n");
   assert.ok(checklistLines.every((line) => line.length <= 48));
-  assert.equal(checklistLines.filter((line) => /\[X\]|M2 \[X\]/.test(line)).length, 1);
-  assert.match(checklistLines.at(-1) ?? "", /.+ \[X\]  M2 \[X\]$/);
+  assert.equal(checklistLines.filter((line) => /\[X\]/.test(line)).length, 1);
+  assert.match(checklistLines.at(-1) ?? "", /.+ +\[X\]  \[X\]$/);
+  assert.equal(checklistLines.at(-1)?.length, 48);
   assert.ok(
-    checklistLines.every((line) => !/^(?:\[X\]|\[N\/A\]|M2 \[X\])/.test(line.trim())),
+    checklistLines.every((line) => !/^(?:\[X\]|\[N\/A\])/.test(line.trim())),
   );
 });
 
