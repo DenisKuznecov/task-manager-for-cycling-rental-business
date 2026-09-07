@@ -22,6 +22,7 @@ interface BikeFitReportActionsProps {
   reportGeneratedAt: string | null;
   customerName: string;
   customerEmail: string | null;
+  canManage: boolean;
 }
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -54,6 +55,7 @@ export function BikeFitReportActions({
   reportGeneratedAt,
   customerName,
   customerEmail,
+  canManage,
 }: BikeFitReportActionsProps) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
@@ -75,6 +77,7 @@ export function BikeFitReportActions({
     : "";
 
   const handleGenerate = () => {
+    if (!canManage) return;
     if (isGenerating) return;
     setError(null);
     setSuccess(null);
@@ -106,6 +109,7 @@ export function BikeFitReportActions({
     emailMode === EMAIL_MODE_CUSTOMER ? customerEmail?.trim() ?? "" : customEmail.trim();
 
   const handleOpenEmailDialog = () => {
+    if (!canManage) return;
     setError(null);
     setSuccess(null);
     setEmailError(null);
@@ -123,6 +127,7 @@ export function BikeFitReportActions({
   };
 
   const handleSendEmail = () => {
+    if (!canManage) return;
     if (isSending) return;
     setEmailError(null);
     setError(null);
@@ -163,15 +168,17 @@ export function BikeFitReportActions({
               >
                 Download PDF
               </Button>
-              <Button
-                variant="neutral-secondary"
-                icon={<FeatherMail />}
-                onClick={handleOpenEmailDialog}
-              >
-                Email to Customer
-              </Button>
+              {canManage ? (
+                <Button
+                  variant="neutral-secondary"
+                  icon={<FeatherMail />}
+                  onClick={handleOpenEmailDialog}
+                >
+                  Email to Customer
+                </Button>
+              ) : null}
             </>
-          ) : (
+          ) : canManage ? (
             <Button
               variant="brand-primary"
               icon={<FeatherFileText />}
@@ -181,7 +188,7 @@ export function BikeFitReportActions({
             >
               Generate PDF
             </Button>
-          )}
+          ) : null}
         </div>
         {hasReport && generatedLabel ? (
           <span className="text-caption font-caption text-subtext-color">
@@ -198,20 +205,22 @@ export function BikeFitReportActions({
         ) : null}
       </div>
 
-      <BikeFitEmailDialog
-        open={emailDialogOpen}
-        onOpenChange={setEmailDialogOpen}
-        customerName={customerName}
-        customerEmail={customerEmail}
-        hasCustomerEmail={hasCustomerEmail}
-        emailMode={emailMode}
-        onEmailModeChange={handleEmailModeChange}
-        customEmail={customEmail}
-        onCustomEmailChange={setCustomEmail}
-        emailError={emailError}
-        isSending={isSending}
-        onSend={handleSendEmail}
-      />
+      {canManage ? (
+        <BikeFitEmailDialog
+          open={emailDialogOpen}
+          onOpenChange={setEmailDialogOpen}
+          customerName={customerName}
+          customerEmail={customerEmail}
+          hasCustomerEmail={hasCustomerEmail}
+          emailMode={emailMode}
+          onEmailModeChange={handleEmailModeChange}
+          customEmail={customEmail}
+          onCustomEmailChange={setCustomEmail}
+          emailError={emailError}
+          isSending={isSending}
+          onSend={handleSendEmail}
+        />
+      ) : null}
     </>
   );
 }

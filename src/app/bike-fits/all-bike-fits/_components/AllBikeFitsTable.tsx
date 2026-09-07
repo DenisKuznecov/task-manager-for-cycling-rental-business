@@ -32,6 +32,7 @@ interface AllBikeFitsTableProps {
   totalPages: number;
   query: string;
   timeframe: BikeFitsTimeframe;
+  canManage: boolean;
 }
 
 const SEARCH_DEBOUNCE_MS = 300;
@@ -67,6 +68,7 @@ export function AllBikeFitsTable({
   totalPages,
   query,
   timeframe,
+  canManage,
 }: AllBikeFitsTableProps) {
   const router = useRouter();
   const pathname = usePathname();
@@ -143,21 +145,23 @@ export function AllBikeFitsTable({
 
   return (
     <div className="flex w-full flex-col items-start gap-6">
-      <div className="flex w-full flex-col items-end gap-1">
-        <Button
-          variant="brand-primary"
-          loading={isCreating}
-          disabled={isCreating}
-          onClick={handleCreate}
-        >
-          Create New Bike Fit
-        </Button>
-        {createError ? (
-          <span className="text-caption font-caption text-error-700">
-            {createError}
-          </span>
-        ) : null}
-      </div>
+      {canManage ? (
+        <div className="flex w-full flex-col items-end gap-1">
+          <Button
+            variant="brand-primary"
+            loading={isCreating}
+            disabled={isCreating}
+            onClick={handleCreate}
+          >
+            Create New Bike Fit
+          </Button>
+          {createError ? (
+            <span className="text-caption font-caption text-error-700">
+              {createError}
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       <div className="flex w-full items-center gap-2 mobile:flex-col mobile:items-stretch mobile:gap-3">
         <span className="grow shrink-0 basis-0 text-heading-3 font-heading-3 text-default-font mobile:grow-0 mobile:basis-auto">
           All Bike Fits
@@ -287,7 +291,7 @@ export function AllBikeFitsTable({
                   <Table.Cell
                     onClick={(event) => event.stopPropagation()}
                   >
-                    {isEditableStatus(fit.status) ? (
+                    {canManage && isEditableStatus(fit.status) ? (
                       <div className="flex grow shrink-0 basis-0 items-center justify-end">
                         <SubframeCore.DropdownMenu.Root>
                           <SubframeCore.DropdownMenu.Trigger asChild={true}>
