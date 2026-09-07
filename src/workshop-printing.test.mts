@@ -235,7 +235,14 @@ test("M1 uses RE-CHECK TAG as its sole enlarged cue and separates the preparer f
     m1SignedAt: "7 Sep 2026, 12:20",
   });
   assert.match(document, /<text align="center" dw="true" dh="true">RE-CHECK TAG/);
-  assert.equal(document.match(/<text[^>]*dw="true" dh="true"/g)?.length, 1);
+  assert.deepEqual(
+    [...document.matchAll(/<text([^>]*)>/g)].map((match) => match[1]),
+    [
+      ' align="center" dw="true" dh="true"',
+      ' dw="false" dh="false"',
+      ' dw="false" dh="false"',
+    ],
+  );
   assert.doesNotMatch(document, /<text[^>]*>\s*1\n<\/text>/);
   assert.match(document, /Order #42/);
   assert.match(document, /Bike: Focus Aventura2 6\.7 - size L, 5&apos;9&quot;-6&apos;3&quot;/);
@@ -279,8 +286,17 @@ test("M2 starts with a validated centered one-bit logo and keeps sorted trailing
   );
   assert.ok(
     document.includes(
-      `<image width="${ECHELON_LOGO_WIDTH}" height="${ECHELON_LOGO_HEIGHT}" align="center" color="color_1" mode="mono">${ECHELON_LOGO_RASTER_BASE64}</image><text align="center" dw="true" dh="true">BIKE READY FOR PICKUP`,
+      `<image width="${ECHELON_LOGO_WIDTH}" height="${ECHELON_LOGO_HEIGHT}" align="center" color="color_1" mode="mono">${ECHELON_LOGO_RASTER_BASE64}</image><feed line="1"/><text align="center" dw="true" dh="true">BIKE READY FOR PICKUP`,
     ),
+  );
+  assert.deepEqual(
+    [...document.matchAll(/<text([^>]*)>/g)].map((match) => match[1]),
+    [
+      ' align="center" dw="true" dh="true"',
+      ' dw="false" dh="false"',
+      ' dw="false" dh="false"',
+      ' dw="false" dh="false"',
+    ],
   );
   assert.ok(document.indexOf("Optional lights") < document.indexOf("Front tyre"));
   assert.ok(document.indexOf("Front tyre") < document.indexOf("Late check"));
@@ -323,9 +339,9 @@ test("M2 checklist wrapping keeps its complete status suffix with the final labe
     m1SignedAt: "7 Sep 2026, 12:20",
     items: [item({ label: longLabel })],
   });
-  const textBlocks = [...document.matchAll(/<text[^>]*>([\s\S]*?)\n<\/text>/g)]
-    .map((match) => match[1].split("\n"));
-  const checklistLines = textBlocks[2];
+  const textBlocks = [...document.matchAll(/<text([^>]*)>([\s\S]*?)\n<\/text>/g)];
+  assert.equal(textBlocks[2]?.[1], ' dw="false" dh="false"');
+  const checklistLines = (textBlocks[2]?.[2] ?? "").split("\n");
   assert.ok(checklistLines.every((line) => line.length <= 48));
   assert.equal(checklistLines.filter((line) => /\[X\]|M2 \[X\]/.test(line)).length, 1);
   assert.match(checklistLines.at(-1) ?? "", /.+ \[X\]  M2 \[X\]$/);

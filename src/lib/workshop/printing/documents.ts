@@ -131,8 +131,8 @@ export function buildM1PrintDocument(input: M1DocumentInput): string {
         order(input.task),
         `Bike: ${bikeName(input.task)}`,
         `Stock ID: ${stockId(input.task)}`,
-      ]),
-      text(["Prepared by", name(input.m1), input.m1SignedAt]),
+      ], ' dw="false" dh="false"'),
+      text(["Prepared by", name(input.m1), input.m1SignedAt], ' dw="false" dh="false"'),
       '<feed line="3"/><cut type="feed"/>',
     ].join(""),
   );
@@ -145,20 +145,21 @@ export function buildM2PrintDocument(input: M2DocumentInput): string {
   return soap(
     [
       `<image width="${ECHELON_LOGO_WIDTH}" height="${ECHELON_LOGO_HEIGHT}" align="center" color="color_1" mode="mono">${ECHELON_LOGO_RASTER_BASE64}</image>`,
+      '<feed line="1"/>',
       text(["BIKE READY FOR PICKUP"], ' align="center" dw="true" dh="true"'),
       text([
         order(input.task),
         `Bike: ${bikeName(input.task)}`,
         "",
         "CHECKLIST",
-      ]),
-      text(items.flatMap(wrapChecklistLine)),
+      ], ' dw="false" dh="false"'),
+      text(items.flatMap(wrapChecklistLine), ' dw="false" dh="false"'),
       text([
         "",
         `Bike prepared by ${name(input.m1)}`,
         `Bike re-checked by ${name(input.m2)}`,
         `Bike was prepared at ${input.m1SignedAt}`,
-      ]),
+      ], ' dw="false" dh="false"'),
       '<feed line="3"/><cut type="feed"/>',
     ].join(""),
   );
