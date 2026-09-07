@@ -1,8 +1,9 @@
 import React from "react";
-import { notFound } from "next/navigation";
+import { notFound, redirect } from "next/navigation";
 import { FeatherAlertTriangle } from "@subframe/core";
 import { Alert } from "@/ui/components/Alert";
 import { loadBikeFitById } from "@/src/lib/bike-fit/data/bike-fits";
+import { getMyProfile } from "@/src/lib/profile";
 import { BikeFitWizard } from "../../_components/BikeFitWizard";
 import {
   bikeFitRowToInitialCustomer,
@@ -15,6 +16,12 @@ export default async function EditBikeFitPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
+  const { role } = await getMyProfile();
+
+  if (role === "mechanic") {
+    redirect(`/bike-fits/${id}`);
+  }
+
   const { bikeFit, error } = await loadBikeFitById(id);
 
   if (error) {

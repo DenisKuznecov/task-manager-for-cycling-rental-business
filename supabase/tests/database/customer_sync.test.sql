@@ -214,9 +214,14 @@ SELECT hasnt_column(
 );
 
 SELECT is(
-  has_table_privilege('authenticated', 'public.customer_sync', 'SELECT'),
+  has_column_privilege(
+    'authenticated',
+    'public.customer_sync',
+    'google_status',
+    'SELECT'
+  ),
   true,
-  'authenticated can SELECT customer_sync'
+  'authenticated can SELECT customer_sync status columns'
 );
 SELECT is(
   has_table_privilege('authenticated', 'public.customer_sync', 'INSERT'),
@@ -443,6 +448,13 @@ INSERT INTO public.orders (
   '05050505-0505-4505-8505-050505050505'
 );
 
+INSERT INTO storage.buckets (id, name, public)
+VALUES ('bike-fit-images', 'bike-fit-images', false)
+ON CONFLICT (id) DO NOTHING;
+
+INSERT INTO storage.objects (bucket_id, name)
+VALUES ('bike-fit-images', 'mechanic-read-test/reference-photo.jpg');
+
 SELECT pg_temp.become('01010101-0101-4101-8101-010101010101');
 SET ROLE authenticated;
 
@@ -540,14 +552,85 @@ SELECT pg_temp.become('03030303-0303-4303-8303-030303030303');
 SET ROLE authenticated;
 
 SELECT is(
-  (SELECT count(*)::integer FROM public.customer_sync),
-  0,
-  'mechanic cannot SELECT customer_sync'
+  (
+    SELECT row(
+      s.google_status,
+      s.google_error,
+      s.holded_status,
+      s.holded_error,
+      s.mailchimp_status,
+      s.mailchimp_error
+    )
+    FROM public.customer_sync AS s
+    WHERE s.customer_id = 'a0a0a0a0-a0a0-40a0-80a0-a0a0a0a0a0a0'
+  ),
+  row(
+    'green'::text,
+    NULL::text,
+    'red'::text,
+    'holded failed'::text,
+    'green'::text,
+    NULL::text
+  ),
+  'mechanic reads customer_sync statuses and errors'
 );
 SELECT is(
   (SELECT count(*)::integer FROM public.customer_sync_list),
-  0,
-  'mechanic cannot SELECT customer_sync_list'
+  2,
+  'mechanic reads customer_sync_list rows'
+);
+SELECT is(
+  has_column_privilege(
+    'authenticated',
+    'public.customer_sync',
+    'google_id',
+    'SELECT'
+  ),
+  false,
+  'authenticated cannot SELECT Google destination IDs'
+);
+SELECT is(
+  has_column_privilege(
+    'authenticated',
+    'public.customer_sync',
+    'holded_id',
+    'SELECT'
+  ),
+  false,
+  'authenticated cannot SELECT Holded destination IDs'
+);
+SELECT is(
+  has_column_privilege(
+    'authenticated',
+    'public.customer_sync',
+    'mailchimp_id',
+    'SELECT'
+  ),
+  false,
+  'authenticated cannot SELECT Mailchimp destination IDs'
+);
+SELECT throws_ok(
+  'SELECT google_id FROM public.customer_sync',
+  '42501',
+  NULL,
+  'mechanic cannot query Google destination IDs'
+);
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM storage.objects
+    WHERE bucket_id = 'bike-fit-images'
+      AND name = 'mechanic-read-test/reference-photo.jpg'
+  ),
+  1,
+  'mechanic can SELECT private bike fit reference images'
+);
+SELECT throws_ok(
+  $$INSERT INTO storage.objects (bucket_id, name)
+    VALUES ('bike-fit-images', 'mechanic-read-test/forbidden-upload.jpg')$$,
+  '42501',
+  NULL,
+  'mechanic cannot upload bike fit reference images'
 );
 
 RESET ROLE;
@@ -581,6 +664,16 @@ SELECT is(
   ),
   0,
   'partner cannot SELECT customer_sync_list for a customer they can read'
+);
+SELECT is(
+  (
+    SELECT count(*)::integer
+    FROM storage.objects
+    WHERE bucket_id = 'bike-fit-images'
+      AND name = 'mechanic-read-test/reference-photo.jpg'
+  ),
+  0,
+  'partner cannot SELECT private bike fit reference images'
 );
 
 RESET ROLE;

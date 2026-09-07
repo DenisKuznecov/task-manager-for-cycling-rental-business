@@ -3,7 +3,7 @@ import { redirect } from "next/navigation";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 import { createClient } from "@/src/utils/supabase/server";
 
-const ALLOWED_ROLES = ["admin", "manager"] as const;
+const ALLOWED_ROLES = ["admin", "manager", "mechanic"] as const;
 type AllowedRole = (typeof ALLOWED_ROLES)[number];
 
 export default async function BikeFitsLayout({

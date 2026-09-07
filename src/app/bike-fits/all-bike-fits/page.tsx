@@ -5,6 +5,7 @@ import {
   resolveBikeFitsTimeframe,
 } from "@/src/lib/bike-fit/data/bike-fits";
 import { DataLoadError } from "@/src/components/DataLoadError";
+import { getMyProfile } from "@/src/lib/profile";
 import { AllBikeFitsTable } from "./_components/AllBikeFitsTable";
 
 export default async function AllBikeFitsPage({
@@ -30,6 +31,8 @@ export default async function AllBikeFitsPage({
     query,
     timeframe,
   );
+  const { role } = await getMyProfile();
+  const canManage = role === "admin" || role === "manager";
   const totalPages = Math.ceil(count / BIKE_FITS_PAGE_SIZE);
 
   return (
@@ -53,6 +56,7 @@ export default async function AllBikeFitsPage({
         totalPages={totalPages}
         query={query}
         timeframe={timeframe}
+        canManage={canManage}
       />
     </div>
   );

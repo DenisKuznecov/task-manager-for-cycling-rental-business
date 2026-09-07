@@ -109,6 +109,85 @@ test("customer layout retains its authorization boundary and mounts the drawer h
   assert.match(layout, /<Suspense fallback=\{null\}>/);
 });
 
+test("mechanics get read-only Orders and Bike Fits access while partners remain redirected", () => {
+  const nav = readSrc("ui/layouts/nav-config.ts");
+  assert.match(nav, /label: "Orders"[\s\S]*roles: \["admin", "manager", "mechanic"\]/);
+  assert.match(nav, /label: "Bike Fits"[\s\S]*roles: \["admin", "manager", "mechanic"\]/);
+
+  for (const relativePath of ["app/orders/layout.tsx", "app/bike-fits/layout.tsx"]) {
+    const layout = readSrc(relativePath);
+    assert.match(layout, /const ALLOWED_ROLES = \["admin", "manager", "mechanic"\]/);
+    assert.match(layout, /redirect\("\/partner\/overview"\)/);
+  }
+});
+
+test("Bike Fits pass an explicit management capability and keep mechanic controls read-only", () => {
+  const listPage = readSrc("app/bike-fits/all-bike-fits/page.tsx");
+  const list = readSrc("app/bike-fits/all-bike-fits/_components/AllBikeFitsTable.tsx");
+  const detailPage = readSrc("app/bike-fits/[id]/page.tsx");
+  const detail = readSrc("app/bike-fits/_components/BikeFitDetail.tsx");
+  const editPage = readSrc("app/bike-fits/[id]/edit/page.tsx");
+  const reports = readSrc("app/bike-fits/_components/BikeFitReportActions.tsx");
+
+  assert.match(listPage, /const canManage = role === "admin" \|\| role === "manager"/);
+  assert.match(listPage, /canManage=\{canManage\}/);
+  assert.match(list, /canManage: boolean/);
+  assert.match(list, /\{canManage \? \(/);
+  assert.match(list, /canManage && isEditableStatus/);
+  assert.match(detailPage, /canManage=\{canManage\}/);
+  assert.match(detail, /canManage: boolean/);
+  assert.match(detail, /\{canManage \? \(/);
+  assert.match(editPage, /if \(role === "mechanic"\)/);
+  assert.match(editPage, /redirect\(`\/bike-fits\/\$\{id\}`\)/);
+  assert.match(reports, /canManage: boolean/);
+  assert.match(reports, /\{canManage \? \(/);
+  assert.match(reports, /\) : canManage \? \(/);
+  assert.match(reports, /Download PDF/);
+});
+
+test("Bike Fit server actions authorize every mutation and report generation or email", () => {
+  const bikeFitActions = readSrc("lib/bike-fit/actions/bike-fit-actions.ts");
+  const reportActions = readSrc("lib/bike-fit/actions/report-actions.ts");
+
+  assert.match(bikeFitActions, /requireBikeFitManagementAccess/);
+  for (const action of [
+    "createBikeFitDraftAction",
+    "saveBikeFitDraftAction",
+    "completeBikeFitAction",
+    "unlockBikeFitForEditAction",
+    "deleteBikeFitAction",
+  ]) {
+    assert.match(
+      bikeFitActions,
+      new RegExp(`async function ${action}[\\s\\S]*?requireBikeFitManagementAccess\\(\\)`),
+    );
+  }
+  assert.match(reportActions, /requireBikeFitReportManagementAccess/);
+  assert.match(reportActions, /generateBikeFitReportAction[\s\S]*?requireBikeFitReportManagementAccess\(\)/);
+  assert.match(reportActions, /sendBikeFitReportEmailAction[\s\S]*?requireBikeFitReportManagementAccess\(\)/);
+  assert.doesNotMatch(
+    reportActions.match(/getBikeFitReportDownloadUrlAction[\s\S]*?(?=\/\*\*|$)/)?.[0] ?? "",
+    /requireBikeFitReportManagementAccess/,
+  );
+});
+
+test("mechanic migration is idempotent, status-only, and preserves private storage writes", () => {
+  const migration = readFileSync(
+    join(root, "supabase/migrations/20260904130000_mechanic_customer_read_access.sql"),
+    "utf8",
+  );
+
+  assert.match(migration, /DROP POLICY IF EXISTS "Mechanics can read orders with bike tasks"/);
+  assert.match(migration, /CREATE POLICY "Mechanics can read all orders"/);
+  assert.match(migration, /CREATE POLICY "Mechanics can read all customers"/);
+  assert.match(migration, /CREATE POLICY "Mechanics can read all bike fits"/);
+  assert.match(migration, /CREATE POLICY "Staff and mechanics can read customer sync"/);
+  assert.match(migration, /GRANT SELECT \([\s\S]*google_status[\s\S]*mailchimp_error[\s\S]*\) ON TABLE public\.customer_sync TO authenticated/);
+  assert.doesNotMatch(migration, /google_id[\s\S]*ON TABLE public\.customer_sync TO authenticated/);
+  assert.match(migration, /CREATE POLICY "Staff and mechanics can view bike fit reference images"/);
+  assert.doesNotMatch(migration, /FOR INSERT[\s\S]*mechanic|FOR UPDATE[\s\S]*mechanic|FOR DELETE[\s\S]*mechanic/);
+});
+
 test("migration uses security-invoker views, qualified partners, grants, and indexes", () => {
   const migration = readFileSync(
     join(root, "supabase/migrations/20260904120000_customer_directory.sql"),
