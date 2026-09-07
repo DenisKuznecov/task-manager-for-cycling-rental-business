@@ -24,6 +24,26 @@ import {
 } from "@/src/lib/bike-fit/storage";
 import { isBikeType, type BikeFitStatus } from "@/src/lib/bike-fit/types/records";
 
+type BikeFitManagementAccess =
+  | { ok: true; supabase: Awaited<ReturnType<typeof createClient>> }
+  | { ok: false; error: string };
+
+async function requireBikeFitManagementAccess(): Promise<BikeFitManagementAccess> {
+  const supabase = await createClient();
+  const { data: role, error } = await supabase.rpc("get_user_role");
+
+  if (error) {
+    console.error("requireBikeFitManagementAccess:", error);
+    return { ok: false, error: "Could not verify your permissions. Please try again." };
+  }
+
+  if (role !== "admin" && role !== "manager") {
+    return { ok: false, error: "Only admins and managers can modify bike fits." };
+  }
+
+  return { ok: true, supabase };
+}
+
 function firstZodErrorMessage(error: ZodError): string {
   return error.issues[0]?.message ?? "Invalid bike fit data.";
 }
@@ -77,7 +97,9 @@ export const createBikeFitDraft = withAuth(
 async function createBikeFitDraftAction(
   _user: User,
 ): Promise<CreateBikeFitDraftResult> {
-  const supabase = await createClient();
+  const access = await requireBikeFitManagementAccess();
+  if (!access.ok) return access;
+  const { supabase } = access;
 
   const { data, error } = await supabase
     .from("bike_fits")
@@ -159,6 +181,9 @@ async function saveBikeFitDraftAction(
 ): Promise<SaveBikeFitResult> {
   if (!id) return { ok: false, error: "Missing bike fit id." };
 
+  const access = await requireBikeFitManagementAccess();
+  if (!access.ok) return access;
+
   // Block XSS at the draft stage too — client validation is bypassable, and
   // without this autosave would silently persist unsafe free-text that only
   // `completeBikeFit` would otherwise reject.
@@ -167,7 +192,7 @@ async function saveBikeFitDraftAction(
     return { ok: false, error: unsafeTextError };
   }
 
-  const supabase = await createClient();
+  const { supabase } = access;
   const columns = buildSaveColumns(values);
 
   const { data, error } = await supabase
@@ -210,12 +235,15 @@ async function completeBikeFitAction(
 ): Promise<SaveBikeFitResult> {
   if (!id) return { ok: false, error: "Missing bike fit id." };
 
+  const access = await requireBikeFitManagementAccess();
+  if (!access.ok) return access;
+
   const parsed = BikeFitFormSchema.safeParse(values);
   if (!parsed.success) {
     return { ok: false, error: firstZodErrorMessage(parsed.error) };
   }
 
-  const supabase = await createClient();
+  const { supabase } = access;
   const columns = buildSaveColumns(
     parsed.data as BikeFitFormValues,
     { status: "completed" },
@@ -264,7 +292,10 @@ async function unlockBikeFitForEditAction(
 ): Promise<SaveBikeFitResult> {
   if (!id) return { ok: false, error: "Missing bike fit id." };
 
-  const supabase = await createClient();
+  const access = await requireBikeFitManagementAccess();
+  if (!access.ok) return access;
+
+  const { supabase } = access;
   const { data, error } = await supabase
     .from("bike_fits")
     .update({
@@ -322,7 +353,9 @@ async function deleteBikeFitAction(
 ): Promise<DeleteBikeFitResult> {
   if (!id) return { ok: false, error: "Missing bike fit id." };
 
-  const supabase = await createClient();
+  const access = await requireBikeFitManagementAccess();
+  if (!access.ok) return access;
+  const { supabase } = access;
 
   const { data: row, error: fetchError } = await supabase
     .from("bike_fits")

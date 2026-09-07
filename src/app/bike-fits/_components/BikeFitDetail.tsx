@@ -45,8 +45,7 @@ import { BikeFitReportActions } from "./BikeFitReportActions";
 
 interface BikeFitDetailProps {
   bikeFit: BikeFitRow;
-  /** When false, header edit/unlock actions are hidden (permissions wiring comes later). */
-  canEdit?: boolean;
+  canManage: boolean;
 }
 
 function formatFitDate(isoDate: string): string {
@@ -108,7 +107,7 @@ function DetailSectionAccordion({
   );
 }
 
-export function BikeFitDetail({ bikeFit, canEdit = true }: BikeFitDetailProps) {
+export function BikeFitDetail({ bikeFit, canManage }: BikeFitDetailProps) {
   const router = useRouter();
   const [unlockOpen, setUnlockOpen] = useState(false);
   const [unlockError, setUnlockError] = useState<string | null>(null);
@@ -179,7 +178,7 @@ export function BikeFitDetail({ bikeFit, canEdit = true }: BikeFitDetailProps) {
             </span>
           </div>
 
-          {canEdit ? (
+          {canManage ? (
             <div className="flex shrink-0 flex-col items-end gap-2">
               <div className="flex items-center gap-2">
                 {isEditableStatus ? (
@@ -218,16 +217,17 @@ export function BikeFitDetail({ bikeFit, canEdit = true }: BikeFitDetailProps) {
                   </Button>
                 ) : null}
               </div>
-              {isCompleted ? (
-                <BikeFitReportActions
-                  bikeFitId={bikeFit.id}
-                  reportStoragePath={bikeFit.report_storage_path}
-                  reportGeneratedAt={bikeFit.report_generated_at}
-                  customerName={bikeFit.customer_name}
-                  customerEmail={bikeFit.customer_email}
-                />
-              ) : null}
             </div>
+          ) : null}
+          {isCompleted ? (
+            <BikeFitReportActions
+              bikeFitId={bikeFit.id}
+              reportStoragePath={bikeFit.report_storage_path}
+              reportGeneratedAt={bikeFit.report_generated_at}
+              customerName={bikeFit.customer_name}
+              customerEmail={bikeFit.customer_email}
+              canManage={canManage}
+            />
           ) : null}
         </div>
       </div>

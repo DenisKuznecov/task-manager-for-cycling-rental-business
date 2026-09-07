@@ -8,6 +8,7 @@ import { Badge } from "@/ui/components/Badge";
 import { DetailsDrawer } from "@/src/components/DetailsDrawer";
 import { DataLoadError } from "@/src/components/DataLoadError";
 import { OrderStatusBadge } from "@/src/components/OrderStatusBadge";
+import { useHasRole } from "@/src/context/UserContext";
 import {
   formatCentsToEuros,
   formatRentalPeriod,
@@ -220,6 +221,7 @@ export function OrderDetailsDrawer({
   loading = false,
 }: OrderDetailsDrawerProps) {
   const router = useRouter();
+  const canOpenCustomerDetails = useHasRole("admin", "manager", "mechanic");
 
   const handleCloseComplete = useCallback(() => {
     const params = new URLSearchParams(window.location.search);
@@ -276,9 +278,18 @@ export function OrderDetailsDrawer({
                     {(order.customers.name || "?").charAt(0).toUpperCase()}
                   </span>
                 </Avatar>
-                <span className="min-w-0 break-words text-body-bold font-body-bold text-default-font">
-                  {order.customers.name || "Unknown"}
-                </span>
+                {canOpenCustomerDetails ? (
+                  <Link
+                    href={`/customers?customer=${order.customers.id}`}
+                    className="min-w-0 break-words text-body-bold font-body-bold text-brand-700 hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-brand-primary"
+                  >
+                    {order.customers.name || "Unknown"}
+                  </Link>
+                ) : (
+                  <span className="min-w-0 break-words text-body-bold font-body-bold text-default-font">
+                    {order.customers.name || "Unknown"}
+                  </span>
+                )}
               </div>
               {order.customers.email ? (
                 <DetailRow label="Email">{order.customers.email}</DetailRow>

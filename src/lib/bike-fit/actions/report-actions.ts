@@ -17,6 +17,28 @@ import {
 const DOWNLOAD_SIGNED_URL_TTL_SECONDS = 60 * 5;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+async function requireBikeFitReportManagementAccess(): Promise<
+  | { ok: true }
+  | { ok: false; error: string }
+> {
+  const supabase = await createClient();
+  const { data: role, error } = await supabase.rpc("get_user_role");
+
+  if (error) {
+    console.error("requireBikeFitReportManagementAccess:", error);
+    return { ok: false, error: "Could not verify your permissions. Please try again." };
+  }
+
+  if (role !== "admin" && role !== "manager") {
+    return {
+      ok: false,
+      error: "Only admins and managers can generate or email bike fit reports.",
+    };
+  }
+
+  return { ok: true };
+}
+
 export type GenerateBikeFitReportResult =
   | { ok: true }
   | { ok: false; error: string };
@@ -46,6 +68,9 @@ async function generateBikeFitReportAction(
   id: string,
 ): Promise<GenerateBikeFitReportResult> {
   if (!id) return { ok: false, error: "Missing bike fit id." };
+
+  const access = await requireBikeFitReportManagementAccess();
+  if (!access.ok) return access;
 
   const { bikeFit: row, error: loadError } = await loadBikeFitById(id);
   if (loadError || !row) {
@@ -166,6 +191,9 @@ async function sendBikeFitReportEmailAction(
   email: string,
 ): Promise<SendBikeFitReportEmailResult> {
   if (!id) return { ok: false, error: "Missing bike fit id." };
+
+  const access = await requireBikeFitReportManagementAccess();
+  if (!access.ok) return access;
 
   const targetEmail = email.trim();
   if (!targetEmail) return { ok: false, error: "Email is required." };

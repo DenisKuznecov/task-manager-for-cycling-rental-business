@@ -161,8 +161,8 @@ SELECT ok(
 SELECT is(
   (SELECT count(*)::integer FROM public.customers
     WHERE id = 'bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb'),
-  0,
-  'mechanic cannot SELECT an unrelated customer'
+  1,
+  'mechanic can SELECT an unrelated customer'
 );
 
 RESET ROLE;

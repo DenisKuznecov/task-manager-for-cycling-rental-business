@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { FeatherAlertTriangle } from "@subframe/core";
 import { Alert } from "@/ui/components/Alert";
 import { loadBikeFitById } from "@/src/lib/bike-fit/data/bike-fits";
+import { getMyProfile } from "@/src/lib/profile";
 import { BikeFitDetail } from "../_components/BikeFitDetail";
 
 export default async function ViewBikeFitPage({
@@ -30,9 +31,12 @@ export default async function ViewBikeFitPage({
     notFound();
   }
 
+  const { role } = await getMyProfile();
+  const canManage = role === "admin" || role === "manager";
+
   return (
     <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background py-12">
-      <BikeFitDetail bikeFit={bikeFit} />
+      <BikeFitDetail bikeFit={bikeFit} canManage={canManage} />
     </div>
   );
 }

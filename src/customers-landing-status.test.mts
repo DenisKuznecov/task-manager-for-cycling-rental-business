@@ -3,11 +3,6 @@ import { readFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { test } from "node:test";
 import { fileURLToPath } from "node:url";
-import { destNextAction } from "./lib/customer-landing/dest-error.ts";
-import {
-  toLandingListRow,
-  type CustomerLandingDbRow,
-} from "./lib/customer-landing/status-rows.ts";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const srcRoot = join(root, "src");
@@ -16,250 +11,198 @@ function readSrc(relativePath: string): string {
   return readFileSync(join(srcRoot, relativePath), "utf8");
 }
 
-function dbRow(
-  overrides: Partial<CustomerLandingDbRow> = {},
-): CustomerLandingDbRow {
-  return {
-    id: "cust-1",
-    name: "Ada",
-    email: null,
-    phone: null,
-    birthday: null,
-    address_street: null,
-    address_city: null,
-    address_region: null,
-    address_zip: null,
-    address_country: null,
-    booqable_customer_id: "bq-1",
-    google_status: "green",
-    google_error: null,
-    holded_status: "green",
-    holded_error: null,
-    mailchimp_status: "red",
-    mailchimp_error: destNextAction("Mailchimp", "an email is required."),
-    ...overrides,
-  };
-}
-
-test("Customers nav opens /customers", () => {
+test("Customers navigation preserves the staff customer directory entry", () => {
   const nav = readSrc("ui/layouts/nav-config.ts");
   assert.match(nav, /label: "Customers"/);
   assert.match(nav, /href: "\/customers"/);
-  assert.match(nav, /roles: \["admin", "manager"\]/);
+  assert.match(nav, /roles: \["admin", "manager", "mechanic"\]/);
 });
 
-test("list mapper treats empty name as Unknown and never-landed is not red", () => {
-  const unnamed = toLandingListRow(
-    dbRow({
-      id: "cust-2",
-      name: "   ",
-      google_status: null,
-      google_error: null,
-      holded_status: null,
-      holded_error: null,
-      mailchimp_status: null,
-      mailchimp_error: null,
-    }),
-  );
-  assert.equal(unnamed.name, "Unknown");
-  assert.equal(unnamed.google.status, null);
-  assert.equal(unnamed.holded.status, null);
-  assert.equal(unnamed.mailchimp.status, null);
-
-  const mixed = toLandingListRow(dbRow());
-  assert.equal(mixed.google.status, "green");
-  assert.equal(mixed.holded.status, "green");
-  assert.equal(mixed.mailchimp.status, "red");
-  assert.match(mixed.mailchimp.error ?? "", /Mailchimp/);
-});
-
-test("list mapper formats contact fields and dashes missing ones", () => {
-  const full = toLandingListRow(
-    dbRow({
-      email: "ada@example.test",
-      phone: "+34000000000",
-      birthday: "1990-05-17",
-      address_street: "Carrer de Mallorca 1",
-      address_city: "Barcelona",
-      address_region: "Catalonia",
-      address_zip: "08001",
-      address_country: "Spain",
-    }),
-  );
-  assert.equal(full.email, "ada@example.test");
-  assert.equal(full.phone, "+34000000000");
-  assert.equal(full.birthday, "17/05/1990");
-  assert.equal(
-    full.address,
-    "Carrer de Mallorca 1, Barcelona, Catalonia, 08001, Spain",
-  );
-
-  const cityOnly = toLandingListRow(dbRow({ address_city: "Barcelona" }));
-  assert.equal(cityOnly.address, "Barcelona");
-
-  const streetAndCity = toLandingListRow(
-    dbRow({
-      address_street: "Carrer de Mallorca 1",
-      address_city: "Barcelona",
-    }),
-  );
-  assert.equal(streetAndCity.address, "Carrer de Mallorca 1, Barcelona");
-
-  const missing = toLandingListRow(dbRow());
-  assert.equal(missing.email, "—");
-  assert.equal(missing.phone, "—");
-  assert.equal(missing.birthday, "—");
-  assert.equal(missing.address, "—");
-
-  const unnamed = toLandingListRow(dbRow({ name: "   " }));
-  assert.equal(unnamed.name, "Unknown");
-  assert.equal(unnamed.email, "—");
-});
-
-test("loader lists customer_sync_list newest first and page uses DataLoadError plus query", () => {
-  const loader = readSrc("lib/customer-landing/load-status-page.ts");
-  assert.match(loader, /from\("customer_sync_list"\)/);
-  assert.match(
-    loader,
-    /id, name, email, phone, birthday, address_street, address_city, address_region, address_zip, address_country, booqable_customer_id/,
-  );
-  assert.match(loader, /\.order\(\s*["']synced_at["'],\s*\{\s*ascending:\s*false/);
-  assert.match(loader, /\.order\(\s*["']id["'],\s*\{\s*ascending:\s*false/);
-  assert.match(loader, /\.ilike\(\s*["']name["']/);
-  assert.doesNotMatch(loader, /\.ilike\(\s*["']email["']/);
-  assert.match(loader, /replace\(\/\[,\(\)\]\/g/);
-  assert.match(loader, /if \(escaped\)/);
-  assert.doesNotMatch(loader, /\.order\(\s*["']name["']/);
-  assert.doesNotMatch(loader, /\.order\(\s*["']updated_at["']/);
-  assert.doesNotMatch(loader, /landing_at/);
-  assert.doesNotMatch(loader, /createServiceRoleClient|SUPABASE_SERVICE_ROLE_KEY/);
-  assert.match(loader, /createClient\(/);
-  assert.match(loader, /loadCustomersLandingPage:/);
-  assert.match(loader, /customers: \[\]/);
-  assert.match(loader, /error\.message/);
+test("directory starts at customer_directory and searches all contact identifiers", () => {
+  const customers = readSrc("lib/customers.ts");
+  assert.match(customers, /from\("customer_directory"\)/);
+  assert.match(customers, /name\.ilike/);
+  assert.match(customers, /email\.ilike/);
+  assert.match(customers, /phone\.ilike/);
+  assert.match(customers, /function escapedContactTerm/);
+  assert.match(customers, /\\\\%_/);
+  assert.match(customers, /if \(escaped\)/);
+  assert.match(customers, /\.order\("name", \{ ascending: true \}\)/);
+  assert.match(customers, /\.order\("id", \{ ascending: true \}\)/);
+  assert.match(customers, /count: "exact"/);
+  assert.match(customers, /loadCustomerDirectoryPage:/);
+  assert.match(customers, /customers: \[\], count: 0, error: error\.message/);
+  assert.doesNotMatch(customers, /createServiceRoleClient|SUPABASE_SERVICE_ROLE_KEY/);
 
   const page = readSrc("app/customers/page.tsx");
+  assert.match(page, /loadCustomerDirectoryPage/);
+  assert.match(page, /CUSTOMERS_DIRECTORY_PAGE_SIZE/);
   assert.match(page, /DataLoadError/);
-  assert.match(page, /loadCustomersLandingPage/);
-  assert.match(page, /page\?: string/);
-  assert.match(page, /query\?: string/);
-  assert.match(page, /typeof queryParam === "string"/);
   assert.match(page, /queryParam\.trim\(\)/);
-  assert.match(page, /loadCustomersLandingPage\(page, query\)/);
+});
 
+test("directory table keeps URL state, debounces search, opens customer drawer, and replaces stale rows", () => {
+  const table = readSrc("app/customers/_components/CustomersLandingTable.tsx");
+  assert.match(table, /SEARCH_DEBOUNCE_MS = 300/);
+  assert.match(table, /useTransition/);
+  assert.match(table, /startTransition\(\(\) => router\.push\(buildHref\(search, 1\)\)\)/);
+  assert.match(table, /startTransition\(\(\) => router\.push\(buildHref\(query, page\)\)\)/);
+  assert.match(table, /params\.set\("customer", customerId\)/);
+  assert.match(table, /aria-label="Search customers"/);
+  assert.match(table, /event\.key === "Enter"/);
+  assert.match(table, /<CustomersLandingTableSkeleton \/>/);
+  assert.match(table, /HeaderCell>Name<\/Table.HeaderCell>\s*<Table.HeaderCell>Email<\/Table.HeaderCell>\s*<Table.HeaderCell>Phone<\/Table.HeaderCell>\s*<Table.HeaderCell>Birthday<\/Table.HeaderCell>/);
+  assert.doesNotMatch(table, /customer_sync_list|HeaderCell>Google|HeaderCell>Holded|HeaderCell>Mailchimp/);
+
+  const skeleton = readSrc("app/customers/_components/CustomersLandingTableSkeleton.tsx");
+  assert.match(skeleton, /Table\.HeaderCell>Name/);
+  assert.match(skeleton, /SkeletonText/);
+});
+
+test("customer drawer has authenticated details loading and the resolved destinations", () => {
+  const action = readSrc("lib/customers/actions/customer-details-actions.ts");
+  assert.match(action, /withAuth\(/);
+  assert.match(action, /fetchCustomerDetails/);
+  assert.match(action, /loadCustomerDetails/);
+
+  const customers = readSrc("lib/customers.ts");
+  assert.match(customers, /UUID_RE\.test\(customerId\)/);
+  assert.match(customers, /from\("orders"\)/);
+  assert.match(customers, /from\("bike_fits"\)/);
+  assert.match(customers, /from\("customer_partner_history"\)/);
+  assert.match(customers, /Promise\.all/);
+  assert.match(customers, /loadCustomerDetails:/);
+
+  const host = readSrc("components/customers/CustomerDetailsDrawerHost.tsx");
+  assert.match(host, /searchParams\.get\("customer"\)/);
+  assert.match(host, /cancelled/);
+  assert.match(host, /fetchCustomerDetails/);
+
+  const drawer = readSrc("components/customers/CustomerDetailsDrawer.tsx");
+  assert.match(drawer, /params\.delete\("customer"\)/);
+  assert.match(drawer, /CustomerDetailsDrawerSkeleton/);
+  assert.match(drawer, /Couldn't load customer details/);
+  assert.match(drawer, /Customer not found/);
+  assert.match(drawer, /\/orders\?order=\$\{order\.id\}/);
+  assert.match(drawer, /\/bike-fits\/\$\{fit\.id\}/);
+  assert.match(drawer, /No qualifying partner order exists/);
+
+  const orderDrawer = readSrc("components/orders/OrderDetailsDrawer.tsx");
+  const orders = readSrc("lib/orders.ts");
+  assert.match(orders, /customers \( id, name, email, phone, birthday \)/);
+  assert.match(orderDrawer, /useHasRole\("admin", "manager", "mechanic"\)/);
+  assert.match(orderDrawer, /href=\{`\/customers\?customer=\$\{order\.customers\.id\}`\}/);
+  assert.match(orderDrawer, /focus-visible:ring-2/);
+});
+
+test("customer layout retains its authorization boundary and mounts the drawer host", () => {
   const layout = readSrc("app/customers/layout.tsx");
   assert.match(layout, /redirect\("\/login"\)/);
   assert.match(layout, /redirect\("\/pending"\)/);
   assert.match(layout, /redirect\("\/partner\/overview"\)/);
   assert.match(layout, /redirect\("\/unauthorized"\)/);
-});
-
-test("landing store upserts customer_sync and stamps synced_at", () => {
-  const store = readSrc("lib/customer-landing/landing-store.ts");
-  assert.match(store, /function syncStatusPatch/);
-  assert.match(store, /identityUpsertRow\(passport\)/);
-  assert.match(store, /if \(passport\.address\)/);
-  assert.match(store, /address_street/);
-  assert.match(store, /synced_at:\s*new Date\(\)\.toISOString\(\)/);
-  assert.match(store, /from\("customer_sync"\)/);
-  assert.match(store, /\.upsert\(/);
-  assert.match(store, /onConflict:\s*["']customer_id["']/);
-  assert.doesNotMatch(store, /saveStatusesByCustomerId/);
-  assert.doesNotMatch(store, /\.update\(/);
-});
-
-test("table searches by name and has no upload control", () => {
-  const table = readSrc("app/customers/_components/CustomersLandingTable.tsx");
-  assert.doesNotMatch(table, /Upload/);
-  assert.doesNotMatch(table, /landLocalCustomer/);
-  assert.doesNotMatch(table, /Not from Booqable/);
-  assert.doesNotMatch(table, /Search by name or email/);
   assert.match(
-    table,
-    /HeaderCell>Name<\/Table.HeaderCell>\s*<Table.HeaderCell>Email<\/Table.HeaderCell>\s*<Table.HeaderCell>Phone<\/Table.HeaderCell>\s*<Table.HeaderCell>Birthday<\/Table.HeaderCell>\s*<Table.HeaderCell>Address<\/Table.HeaderCell>\s*<Table.HeaderCell>Google<\/Table.HeaderCell>\s*<Table.HeaderCell>Holded<\/Table.HeaderCell>\s*<Table.HeaderCell>Mailchimp<\/Table.HeaderCell>/,
+    layout,
+    /const ALLOWED_ROLES = \["admin", "manager", "mechanic"\]/,
   );
-  assert.match(table, /variant="success"/);
-  assert.match(table, /variant="error"/);
-  assert.match(table, /variant="neutral"/);
-  assert.match(table, /TextField/);
-  assert.match(table, /SEARCH_DEBOUNCE_MS = 300/);
-  assert.match(table, /function buildHref|const buildHref/);
-  assert.match(table, /params\.set\("query"/);
-  assert.match(table, /router\.push\(buildHref\(search, 1\)\)/);
-  assert.match(table, /router\.push\(buildHref\(query, page\)\)/);
-  assert.match(table, /query\.trim\(\)/);
-  assert.match(
-    table,
-    /query\.trim\(\)\s*\?\s*"Try adjusting your search\."\s*:\s*"This is not a full customer directory/,
-  );
+  assert.match(layout, /<CustomerDetailsDrawerHost \/>/);
+  assert.match(layout, /<Suspense fallback=\{null\}>/);
 });
 
-test("page does not use the service role and upload is gone", () => {
-  const files = [
-    "lib/customer-landing/load-status-page.ts",
-    "app/customers/page.tsx",
-    "app/customers/layout.tsx",
-    "app/customers/_components/CustomersLandingTable.tsx",
-    "lib/customers.ts",
-  ];
-  for (const file of files) {
-    const source = readSrc(file);
-    assert.doesNotMatch(
-      source,
-      /createServiceRoleClient|SUPABASE_SERVICE_ROLE_KEY/,
-      `${file} must not use the service role`,
+test("mechanics get read-only Orders and Bike Fits access while partners remain redirected", () => {
+  const nav = readSrc("ui/layouts/nav-config.ts");
+  assert.match(nav, /label: "Orders"[\s\S]*roles: \["admin", "manager", "mechanic"\]/);
+  assert.match(nav, /label: "Bike Fits"[\s\S]*roles: \["admin", "manager", "mechanic"\]/);
+
+  for (const relativePath of ["app/orders/layout.tsx", "app/bike-fits/layout.tsx"]) {
+    const layout = readSrc(relativePath);
+    assert.match(layout, /const ALLOWED_ROLES = \["admin", "manager", "mechanic"\]/);
+    assert.match(layout, /redirect\("\/partner\/overview"\)/);
+  }
+});
+
+test("Bike Fits pass an explicit management capability and keep mechanic controls read-only", () => {
+  const listPage = readSrc("app/bike-fits/all-bike-fits/page.tsx");
+  const list = readSrc("app/bike-fits/all-bike-fits/_components/AllBikeFitsTable.tsx");
+  const detailPage = readSrc("app/bike-fits/[id]/page.tsx");
+  const detail = readSrc("app/bike-fits/_components/BikeFitDetail.tsx");
+  const editPage = readSrc("app/bike-fits/[id]/edit/page.tsx");
+  const reports = readSrc("app/bike-fits/_components/BikeFitReportActions.tsx");
+
+  assert.match(listPage, /const canManage = role === "admin" \|\| role === "manager"/);
+  assert.match(listPage, /canManage=\{canManage\}/);
+  assert.match(list, /canManage: boolean/);
+  assert.match(list, /\{canManage \? \(/);
+  assert.match(list, /canManage && isEditableStatus/);
+  assert.match(detailPage, /canManage=\{canManage\}/);
+  assert.match(detail, /canManage: boolean/);
+  assert.match(detail, /\{canManage \? \(/);
+  assert.match(editPage, /if \(role === "mechanic"\)/);
+  assert.match(editPage, /redirect\(`\/bike-fits\/\$\{id\}`\)/);
+  assert.match(reports, /canManage: boolean/);
+  assert.match(reports, /\{canManage \? \(/);
+  assert.match(reports, /\) : canManage \? \(/);
+  assert.match(reports, /Download PDF/);
+});
+
+test("Bike Fit server actions authorize every mutation and report generation or email", () => {
+  const bikeFitActions = readSrc("lib/bike-fit/actions/bike-fit-actions.ts");
+  const reportActions = readSrc("lib/bike-fit/actions/report-actions.ts");
+
+  assert.match(bikeFitActions, /requireBikeFitManagementAccess/);
+  for (const action of [
+    "createBikeFitDraftAction",
+    "saveBikeFitDraftAction",
+    "completeBikeFitAction",
+    "unlockBikeFitForEditAction",
+    "deleteBikeFitAction",
+  ]) {
+    assert.match(
+      bikeFitActions,
+      new RegExp(`async function ${action}[\\s\\S]*?requireBikeFitManagementAccess\\(\\)`),
     );
   }
+  assert.match(reportActions, /requireBikeFitReportManagementAccess/);
+  assert.match(reportActions, /generateBikeFitReportAction[\s\S]*?requireBikeFitReportManagementAccess\(\)/);
+  assert.match(reportActions, /sendBikeFitReportEmailAction[\s\S]*?requireBikeFitReportManagementAccess\(\)/);
+  assert.doesNotMatch(
+    reportActions.match(/getBikeFitReportDownloadUrlAction[\s\S]*?(?=\/\*\*|$)/)?.[0] ?? "",
+    /requireBikeFitReportManagementAccess/,
+  );
+});
 
-  const customersLib = readSrc("lib/customers.ts");
-  assert.doesNotMatch(customersLib, /loadCustomersLandingPage/);
-  assert.doesNotMatch(customersLib, /customer_sync/);
-
-  const partner = readSrc("app/partner/(me)/customers/page.tsx");
-  assert.doesNotMatch(partner, /loadCustomersLandingPage/);
-  assert.doesNotMatch(partner, /landLocalCustomer/);
-
-  const land = readSrc("lib/customer-landing/land-customer.ts");
-  assert.doesNotMatch(land, /landLocalCustomer/);
-  assert.doesNotMatch(land, /destLocalNextAction/);
-
+test("mechanic migration is idempotent, status-only, and preserves private storage writes", () => {
   const migration = readFileSync(
-    join(root, "supabase/migrations/20260901120000_customer_sync.sql"),
+    join(root, "supabase/migrations/20260904130000_mechanic_customer_read_access.sql"),
     "utf8",
   );
-  assert.match(migration, /CREATE TABLE IF NOT EXISTS public\.customer_sync/);
-  assert.match(migration, /CREATE OR REPLACE VIEW public\.customer_sync_list/);
-  assert.match(migration, /CREATE INDEX IF NOT EXISTS customer_sync_synced_at_id_desc_idx/);
-  assert.match(migration, /Staff can read customer sync/);
-  assert.match(
-    migration,
-    /DROP POLICY IF EXISTS "Staff can update customer landing status"/,
-  );
-  assert.doesNotMatch(migration, /CREATE POLICY "Staff can update customer landing status"/);
-  assert.doesNotMatch(migration, /landing_at = updated_at/);
-  assert.doesNotMatch(migration, /GRANT UPDATE \(\s*landing_/);
 
-  const addressMigration = readFileSync(
-    join(root, "supabase/migrations/20260901140000_customers_landing_address.sql"),
+  assert.match(migration, /DROP POLICY IF EXISTS "Mechanics can read orders with bike tasks"/);
+  assert.match(migration, /CREATE POLICY "Mechanics can read all orders"/);
+  assert.match(migration, /CREATE POLICY "Mechanics can read all customers"/);
+  assert.match(migration, /CREATE POLICY "Mechanics can read all bike fits"/);
+  assert.match(migration, /CREATE POLICY "Staff and mechanics can read customer sync"/);
+  assert.match(migration, /GRANT SELECT \([\s\S]*google_status[\s\S]*mailchimp_error[\s\S]*\) ON TABLE public\.customer_sync TO authenticated/);
+  assert.doesNotMatch(migration, /google_id[\s\S]*ON TABLE public\.customer_sync TO authenticated/);
+  assert.match(migration, /CREATE POLICY "Staff and mechanics can view bike fit reference images"/);
+  assert.doesNotMatch(migration, /FOR INSERT[\s\S]*mechanic|FOR UPDATE[\s\S]*mechanic|FOR DELETE[\s\S]*mechanic/);
+});
+
+test("migration uses security-invoker views, qualified partners, grants, and indexes", () => {
+  const migration = readFileSync(
+    join(root, "supabase/migrations/20260904120000_customer_directory.sql"),
     "utf8",
   );
-  assert.match(addressMigration, /ADD COLUMN IF NOT EXISTS address_street text/);
-  assert.match(addressMigration, /ADD COLUMN IF NOT EXISTS address_city text/);
-  assert.match(addressMigration, /ADD COLUMN IF NOT EXISTS address_region text/);
-  assert.match(addressMigration, /ADD COLUMN IF NOT EXISTS address_zip text/);
-  assert.match(addressMigration, /ADD COLUMN IF NOT EXISTS address_country text/);
-  assert.match(addressMigration, /c\.email/);
-  assert.match(addressMigration, /c\.phone/);
-  assert.match(addressMigration, /c\.birthday/);
-  assert.match(addressMigration, /c\.address_street/);
-  assert.match(addressMigration, /c\.address_city/);
-  assert.match(addressMigration, /c\.address_region/);
-  assert.match(addressMigration, /c\.address_zip/);
-  assert.match(addressMigration, /c\.address_country/);
-  assert.match(addressMigration, /DROP VIEW IF EXISTS public\.customer_sync_list/);
-  assert.match(addressMigration, /security_invoker = true/);
-  assert.match(
-    addressMigration,
-    /GRANT SELECT ON TABLE public.customer_sync_list TO authenticated/,
-  );
+  assert.match(migration, /CREATE OR REPLACE VIEW public\.customer_directory/);
+  assert.match(migration, /security_invoker = true/);
+  assert.match(migration, /FROM public\.customers AS c/);
+  assert.match(migration, /LEFT JOIN public\.customer_sync AS s/);
+  assert.match(migration, /CREATE OR REPLACE VIEW public\.customer_partner_history/);
+  assert.match(migration, /SELECT DISTINCT/);
+  assert.match(migration, /NULLIF\(btrim\(o\.partner_promo\), ''\) IS NOT NULL/);
+  assert.match(migration, /GRANT SELECT ON TABLE public\.customer_directory TO authenticated/);
+  assert.match(migration, /GRANT SELECT ON TABLE public\.customer_partner_history TO authenticated/);
+  assert.match(migration, /CREATE INDEX IF NOT EXISTS customers_directory_name_id_idx/);
+  assert.match(migration, /CREATE INDEX IF NOT EXISTS orders_customer_created_at_id_idx/);
+  assert.match(migration, /CREATE INDEX IF NOT EXISTS bike_fits_customer_date_fit_number_idx/);
 });

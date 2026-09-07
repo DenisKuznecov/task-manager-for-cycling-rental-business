@@ -1,9 +1,10 @@
-import React from "react";
+import React, { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { DefaultPageLayout } from "@/ui/layouts/DefaultPageLayout";
 import { createClient } from "@/src/utils/supabase/server";
+import { CustomerDetailsDrawerHost } from "@/src/components/customers/CustomerDetailsDrawerHost";
 
-const ALLOWED_ROLES = ["admin", "manager"] as const;
+const ALLOWED_ROLES = ["admin", "manager", "mechanic"] as const;
 type AllowedRole = (typeof ALLOWED_ROLES)[number];
 
 export default async function CustomersLayout({
@@ -41,5 +42,12 @@ export default async function CustomersLayout({
     redirect("/unauthorized");
   }
 
-  return <DefaultPageLayout>{children}</DefaultPageLayout>;
+  return (
+    <DefaultPageLayout>
+      <Suspense fallback={null}>
+        <CustomerDetailsDrawerHost />
+      </Suspense>
+      {children}
+    </DefaultPageLayout>
+  );
 }
