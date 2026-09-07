@@ -4,17 +4,15 @@ export const PRINTER_TIMEOUT_MS = 10_000;
 export const REQUEST_TIMEOUT_MS = 15_000;
 export const MAX_RESPONSE_BYTES = 64 * 1024;
 
-export type Operation = "connection" | "print";
-export type Outcome = "acknowledged" | "failed" | "unknown";
+export type PrintOutcome = "acknowledged" | "failed" | "unknown";
 export type EposReply = {
-  outcome: Outcome;
+  outcome: PrintOutcome;
   code: string | null;
   status: string | null;
   message: string;
 };
-export type Attempt = EposReply & {
+export type PrintAttempt = EposReply & {
   target: string;
-  operation: Operation;
   httpStatus: number | null;
   elapsedMs: number;
   rawResponse: string;
@@ -25,26 +23,48 @@ export type TargetValidation =
 
 export function validateTarget(address: string, deviceId: string): TargetValidation {
   // Validate the original spelling before URL normalizes shorthand IPv4,
-  // backslashes, dot segments, credentials or escaped hostname characters.
+  // backslashes, dot segments, credentials, or escaped hostname characters.
   const origin = address.trim();
   const match = /^https?:\/\/([a-zA-Z0-9.-]+)(?::([0-9]{1,5}))?\/?$/.exec(origin);
   if (!match) {
-    return { ok: false, error: "Enter an HTTP(S) origin with a private IPv4 or .local hostname, without credentials, path, query or fragment." };
+    return {
+      ok: false,
+      error:
+        "Printer address must be an HTTP(S) origin with a private IPv4 or .local hostname.",
+    };
   }
   const host = match[1].toLowerCase();
   const octets = host.split(".");
-  const ipv4 = octets.length === 4 && octets.every((part) => /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255);
+  const ipv4 =
+    octets.length === 4 &&
+    octets.every(
+      (part) => /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255,
+    );
   const [first, second] = octets.map(Number);
-  const privateIp = ipv4 && (first === 10 || (first === 172 && second >= 16 && second <= 31) || (first === 192 && second === 168));
-  const localHost = host.endsWith(".local") && host.length <= 253 && octets.length >= 2 && octets.every((label) => /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label));
+  const privateIp =
+    ipv4 &&
+    (first === 10 ||
+      (first === 172 && second >= 16 && second <= 31) ||
+      (first === 192 && second === 168));
+  const localHost =
+    host.endsWith(".local") &&
+    host.length <= 253 &&
+    octets.length >= 2 &&
+    octets.every((label) =>
+      /^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?$/.test(label),
+    );
   if (!privateIp && !localHost) {
-    return { ok: false, error: "Use a private IPv4 address (10.x.x.x, 172.16–31.x.x or 192.168.x.x) or a .local hostname." };
+    return {
+      ok: false,
+      error:
+        "Printer address must use a private IPv4 address or a .local hostname.",
+    };
   }
   if (match[2] && (Number(match[2]) < 1 || Number(match[2]) > 65535)) {
-    return { ok: false, error: "The HTTP(S) port must be between 1 and 65535." };
+    return { ok: false, error: "Printer port must be between 1 and 65535." };
   }
   if (!/^[a-zA-Z0-9_-]{1,30}$/.test(deviceId)) {
-    return { ok: false, error: "Use a device ID of 1–30 ASCII letters, numbers, underscores or hyphens." };
+    return { ok: false, error: "Printer device ID is invalid." };
   }
   const url = new URL("/cgi-bin/epos/service.cgi", origin);
   url.searchParams.set("devid", deviceId);
@@ -52,21 +72,23 @@ export function validateTarget(address: string, deviceId: string): TargetValidat
   return { ok: true, target: url.href };
 }
 
-export function buildSoap(operation: Operation): string {
-  const receipt = operation === "print"
-    ? '<text>ECHELON PRINTER TEST\nDIAGNOSTIC ONLY - NOT A WORKSHOP TASK\nTM-m30III direct browser spike\nNo customer or bike data\nInspect this paper and the cut.\n</text><cut type="feed"/>'
-    : "";
-  return `<?xml version="1.0" encoding="utf-8"?><s:Envelope xmlns:s="${SOAP_NAMESPACE}"><s:Body><epos-print xmlns="${EPOS_NAMESPACE}">${receipt}</epos-print></s:Body></s:Envelope>`;
-}
-
 function unknown(message: string): EposReply {
   return { outcome: "unknown", code: null, status: null, message };
 }
 
-// Kept separate from XML parsing so native Node tests never imitate a DOM parser.
-export function classifyReply(success: string | null, code: string | null, status: string | null): EposReply {
+export function classifyReply(
+  success: string | null,
+  code: string | null,
+  status: string | null,
+): EposReply {
   if (success === "true" || success === "1") {
-    return { outcome: "acknowledged", code, status, message: "Epson acknowledged the request. This does not prove physical output; inspect the printer and paper." };
+    return {
+      outcome: "acknowledged",
+      code,
+      status,
+      message:
+        "Epson acknowledged the request. This does not prove physical output; inspect the printer and paper.",
+    };
   }
   if (success === "false" || success === "0") {
     if (code === "EX_TIMEOUT") {
@@ -74,18 +96,32 @@ export function classifyReply(success: string | null, code: string | null, statu
         outcome: "unknown",
         code,
         status,
-        message: "Epson reported a print timeout. Delivery is unknown; check the paper before an explicit next attempt.",
+        message:
+          "Epson reported a print timeout. Delivery is unknown; check the paper before an explicit next attempt.",
       };
     }
-    return { outcome: "failed", code, status, message: `Epson reported failure${code ? ` (${code})` : ""}. Inspect the printer before an explicit next attempt.` };
+    return {
+      outcome: "failed",
+      code,
+      status,
+      message: `Epson reported failure${code ? ` (${code})` : ""}. Inspect the printer before an explicit next attempt.`,
+    };
   }
-  return { ...unknown("The Epson reply has no recognized success value. Check the paper before reprinting."), code, status };
+  return {
+    ...unknown(
+      "The Epson reply has no recognized success value. Check the paper before reprinting.",
+    ),
+    code,
+    status,
+  };
 }
 
 export function parseEposResponse(xml: string): EposReply {
   const doc = new DOMParser().parseFromString(xml, "application/xml");
   if (doc.getElementsByTagNameNS("*", "parsererror").length || doc.doctype) {
-    return unknown("Malformed or unsupported XML response. Check the paper before reprinting.");
+    return unknown(
+      "Malformed or unsupported XML response. Check the paper before reprinting.",
+    );
   }
   const root = doc.documentElement;
   const replies = doc.getElementsByTagNameNS(EPOS_NAMESPACE, "response");
@@ -95,13 +131,23 @@ export function parseEposResponse(xml: string): EposReply {
   const reply = replies[0];
   const body = reply.parentElement;
   const standalone = root === reply;
-  const soap = root.namespaceURI === SOAP_NAMESPACE && root.localName === "Envelope" &&
-    body?.namespaceURI === SOAP_NAMESPACE && body.localName === "Body" && body.parentElement === root &&
+  const soap =
+    root.namespaceURI === SOAP_NAMESPACE &&
+    root.localName === "Envelope" &&
+    body?.namespaceURI === SOAP_NAMESPACE &&
+    body.localName === "Body" &&
+    body.parentElement === root &&
     body.children.length === 1;
   if (!standalone && !soap) {
-    return unknown("The response is not an Epson reply or SOAP receipt response. Check the paper before reprinting.");
+    return unknown(
+      "The response is not an Epson reply or SOAP receipt response. Check the paper before reprinting.",
+    );
   }
-  return classifyReply(reply.getAttribute("success"), reply.getAttribute("code"), reply.getAttribute("status"));
+  return classifyReply(
+    reply.getAttribute("success"),
+    reply.getAttribute("code"),
+    reply.getAttribute("status"),
+  );
 }
 
 type AttemptOptions = {
@@ -110,7 +156,11 @@ type AttemptOptions = {
   timeoutMs?: number;
 };
 
-export async function sendAttempt(target: string, operation: Operation, options: AttemptOptions = {}): Promise<Attempt> {
+export async function sendPrintAttempt(
+  target: string,
+  document: string,
+  options: AttemptOptions = {},
+): Promise<PrintAttempt> {
   const started = performance.now();
   const controller = new AbortController();
   let httpStatus: number | null = null;
@@ -132,8 +182,8 @@ export async function sendAttempt(target: string, operation: Operation, options:
       redirect: "error",
       cache: "no-store",
       referrerPolicy: "no-referrer",
-      headers: { "Content-Type": "text/xml; charset=utf-8", SOAPAction: '""' },
-      body: buildSoap(operation),
+      headers: { "Content-Type": "text/xml; charset=utf-8", SOAPAction: '\"\"' },
+      body: document,
       signal: controller.signal,
     });
     httpStatus = response.status;
@@ -148,7 +198,9 @@ export async function sendAttempt(target: string, operation: Operation, options:
           bytes += chunk.value.byteLength;
           if (bytes > MAX_RESPONSE_BYTES) {
             controller.abort();
-            throw new Error("Response exceeded the 64 KiB diagnostic limit (displayed response is partial)");
+            throw new Error(
+              "Response exceeded the 64 KiB print limit (displayed response is partial)",
+            );
           }
           rawResponse += decoder.decode(chunk.value, { stream: true });
         }
@@ -157,24 +209,40 @@ export async function sendAttempt(target: string, operation: Operation, options:
         reader.releaseLock();
       }
     }
-    if (!response.ok) return unknown(`HTTP ${response.status}; delivery is unknown. Check the paper before reprinting.`);
+    if (!response.ok) {
+      return unknown(
+        `HTTP ${response.status}; delivery is unknown. Check the paper before reprinting.`,
+      );
+    }
     return (options.parseReply ?? parseEposResponse)(rawResponse);
   };
   let reply: EposReply;
   try {
     reply = await Promise.race([request(), timeout]);
   } catch (error) {
-    const detail = timedOut ? "Request timed out" : error instanceof Error ? error.message : String(error);
-    console.error("printer-spike:", error);
-    reply = unknown(`${detail}. Delivery is unknown. Browser failures may involve network, permissions, TLS or CORS. Check the paper before reprinting.`);
+    const detail = timedOut
+      ? "Request timed out"
+      : error instanceof Error
+        ? error.message
+        : String(error);
+    console.error("workshop-printing:", error);
+    reply = unknown(
+      `${detail}. Delivery is unknown. Browser failures may involve network, permissions, TLS or CORS. Check the paper before reprinting.`,
+    );
   } finally {
     clearTimeout(timer);
   }
-  return { ...reply, target, operation, httpStatus, elapsedMs: Math.round(performance.now() - started), rawResponse };
+  return {
+    ...reply,
+    target,
+    httpStatus,
+    elapsedMs: Math.round(performance.now() - started),
+    rawResponse,
+  };
 }
 
 // Claim synchronously before React can render a disabled button.
-export function createAttemptGuard() {
+export function createPrintAttemptGuard() {
   let pending = false;
   return {
     claim() {
@@ -182,6 +250,8 @@ export function createAttemptGuard() {
       pending = true;
       return true;
     },
-    release() { pending = false; },
+    release() {
+      pending = false;
+    },
   };
 }

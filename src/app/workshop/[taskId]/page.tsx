@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { FeatherAlertTriangle } from "@subframe/core";
 import { Alert } from "@/ui/components/Alert";
 import { workshopData } from "@/src/lib/workshop";
+import { resolveWorkshopPrinterConfig } from "@/src/lib/workshop/printing/config";
 import { WorkshopTask } from "../_components/WorkshopTask";
 
 export default async function WorkshopTaskPage({
@@ -30,9 +31,15 @@ export default async function WorkshopTaskPage({
     notFound();
   }
 
+  const printerConfig = resolveWorkshopPrinterConfig();
+
   return (
     <div className="container max-w-none flex w-full flex-col items-start gap-8 bg-default-background pt-4 pb-12">
-      <WorkshopTask key={item.task.taskId} detail={item} />
+      <WorkshopTask
+        key={item.task.taskId}
+        detail={item}
+        printerConfig={printerConfig}
+      />
     </div>
   );
 }
