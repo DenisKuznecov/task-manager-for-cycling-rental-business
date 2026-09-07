@@ -1,0 +1,10 @@
+# Dimension 3 — follow-up reliability evidence
+
+Accessed 2026-09-07. All claims medium confidence from one authoritative publisher; no end-to-end hardware proof.
+
+- {claim: "ePOS timeout can still print already-interpreted data. Empty print data queries status. With spooler disabled response follows printing; with spooler enabled response precedes completion. Supported job-status polling is conditional on model/service features, not universal deduplication.", source: "https://files.support.epson.com/pdf/pos/bulk/epos-print_xml_um_en_revs.pdf", publisher: "Epson", pub_date: "unknown; historical Rev.S", accessed: "2026-09-07", confidence: "medium", class: "primary protocol manual", section: "pp.52, 56–60"}
+- {claim: "The exact-model manual registry links SDP manual M00062922 uploaded 2024-06-26, but sends the reader to its model support matrix. The download failed. Presence of a link alone is insufficient to prove native polling support.", source: "https://support.epson.net/publist/bsmanual.php?lang=EN&model=TM-m30II", publisher: "Epson", pub_date: "unknown; manual upload 2024-06-26", accessed: "2026-09-07", confidence: "medium for registry; exact SKU SDP unknown", class: "primary manual registry", section: "Server Direct Print overview"}
+
+Native SDP remains unresolved because exact-model marketing lists it while inspected technical manual does not. Prefer neither a blanket unsupported statement nor a cloud-polling recommendation until exact firmware/SKU settings are observed. QZ fallback evidence is in round 1. Browser-local bridge still requires Chrome loopback permission, signed-message trust setup, and an available Windows process.
+
+Operational recommendation is a design inference: first provide a Test Printer flow, then a one-tap action after setup; show printer-confirmed success only on meaningful printer response and unknown after ambiguous interruption. A human reprint decision must be distinct from retries. Stop: follow-up budget exhausted; no independently fresh installation evidence can be obtained from additional generic literature.

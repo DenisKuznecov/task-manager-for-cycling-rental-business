@@ -13,6 +13,7 @@
     "lint": "eslint .",
     "test:upgrade-gate": "node --test src/upgrade-gate.test.mts",
     "test:workshop-ui": "node --test src/workshop-ui.test.mts",
+    "test:printer-spike": "node --test src/printer-spike.test.mts",
     "test:source-apply": "node --test src/booqable-source-apply.test.mts",
     "test:workshop-sync": "node --test src/workshop-sync.test.mts",
     "test:customer-landing": "node --test src/customer-landing.test.mts",
