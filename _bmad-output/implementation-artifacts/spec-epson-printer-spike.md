@@ -2,7 +2,7 @@
 title: 'Direct Epson browser printing spike'
 type: chore
 created: 2026-09-07
-status: in-progress
+status: in-review
 baseline_commit: 9014b649d682470a10810d706932bd9a3f5a17f2
 review_loop_iteration: 0
 context:
@@ -50,10 +50,10 @@ context:
 ## Tasks & Acceptance
 
 **Execution:**
-- [ ] `src/app/workshop/printer-spike/page.tsx` and `_components/PrinterSpike.tsx`: route and form; editable base address default http://192.168.1.38, device ID default local_printer, Test connection and Print test receipt. Collapsible diagnostics; no persistence or global navigation change.
-- [ ] `src/app/workshop/printer-spike/_lib/epos.ts`: private IPv4/.local HTTP(S) origin validation; device ID; SOAP builder; namespace-aware browser DOMParser; classification; bounded fetch/body read. No runtime dependency. Separate testable pure logic.
-- [ ] `src/printer-spike.test.mts`, `package.json`: test matrix including fetch request contract, no credentials/retries, timeout and duplicate guard; add test:printer-spike. Use DOM-capable browser checks for real XML parsing, not regex pretending to parse XML.
-- [ ] `_bmad-output/implementation-artifacts/printer-spike-evidence.md`: record commands/results and exact local setup, mock versus real tests, unresolved physical/HTTPS-origin checks, decision and reproducible next steps. No secrets.
+- [x] `src/app/workshop/printer-spike/page.tsx` and `_components/PrinterSpike.tsx`: route and form; editable base address default http://192.168.1.38, device ID default local_printer, Test connection and Print test receipt. Collapsible diagnostics; no persistence or global navigation change.
+- [x] `src/app/workshop/printer-spike/_lib/epos.ts`: private IPv4/.local HTTP(S) origin validation; device ID; SOAP builder; namespace-aware browser DOMParser; classification; bounded fetch/body read. No runtime dependency. Separate testable pure logic.
+- [x] `src/printer-spike.test.mts`, `package.json`: test matrix including fetch request contract, no credentials/retries, timeout and duplicate guard; add test:printer-spike. Use DOM-capable browser checks for real XML parsing, not regex pretending to parse XML.
+- [x] `_bmad-output/implementation-artifacts/printer-spike-evidence.md`: record commands/results and exact local setup, mock versus real tests, unresolved physical/HTTPS-origin checks, decision and reproducible next steps. No secrets.
 
 **Acceptance Criteria:**
 - Given the existing role guards, when an unauthenticated user visits the route, then login is required; mechanic can access and partner is rejected using normal local login.

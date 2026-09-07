@@ -69,6 +69,14 @@ export function classifyReply(success: string | null, code: string | null, statu
     return { outcome: "acknowledged", code, status, message: "Epson acknowledged the request. This does not prove physical output; inspect the printer and paper." };
   }
   if (success === "false" || success === "0") {
+    if (code === "EX_TIMEOUT") {
+      return {
+        outcome: "unknown",
+        code,
+        status,
+        message: "Epson reported a print timeout. Delivery is unknown; check the paper before an explicit next attempt.",
+      };
+    }
     return { outcome: "failed", code, status, message: `Epson reported failure${code ? ` (${code})` : ""}. Inspect the printer before an explicit next attempt.` };
   }
   return { ...unknown("The Epson reply has no recognized success value. Check the paper before reprinting."), code, status };

@@ -58,6 +58,14 @@ test("classification accepts XML boolean spellings and preserves device errors",
   for (const success of [null, "", "TRUE", "yes"]) assert.equal(classifyReply(success, null, null).outcome, "unknown");
 });
 
+test("Epson print timeout preserves diagnostics but keeps delivery unknown", () => {
+  const reply = classifyReply("false", "EX_TIMEOUT", "1");
+  assert.equal(reply.outcome, "unknown");
+  assert.equal(reply.code, "EX_TIMEOUT");
+  assert.equal(reply.status, "1");
+  assert.match(reply.message, /check the paper before an explicit next attempt/i);
+});
+
 test("fetch contract: exactly one credential-free CORS SOAP POST, no redirects or retries", async () => {
   let calls = 0;
   const result = await sendAttempt(target, "print", {

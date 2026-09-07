@@ -39,3 +39,23 @@ This establishes physical direct-browser Wi-Fi printing and cutting from this lo
 ## Commit checkpoint verification
 
 At the user's requested commit/handover: `npm run test:printer-spike` passed 12/12; `npm run test:workshop-ui` passed 38/38; `npx tsc --noEmit` passed. Targeted ESLint reported no errors, with a warning that the native `.mts` test is ignored by existing configuration. Production build and remaining browser/review checks have not been completed. The `EX_TIMEOUT` classification correction is still pending in code (current generic negative reply maps to `failed`, with no automatic retry). See [handover](printer-spike-handover.md) for exact remaining work.
+
+## Follow-up verification — 7 September 2026
+
+- `EX_TIMEOUT` is now classified as **unknown delivery**, while retaining its Epson code and status. This is intentionally narrower than generic `success="false"` handling: paper/cover failures remain visible failures, whereas a print timeout cannot establish whether output occurred. The regression is an injected Epson reply, not a hardware result.
+- Current local commands passed: `npm run test:printer-spike` (**13/13**), `npm run test:workshop-ui` (**38/38**), `npx tsc --noEmit`, `npx eslint src/app/workshop/printer-spike --no-warn-ignored`, and `git diff --check`.
+- In the available isolated in-app browser, signed-out `http://localhost:3002/workshop/printer-spike` redirected to `/login?next=%2Fworkshop%2Fprinter-spike`. No browser action was sent to the printer in this follow-up.
+- The native tests use injected fetch replies for transport, timeout, response-size, and no-retry behavior. The prior live authenticated local-Chrome runs above are the real printer results. Browser-mocked malformed/foreign XML and partner-role checks remain unexecuted; production build evidence also remains pending because an existing local development server owns `.next/dev/lock`.
+
+### Decision and reproducible next steps
+
+The spike remains a diagnostic route, not M1/M2 integration. Treat `EX_TIMEOUT` as a paper-check condition before any explicit new print attempt. To finish compatibility confidence, run the authenticated mechanic and partner checks plus deliberately mocked well-formed/malformed/foreign ePOS browser replies on an isolated local server, then test the deployed HTTPS origin from a Windows Chrome mechanic workstation. Do not change firmware, printer settings, or deployment scope without a separate decision.
+
+## Completion verification — 7 September 2026
+
+- In an isolated in-app browser, the documented local mechanic account reached `/workshop/printer-spike`; the signed-out route had already redirected to `/login?next=%2Fworkshop%2Fprinter-spike`.
+- A temporary HTTP server bound to this Mac's private workshop-network address returned three **mocked** replies to the existing **Test connection** action: malformed XML, a foreign-namespace response, and an Epson-namespace `success="false" code="EX_TIMEOUT" status="1"` response. The actual route reported respectively: `Malformed or unsupported XML response`, `No unique Epson response was found`, and the new timeout-specific unknown-delivery guidance. These requests had no receipt text or cut and never contacted the physical printer. The temporary server was stopped after the check.
+- A documented local partner account signed in through the normal form and landed at `/partner/overview`, not the spike route; both temporary browser sessions were explicitly signed out.
+- Production `next build` through Turbopack cannot run on this host because its CSS worker is denied a local port bind even outside the sandbox. The official webpack fallback compiled, type-checked, prerendered all 25 pages, and completed successfully when supplied only the existing local `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` values. It retained an unrelated existing BlockNote CSS nesting warning. The local server was restored on port 3002 afterward.
+
+The remaining reliability work is operational, not an unfinished diagnostic-code check: repeat physical output from an idle printer, then test the deployed HTTPS origin from both workshop Windows/Chrome laptops. Do not replay a timed-out physical receipt automatically.
